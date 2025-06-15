@@ -1,0 +1,65 @@
+{{template "base.html" .}}
+
+{{define "login-content"}}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">
+                    <i class="fas fa-sign-in-alt"></i> 用户登录
+                </h3>
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-sign-in-alt"></i> 登录
+                    </button>
+                </form>
+                <div class="text-center mt-3">
+                    <p class="text-muted">还没有账号？ 
+                        <a href="/register" class="text-decoration-none">立即注册</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "login-scripts"}}
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    
+    try {
+        const response = await axios.post('/api/login', {
+            username: username,
+            password: password
+        });
+        
+        // 保存token
+        const token = response.data.token;
+        localStorage.setItem('token', token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        showAlert('登录成功！', 'success');
+        setTimeout(() => {
+            window.location.href = '/dashboard';
+        }, 1000);
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '登录失败';
+        showAlert(message, 'danger');
+    }
+});
+</script>
+{{end}} 

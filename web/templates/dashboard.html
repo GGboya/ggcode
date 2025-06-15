@@ -1,0 +1,382 @@
+{{template "base.html" .}}
+
+{{define "dashboard-content"}}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-tachometer-alt"></i> 学习仪表板
+            <small class="text-muted">欢迎回来，{{.username}}！</small>
+        </h2>
+    </div>
+</div>
+
+<!-- 打卡区域 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-check"></i> 每日打卡
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <h3 id="totalCheckInDays" class="text-primary">-</h3>
+                                <small class="text-muted">累计打卡天数</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <h3 id="consecutiveDays" class="text-success">-</h3>
+                                <small class="text-muted">连续打卡天数</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <h3 id="todayStatus" class="text-warning">-</h3>
+                                <small class="text-muted">今日状态</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle"></i>
+                            <small>完成算法学习后自动打卡</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-book fa-2x text-primary mb-2"></i>
+                <h5 class="card-title" id="totalStudied">-</h5>
+                <p class="card-text text-muted">总学习题数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h5 class="card-title" id="completed">-</h5>
+                <p class="card-text text-muted">已掌握题数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                <h5 class="card-title" id="todayReview">-</h5>
+                <p class="card-text text-muted">今日待复习</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-percent fa-2x text-info mb-2"></i>
+                <h5 class="card-title" id="completionRate">-</h5>
+                <p class="card-text text-muted">掌握率</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 今日学习和快速操作 -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain"></i> 今日学习任务
+                </h5>
+                <a href="/algorithm" class="btn btn-sm btn-primary">
+                    <i class="fas fa-play"></i> 开始学习
+                </a>
+            </div>
+            <div class="card-body">
+                <div id="dailyQuestions">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2 text-muted">正在加载今日学习任务...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-list"></i> 我的学习计划
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="studyPlansList">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                        <p class="mt-2 text-muted small">加载中...</p>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>快速操作</h6>
+                    <div class="d-grid gap-2">
+                        <a href="/study-plans" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-clipboard-list"></i> 管理学习计划
+                        </a>
+                        <a href="/questionbanks" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-book"></i> 题库管理
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 学习激励 -->
+        <div class="card mt-3 bg-light">
+            <div class="card-body text-center">
+                <i class="fas fa-quote-left fa-2x text-muted mb-2"></i>
+                <p class="card-text small font-italic">
+                    "每天进步一点点，坚持就是胜利！"
+                </p>
+                <small class="text-muted">— 学习格言</small>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "dashboard-scripts"}}
+<script>
+let dailyQuestions = [];
+let checkInStats = {};
+
+// 页面加载时获取数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+    loadStudyPlans();
+    loadCheckInStats().then(() => {
+        // 在打卡统计加载完成后再加载今日题目
+        loadDailyQuestions();
+    });
+});
+
+// 加载统计信息
+async function loadStats() {
+    try {
+        const response = await axios.get('/api/study-stats');
+        const stats = response.data;
+        
+        document.getElementById('totalStudied').textContent = stats.total_studied;
+        document.getElementById('completed').textContent = stats.completed;
+        document.getElementById('todayReview').textContent = stats.today_review;
+        
+        const completionRate = stats.total_studied > 0 ? 
+            Math.round((stats.completed / stats.total_studied) * 100) : 0;
+        document.getElementById('completionRate').textContent = completionRate + '%';
+        
+    } catch (error) {
+        console.error('加载统计信息失败:', error);
+    }
+}
+
+// 加载打卡统计
+async function loadCheckInStats() {
+    try {
+        const response = await axios.get('/api/checkin-stats');
+        checkInStats = response.data;
+        
+        document.getElementById('totalCheckInDays').textContent = checkInStats.total_check_in_days;
+        document.getElementById('consecutiveDays').textContent = checkInStats.consecutive_days;
+        
+        const todayStatus = document.getElementById('todayStatus');
+        
+        if (checkInStats.checked_in_today) {
+            todayStatus.textContent = '已打卡';
+            todayStatus.className = 'text-success';
+        } else {
+            todayStatus.textContent = '未打卡';
+            todayStatus.className = 'text-warning';
+        }
+        
+        return checkInStats; // 返回数据以便链式调用
+        
+    } catch (error) {
+        console.error('加载打卡统计失败:', error);
+        checkInStats = { checked_in_today: false }; // 设置默认值
+        return checkInStats;
+    }
+}
+
+// 自动打卡已在完成题目时自动触发，无需手动打卡函数
+
+// 加载学习计划列表
+async function loadStudyPlans() {
+    try {
+        const response = await axios.get('/api/study-plans');
+        const studyPlans = response.data;
+        
+        if (studyPlans.length === 0) {
+            document.getElementById('studyPlansList').innerHTML = `
+                <div class="text-center py-3">
+                    <i class="fas fa-plus-circle text-muted mb-2"></i>
+                    <p class="text-muted small mb-2">暂无学习计划</p>
+                    <a href="/study-plans" class="btn btn-sm btn-primary">创建学习计划</a>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        studyPlans.slice(0, 3).forEach(plan => { // 只显示前3个
+            html += `
+                <div class="border rounded p-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="fw-bold">${plan.question_bank.name}</small>
+                            <div>
+                                <small class="text-muted">每日 ${plan.daily_count} 题</small>
+                            </div>
+                        </div>
+                        <a href="/algorithm?plan=${plan.id}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-play"></i>
+                        </a>
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (studyPlans.length > 3) {
+            html += `
+                <div class="text-center mt-2">
+                    <a href="/study-plans" class="btn btn-sm btn-outline-primary">
+                        查看全部 ${studyPlans.length} 个计划
+                    </a>
+                </div>
+            `;
+        }
+        
+        document.getElementById('studyPlansList').innerHTML = html;
+        
+    } catch (error) {
+        document.getElementById('studyPlansList').innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
+                <p class="text-muted small mb-2">加载学习计划失败</p>
+                <a href="/study-plans" class="btn btn-sm btn-primary">重试</a>
+            </div>
+        `;
+    }
+}
+
+// 加载今日题目
+async function loadDailyQuestions() {
+    try {
+        // 先检查打卡状态，如果已打卡则不显示学习任务
+        if (checkInStats.checked_in_today) {
+            document.getElementById('dailyQuestions').innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5 class="text-success">今天已经打卡！</h5>
+                    <p class="text-muted">恭喜你完成了今日的学习任务，明天继续加油吧！</p>
+                    <div class="mt-3">
+                        <a href="/study-plans" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus"></i> 继续学习更多
+                        </a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // 显示提示用户选择学习计划
+        document.getElementById('dailyQuestions').innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-clipboard-list fa-3x text-primary mb-3"></i>
+                <h5>选择学习计划开始学习</h5>
+                <p class="text-muted">从右侧选择一个学习计划，或创建新的学习计划</p>
+                <div class="mt-3">
+                    <a href="/study-plans" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 管理学习计划
+                    </a>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        document.getElementById('dailyQuestions').innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
+                <p class="text-muted">请先创建学习计划</p>
+                <a href="/study-plans" class="btn btn-primary">创建学习计划</a>
+            </div>
+        `;
+    }
+}
+
+// 渲染今日题目（简化版，仅显示前3道）
+function renderDailyQuestions() {
+    const container = document.getElementById('dailyQuestions');
+    const displayQuestions = dailyQuestions.slice(0, 3); // 只显示前3道
+    
+    let html = '';
+    
+    displayQuestions.forEach((item, index) => {
+        const difficultyClass = getDifficultyClass(item.question.difficulty);
+        const badgeClass = item.is_review ? 'bg-warning text-dark' : 'bg-primary';
+        const badgeText = item.is_review ? '复习' : '新题';
+        
+        html += `
+            <div class="border rounded p-2 mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="fw-bold">${index + 1}. ${item.question.title}</small>
+                        <div>
+                            <span class="badge ${badgeClass} me-1">${badgeText}</span>
+                            <span class="badge ${difficultyClass}">${item.question.difficulty}</span>
+                        </div>
+                    </div>
+                    <a href="${item.question.leetcode_url}" target="_blank" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
+            </div>
+        `;
+    });
+    
+    if (dailyQuestions.length > 3) {
+        html += `
+            <div class="text-center mt-3">
+                <a href="/algorithm" class="btn btn-primary">
+                    查看全部 ${dailyQuestions.length} 道题目
+                </a>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+// 获取难度样式类
+function getDifficultyClass(difficulty) {
+    switch(difficulty.toLowerCase()) {
+        case 'easy': return 'bg-success';
+        case 'medium': return 'bg-warning';
+        case 'hard': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+</script>
+{{end}} 

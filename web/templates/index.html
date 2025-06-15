@@ -1,0 +1,76 @@
+{{template "base.html" .}}
+
+{{define "content"}}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="text-center mb-5">
+            <h1 class="display-4 text-primary mb-4">
+                <i class="fas fa-brain"></i> GGCode
+            </h1>
+            <p class="lead">基于艾宾浩斯遗忘曲线的智能算法学习平台</p>
+            <p class="text-muted">科学的复习节奏，让你的算法学习更高效</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                        <h5 class="card-title">智能复习</h5>
+                        <p class="card-text">基于艾宾浩斯遗忘曲线，智能安排每日复习内容</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-database fa-3x text-success mb-3"></i>
+                        <h5 class="card-title">丰富题库</h5>
+                        <p class="card-text">包含LeetCode Hot 100等官方题库，支持自定义题库</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-trophy fa-3x text-warning mb-3"></i>
+                        <h5 class="card-title">学习追踪</h5>
+                        <p class="card-text">详细的学习进度追踪，可视化学习成果</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="/register" class="btn btn-primary btn-lg me-3">
+                <i class="fas fa-rocket"></i> 开始学习
+            </a>
+            <a href="/login" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-sign-in-alt"></i> 登录
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">
+                    <i class="fas fa-question-circle"></i> 什么是艾宾浩斯遗忘曲线？
+                </h3>
+                <p class="text-muted">
+                    艾宾浩斯遗忘曲线描述了人类大脑对新事物遗忘的规律。研究表明，学习后的第1天、第2天、第4天、第7天、第15天、第30天和第60天是复习的关键时间点。
+                    我们的平台基于这一科学理论，为每道题目安排最优的复习时间，帮助你更高效地掌握算法知识。
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+// 首页不需要特殊脚本
+</script>
+{{end}} 

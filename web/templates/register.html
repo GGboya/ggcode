@@ -1,0 +1,101 @@
+{{template "base.html" .}}
+
+{{define "register-content"}}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">
+                    <i class="fas fa-user-plus"></i> 用户注册
+                </h3>
+                <form id="registerForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">邮箱</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="password" minlength="6" required>
+                        <div class="form-text">密码长度至少6位</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">确认密码</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-user-plus"></i> 注册
+                    </button>
+                </form>
+                <div class="text-center mt-3">
+                    <p class="text-muted">已有账号？ 
+                        <a href="/login" class="text-decoration-none">立即登录</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "register-scripts"}}
+<script>
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // 验证密码确认
+    if (password !== confirmPassword) {
+        showAlert('两次输入的密码不一致', 'danger');
+        return;
+    }
+    
+    try {
+        const response = await axios.post('/api/register', {
+            username: username,
+            email: email,
+            password: password
+        });
+        
+        // 保存token
+        const token = response.data.token;
+        localStorage.setItem('token', token);
+        
+        // 立即设置axios默认header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        showAlert('注册成功！正在跳转...', 'success');
+        
+        // 等待更长时间确保token设置完成，然后跳转
+        setTimeout(() => {
+            window.location.href = '/dashboard';
+        }, 1500);
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '注册失败';
+        showAlert(message, 'danger');
+    }
+});
+
+// 实时验证密码确认
+document.getElementById('confirmPassword').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = this.value;
+    
+    if (confirmPassword && password !== confirmPassword) {
+        this.setCustomValidity('密码不一致');
+        this.classList.add('is-invalid');
+    } else {
+        this.setCustomValidity('');
+        this.classList.remove('is-invalid');
+    }
+});
+</script>
+{{end}} 

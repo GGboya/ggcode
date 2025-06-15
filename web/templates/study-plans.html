@@ -1,0 +1,393 @@
+{{template "base.html" .}}
+
+{{define "study-plans-content"}}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-clipboard-list"></i> 学习计划管理
+            <small class="text-muted">管理你的所有学习计划</small>
+        </h2>
+        
+        <!-- 遗忘曲线算法说明 -->
+        <div class="alert alert-info mb-4" role="alert">
+            <h5 class="alert-heading">
+                <i class="fas fa-brain"></i> 智能学习算法
+            </h5>
+            <p class="mb-2">
+                我们采用<strong>艾宾浩斯遗忘曲线</strong>算法来优化您的学习效果：
+            </p>
+            <ul class="mb-2">
+                <li><strong>科学复习间隔</strong>：根据记忆规律，在最佳时间点提醒您复习</li>
+                <li><strong>个性化调整</strong>：根据您的掌握情况动态调整复习频率</li>
+                <li><strong>高效记忆</strong>：通过合理的重复间隔，将知识转化为长期记忆</li>
+                <li><strong>进度追踪</strong>：每个学习计划独立计算进度，清晰展示学习成果</li>
+            </ul>
+            <small class="text-muted">
+                💡 提示：坚持按照系统推荐的复习计划学习，能够显著提高学习效率和知识保持率！
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- 创建学习计划 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus"></i> 创建新的学习计划
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="createPlanForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="questionBankSelect" class="form-label">选择题库</label>
+                                <select class="form-select" id="questionBankSelect" required>
+                                    <option value="">请选择题库</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dailyCount" class="form-label">每日学习量</label>
+                                <input type="range" class="form-range" id="dailyCount" min="1" max="20" value="5">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">1题</small>
+                                    <small id="dailyCountDisplay" class="text-primary fw-bold">5题</small>
+                                    <small class="text-muted">20题</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 创建学习计划
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 学习计划列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list"></i> 我的学习计划
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="studyPlansList">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2 text-muted">正在加载学习计划...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑学习计划模态框 -->
+<div class="modal fade" id="editPlanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit"></i> 编辑学习计划
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPlanForm">
+                    <input type="hidden" id="editPlanId">
+                    <div class="mb-3">
+                        <label for="editDailyCount" class="form-label">每日学习量</label>
+                        <input type="range" class="form-range" id="editDailyCount" min="1" max="20" value="5">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">1题</small>
+                            <small id="editDailyCountDisplay" class="text-primary fw-bold">5题</small>
+                            <small class="text-muted">20题</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditPlan()">
+                    <i class="fas fa-save"></i> 保存修改
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "study-plans-scripts"}}
+<script>
+let questionBanks = [];
+let studyPlans = [];
+
+// 页面加载时获取数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadQuestionBanks();
+    loadStudyPlans();
+    
+    // 设置滑动条事件
+    document.getElementById('dailyCount').addEventListener('input', function() {
+        document.getElementById('dailyCountDisplay').textContent = this.value + '题';
+    });
+    
+    document.getElementById('editDailyCount').addEventListener('input', function() {
+        document.getElementById('editDailyCountDisplay').textContent = this.value + '题';
+    });
+});
+
+// 加载题库列表
+async function loadQuestionBanks() {
+    try {
+        const response = await axios.get('/api/questionbanks');
+        questionBanks = response.data;
+        
+        const select = document.getElementById('questionBankSelect');
+        select.innerHTML = '<option value="">请选择题库</option>';
+        
+        questionBanks.forEach(bank => {
+            const option = document.createElement('option');
+            option.value = bank.id;
+            option.textContent = bank.name + (bank.is_official ? ' (官方)' : '');
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('加载题库失败:', error);
+        showAlert('加载题库失败', 'danger');
+    }
+}
+
+// 加载学习计划列表
+async function loadStudyPlans() {
+    try {
+        console.log('开始加载学习计划...');
+        const response = await axios.get('/api/study-plans');
+        studyPlans = response.data;
+        console.log('学习计划数据:', studyPlans);
+        
+        if (studyPlans.length === 0) {
+            document.getElementById('studyPlansList').innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">暂无学习计划</h5>
+                    <p class="text-muted">创建第一个学习计划开始你的学习之旅</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // 并行加载所有学习计划的进度
+        const progressPromises = studyPlans.map(plan => 
+            axios.get(`/api/study-plan/${plan.id}/progress`)
+                .then(response => ({ planId: plan.id, progress: response.data }))
+                .catch(() => ({ planId: plan.id, progress: null }))
+        );
+        
+        const progressResults = await Promise.all(progressPromises);
+        const progressMap = {};
+        progressResults.forEach(result => {
+            progressMap[result.planId] = result.progress;
+        });
+        
+        renderStudyPlans(progressMap);
+        
+    } catch (error) {
+        console.error('加载学习计划失败:', error);
+        document.getElementById('studyPlansList').innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
+                <p class="text-muted">加载学习计划失败: ${error.message}</p>
+                <p class="text-muted small">请检查浏览器控制台获取详细错误信息</p>
+            </div>
+        `;
+    }
+}
+
+// 渲染学习计划列表
+function renderStudyPlans(progressMap) {
+    let html = '';
+    
+    studyPlans.forEach(plan => {
+        const progress = progressMap[plan.id];
+        const progressRate = progress ? progress.progress_rate : 0;
+        const masteryRate = progress ? progress.mastery_rate : 0;
+        const studiedCount = progress ? progress.studied_count : 0;
+        const completedCount = progress ? progress.completed_count : 0;
+        const totalQuestions = progress ? progress.total_questions : 0;
+        
+        html += `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <h6 class="mb-1">${plan.question_bank.name}</h6>
+                            <p class="mb-1 text-muted small">每日学习量: ${plan.daily_count} 题</p>
+                            <p class="mb-0 text-muted small">创建时间: ${new Date(plan.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">学习进度</small>
+                                    <small class="text-primary">${studiedCount}/${totalQuestions} (${progressRate}%)</small>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-primary" style="width: ${progressRate}%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">掌握率</small>
+                                    <small class="text-success">${completedCount}/${totalQuestions} (${masteryRate}%)</small>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" style="width: ${masteryRate}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="btn-group" role="group">
+                                <a href="/study?plan=${plan.id}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i> 开始学习
+                                </a>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="editPlan(${plan.id}, ${plan.daily_count})">
+                                    <i class="fas fa-edit"></i> 编辑
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="confirmDeletePlan(${plan.id}, '${plan.question_bank.name}')">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('studyPlansList').innerHTML = html;
+}
+
+// 创建学习计划
+document.getElementById('createPlanForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const questionBankId = parseInt(document.getElementById('questionBankSelect').value);
+    const dailyCount = parseInt(document.getElementById('dailyCount').value);
+    
+    if (!questionBankId) {
+        showAlert('请选择题库', 'warning');
+        return;
+    }
+    
+    try {
+        await axios.post('/api/study-plan', {
+            question_bank_id: questionBankId,
+            daily_count: dailyCount
+        });
+        
+        showAlert('学习计划创建成功！', 'success');
+        
+        // 重置表单
+        document.getElementById('createPlanForm').reset();
+        document.getElementById('dailyCount').value = 5;
+        document.getElementById('dailyCountDisplay').textContent = '5题';
+        
+        // 重新加载学习计划列表
+        loadStudyPlans();
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '创建失败';
+        showAlert(message, 'danger');
+    }
+});
+
+// 编辑学习计划
+function editPlan(planId, currentDailyCount) {
+    document.getElementById('editPlanId').value = planId;
+    document.getElementById('editDailyCount').value = currentDailyCount;
+    document.getElementById('editDailyCountDisplay').textContent = currentDailyCount + '题';
+    
+    const modal = new bootstrap.Modal(document.getElementById('editPlanModal'));
+    modal.show();
+}
+
+// 保存编辑
+async function saveEditPlan() {
+    const planId = document.getElementById('editPlanId').value;
+    const dailyCount = parseInt(document.getElementById('editDailyCount').value);
+    
+    try {
+        await axios.put(`/api/study-plan/${planId}`, {
+            daily_count: dailyCount
+        });
+        
+        showAlert('学习计划已更新！', 'success');
+        
+        // 关闭模态框
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editPlanModal'));
+        modal.hide();
+        
+        // 重新加载学习计划列表
+        loadStudyPlans();
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '更新失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// 确认删除学习计划
+function confirmDeletePlan(planId, planName) {
+    if (confirm(`确定要删除学习计划"${planName}"吗？此操作不可撤销。`)) {
+        deletePlan(planId);
+    }
+}
+
+// 删除学习计划
+async function deletePlan(planId) {
+    try {
+        await axios.delete(`/api/study-plan/${planId}`);
+        showAlert('学习计划已删除！', 'success');
+        
+        // 重新加载学习计划列表
+        loadStudyPlans();
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '删除失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// 显示提示信息
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // 3秒后自动消失
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+</script>
+{{end}} 

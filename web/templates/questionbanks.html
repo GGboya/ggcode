@@ -1,0 +1,401 @@
+{{template "base.html" .}}
+
+{{define "content"}}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-book"></i> 题库管理
+                <small class="text-muted">管理你的算法题库</small>
+            </h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBankModal">
+                <i class="fas fa-plus"></i> 创建题库
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 题库列表 -->
+<div class="row" id="questionBanksList">
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+        <p class="mt-2 text-muted">正在加载题库...</p>
+    </div>
+</div>
+
+<!-- 创建题库模态框 -->
+<div class="modal fade" id="createBankModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus"></i> 创建新题库
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createBankForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="bankName" class="form-label">题库名称</label>
+                        <input type="text" class="form-control" id="bankName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bankDescription" class="form-label">题库描述</label>
+                        <textarea class="form-control" id="bankDescription" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 创建
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 添加题目模态框 -->
+<div class="modal fade" id="addQuestionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus"></i> 添加题目
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addQuestionForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="questionTitle" class="form-label">题目标题</label>
+                        <input type="text" class="form-control" id="questionTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="questionURL" class="form-label">LeetCode链接</label>
+                        <input type="url" class="form-control" id="questionURL" required>
+                        <div class="form-text">请输入完整的LeetCode题目链接</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="questionDifficulty" class="form-label">难度</label>
+                        <select class="form-select" id="questionDifficulty" required>
+                            <option value="">请选择难度</option>
+                            <option value="Easy">简单</option>
+                            <option value="Medium">中等</option>
+                            <option value="Hard">困难</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 添加
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+let questionBanks = [];
+let questionBanksProgress = [];
+let currentBankId = null;
+
+// 页面加载时获取数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadQuestionBanks();
+    loadQuestionBanksProgress();
+});
+
+// 加载题库列表
+async function loadQuestionBanks() {
+    try {
+        const response = await axios.get('/api/questionbanks');
+        questionBanks = response.data;
+        renderQuestionBanks();
+    } catch (error) {
+        console.error('加载题库失败:', error);
+        document.getElementById('questionBanksList').innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5>加载失败</h5>
+                <p class="text-muted">无法加载题库列表</p>
+                <button class="btn btn-primary" onclick="loadQuestionBanks()">重试</button>
+            </div>
+        `;
+    }
+}
+
+// 加载题库学习进度
+async function loadQuestionBanksProgress() {
+    try {
+        const response = await axios.get('/api/questionbanks-progress');
+        questionBanksProgress = response.data;
+        renderQuestionBanks(); // 重新渲染以显示进度
+    } catch (error) {
+        console.error('加载学习进度失败:', error);
+        // 如果进度加载失败，不影响题库列表的显示
+    }
+}
+
+// 渲染题库列表
+function renderQuestionBanks() {
+    const container = document.getElementById('questionBanksList');
+    
+    if (questionBanks.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                <h5>暂无题库</h5>
+                <p class="text-muted">创建你的第一个题库开始学习</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBankModal">
+                    <i class="fas fa-plus"></i> 创建题库
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    questionBanks.forEach(bank => {
+        const isOfficial = bank.is_official;
+        const badgeClass = isOfficial ? 'bg-success' : 'bg-primary';
+        const badgeText = isOfficial ? '官方' : '自定义';
+        
+        // 查找该题库的学习进度
+        const progress = questionBanksProgress.find(p => p.question_bank_id === bank.id);
+        
+        html += `
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="card-title mb-0">${bank.name}</h5>
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                        <p class="card-text text-muted">${bank.description || '暂无描述'}</p>
+                        
+                        ${progress ? `
+                            <!-- 学习进度部分 -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">学习进度</small>
+                                    <small class="text-primary fw-bold">${progress.progress_rate}%</small>
+                                </div>
+                                <div class="progress mb-2" style="height: 6px;">
+                                    <div class="progress-bar bg-primary" style="width: ${progress.progress_rate}%"></div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">掌握进度</small>
+                                    <small class="text-success fw-bold">${progress.mastery_rate}%</small>
+                                </div>
+                                <div class="progress mb-3" style="height: 6px;">
+                                    <div class="progress-bar bg-success" style="width: ${progress.mastery_rate}%"></div>
+                                </div>
+                                
+                                <div class="row text-center small">
+                                    <div class="col-6">
+                                        <div class="text-muted">已学习</div>
+                                        <div class="fw-bold text-primary">${progress.studied_count}/${progress.total_questions}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted">已掌握</div>
+                                        <div class="fw-bold text-success">${progress.completed_count}/${progress.total_questions}</div>
+                                    </div>
+                                </div>
+                                
+                                ${progress.review_count > 0 ? `
+                                    <div class="alert alert-warning py-2 px-3 mt-2 mb-0">
+                                        <small><i class="fas fa-clock"></i> 待复习: ${progress.review_count} 题</small>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : `
+                            <div class="mb-3">
+                                <small class="text-muted"><i class="fas fa-info-circle"></i> 尚未开始学习</small>
+                            </div>
+                        `}
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-user"></i> ${bank.creator ? bank.creator.username : '系统'}
+                            </small>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="viewQuestions(${bank.id})">
+                                    <i class="fas fa-eye"></i> 查看
+                                </button>
+                                ${!isOfficial ? `
+                                    <button class="btn btn-outline-success" onclick="addQuestion(${bank.id})">
+                                        <i class="fas fa-plus"></i> 添加题目
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// 查看题目
+async function viewQuestions(bankId) {
+    try {
+        const response = await axios.get(`/api/questionbanks/${bankId}/questions`);
+        const questions = response.data;
+        
+        const bank = questionBanks.find(b => b.id === bankId);
+        
+        // 创建题目列表模态框
+        const modalHtml = `
+            <div class="modal fade" id="questionsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-list"></i> ${bank.name} - 题目列表
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${questions.length === 0 ? `
+                                <div class="text-center py-4">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <h6>暂无题目</h6>
+                                    <p class="text-muted">该题库还没有题目</p>
+                                </div>
+                            ` : `
+                                <div class="list-group">
+                                    ${questions.map((q, index) => `
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">${index + 1}. ${q.title}</h6>
+                                                    <span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
+                                                </div>
+                                                <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-external-link-alt"></i> 做题
+                                                </a>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // 移除已存在的模态框
+        const existingModal = document.getElementById('questionsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // 添加新模态框
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('questionsModal'));
+        modal.show();
+        
+        // 模态框关闭后移除DOM
+        document.getElementById('questionsModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+        
+    } catch (error) {
+        console.error('加载题目失败:', error);
+        showAlert('加载题目失败', 'danger');
+    }
+}
+
+// 添加题目
+function addQuestion(bankId) {
+    currentBankId = bankId;
+    const modal = new bootstrap.Modal(document.getElementById('addQuestionModal'));
+    modal.show();
+}
+
+// 获取难度样式类
+function getDifficultyClass(difficulty) {
+    switch(difficulty.toLowerCase()) {
+        case 'easy': return 'bg-success';
+        case 'medium': return 'bg-warning';
+        case 'hard': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+
+// 创建题库表单提交
+document.getElementById('createBankForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('bankName').value;
+    const description = document.getElementById('bankDescription').value;
+    
+    try {
+        await axios.post('/api/questionbanks', {
+            name: name,
+            description: description
+        });
+        
+        showAlert('题库创建成功！', 'success');
+        
+        // 关闭模态框
+        bootstrap.Modal.getInstance(document.getElementById('createBankModal')).hide();
+        
+        // 清空表单
+        this.reset();
+        
+        // 重新加载题库列表
+        loadQuestionBanks();
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '创建失败';
+        showAlert(message, 'danger');
+    }
+});
+
+// 添加题目表单提交
+document.getElementById('addQuestionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const title = document.getElementById('questionTitle').value;
+    const url = document.getElementById('questionURL').value;
+    const difficulty = document.getElementById('questionDifficulty').value;
+    
+    try {
+        await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
+            title: title,
+            leetcode_url: url,
+            difficulty: difficulty
+        });
+        
+        showAlert('题目添加成功！', 'success');
+        
+        // 关闭模态框
+        bootstrap.Modal.getInstance(document.getElementById('addQuestionModal')).hide();
+        
+        // 清空表单
+        this.reset();
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '添加失败';
+        showAlert(message, 'danger');
+    }
+});
+</script>
+{{end}} 
