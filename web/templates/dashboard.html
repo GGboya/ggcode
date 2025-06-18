@@ -161,6 +161,7 @@
 <script>
 let dailyQuestions = [];
 let checkInStats = {};
+let selectedStudyPlan = null; // 当前选中的学习计划
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
@@ -241,17 +242,17 @@ async function loadStudyPlans() {
         let html = '';
         studyPlans.slice(0, 3).forEach(plan => { // 只显示前3个
             html += `
-                <div class="border rounded p-2 mb-2">
+                <div class="border rounded p-2 mb-2 study-plan-item" data-plan-id="${plan.id}" data-plan-name="${plan.question_bank.name}" data-daily-count="${plan.daily_count}">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div>
+                        <div class="flex-grow-1" style="cursor: pointer;">
                             <small class="fw-bold">${plan.question_bank.name}</small>
                             <div>
                                 <small class="text-muted">每日 ${plan.daily_count} 题</small>
                             </div>
                         </div>
-                        <a href="/algorithm?plan=${plan.id}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-play"></i>
-                        </a>
+                        <div class="text-end">
+                            <small class="text-muted d-block">点击选择</small>
+                        </div>
                     </div>
                 </div>
             `;
@@ -268,6 +269,13 @@ async function loadStudyPlans() {
         }
         
         document.getElementById('studyPlansList').innerHTML = html;
+        
+        // 添加学习计划点击事件
+        document.querySelectorAll('.study-plan-item').forEach(item => {
+            item.addEventListener('click', function() {
+                selectStudyPlan(this);
+            });
+        });
         
     } catch (error) {
         document.getElementById('studyPlansList').innerHTML = `
@@ -300,19 +308,8 @@ async function loadDailyQuestions() {
             return;
         }
         
-        // 显示提示用户选择学习计划
-        document.getElementById('dailyQuestions').innerHTML = `
-            <div class="text-center py-4">
-                <i class="fas fa-clipboard-list fa-3x text-primary mb-3"></i>
-                <h5>选择学习计划开始学习</h5>
-                <p class="text-muted">从右侧选择一个学习计划，或创建新的学习计划</p>
-                <div class="mt-3">
-                    <a href="/study-plans" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> 管理学习计划
-                    </a>
-                </div>
-            </div>
-        `;
+        // 使用新的显示逻辑
+        updateDailyTasksDisplay();
         
     } catch (error) {
         document.getElementById('dailyQuestions').innerHTML = `
@@ -377,6 +374,73 @@ function getDifficultyClass(difficulty) {
         case 'hard': return 'bg-danger';
         default: return 'bg-secondary';
     }
+}
+
+// 选择学习计划
+function selectStudyPlan(element) {
+    // 清除之前的选中状态
+    document.querySelectorAll('.study-plan-item').forEach(item => {
+        item.classList.remove('border-primary', 'bg-light');
+    });
+    
+    // 设置当前选中状态
+    element.classList.add('border-primary', 'bg-light');
+    
+    // 保存选中的学习计划信息
+    selectedStudyPlan = {
+        id: element.dataset.planId,
+        name: element.dataset.planName,
+        dailyCount: element.dataset.dailyCount
+    };
+    
+    // 更新今日学习任务显示
+    updateDailyTasksDisplay();
+}
+
+// 更新今日学习任务显示
+function updateDailyTasksDisplay() {
+    if (!selectedStudyPlan) {
+        document.getElementById('dailyQuestions').innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-clipboard-list fa-3x text-primary mb-3"></i>
+                <h5>选择学习计划开始学习</h5>
+                <p class="text-muted">从右侧选择一个学习计划，或创建新的学习计划</p>
+                <div class="mt-3">
+                    <a href="/study-plans" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 管理学习计划
+                    </a>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    // 显示选中的学习计划信息和开始学习按钮
+    document.getElementById('dailyQuestions').innerHTML = `
+        <div class="text-center py-4">
+            <i class="fas fa-play-circle fa-3x text-success mb-3"></i>
+            <h5>已选择学习计划</h5>
+            <p class="text-primary fw-bold mb-2">${selectedStudyPlan.name}</p>
+            <p class="text-muted mb-4">每日学习 ${selectedStudyPlan.dailyCount} 题</p>
+            <div class="d-grid gap-2 col-6 mx-auto">
+                <a href="/study?plan=${selectedStudyPlan.id}" class="btn btn-success btn-lg">
+                    <i class="fas fa-play"></i> 开始学习
+                </a>
+                <button class="btn btn-outline-secondary" onclick="clearSelection()">
+                    <i class="fas fa-times"></i> 重新选择
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// 清除选择
+function clearSelection() {
+    selectedStudyPlan = null;
+    document.querySelectorAll('.study-plan-item').forEach(item => {
+        item.classList.remove('border-primary', 'bg-light');
+    });
+    updateDailyTasksDisplay();
 }
 </script>
 {{end}} 
