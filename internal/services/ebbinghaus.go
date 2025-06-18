@@ -466,3 +466,45 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 
 	return &progress, nil
 }
+
+// DeleteStudyPlanWithProgress 删除学习计划并清空相关的学习进度
+func (s *EbbinghausService) DeleteStudyPlanWithProgress(userID, studyPlanID uint) error {
+	// 先获取学习计划信息
+	var studyPlan database.UserStudyPlan
+	if err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).First(&studyPlan).Error; err != nil {
+		return errors.New("学习计划不存在")
+	}
+
+	// 开始事务
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除该用户在该题库中的所有学习进度记录
+	if err := tx.Exec(`
+		DELETE FROM user_question_progresses 
+		WHERE user_id = ? AND question_id IN (
+			SELECT id FROM questions WHERE question_bank_id = ?
+		)
+	`, userID, studyPlan.QuestionBankID).Error; err != nil {
+		tx.Rollback()
+		return errors.New("清空学习进度失败")
+	}
+
+	// 删除学习计划
+	if err := tx.Where("id = ? AND user_id = ?", studyPlanID, userID).
+		Delete(&database.UserStudyPlan{}).Error; err != nil {
+		tx.Rollback()
+		return errors.New("删除学习计划失败")
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return errors.New("删除操作提交失败")
+	}
+
+	return nil
+}

@@ -350,7 +350,16 @@ async function saveEditPlan() {
 
 // 确认删除学习计划
 function confirmDeletePlan(planId, planName) {
-    if (confirm(`确定要删除学习计划"${planName}"吗？此操作不可撤销。`)) {
+    const confirmMessage = `确定要删除学习计划"${planName}"吗？
+
+⚠️ 警告：此操作将会：
+• 删除该学习计划
+• 清空该题库的所有学习进度和状态
+• 删除该题库的复习记录
+
+此操作不可撤销，请谨慎操作！`;
+    
+    if (confirm(confirmMessage)) {
         deletePlan(planId);
     }
 }

@@ -485,14 +485,17 @@ func (h *Handler) DeleteStudyPlan(c *gin.Context) {
 		return
 	}
 
-	// 真正删除学习计划
-	if err := h.db.Where("id = ? AND user_id = ?", planID, userID).
-		Delete(&database.UserStudyPlan{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除学习计划失败"})
+	// 使用服务层的删除方法
+	if err := h.ebbinghausService.DeleteStudyPlanWithProgress(userID, uint(planID)); err != nil {
+		if err.Error() == "学习计划不存在" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "学习计划已删除"})
+	c.JSON(http.StatusOK, gin.H{"message": "学习计划和对应的学习进度已删除"})
 }
 
 // GetAllStudyPlans 获取用户所有学习计划
