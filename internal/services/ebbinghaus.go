@@ -74,6 +74,9 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 		return []QuestionWithProgress{}, nil
 	}
 
+	if len(reviewQuestions) > studyPlan.DailyCount {
+		reviewQuestions = reviewQuestions[:studyPlan.DailyCount]
+	}
 	return reviewQuestions, nil
 }
 
@@ -428,31 +431,29 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 		return nil, err
 	}
 
-	// 获取该学习计划创建后的学习记录（基于学习计划创建时间）
-	// 已学习题目数（学习计划创建后有学习记录的）
+	// 获取已学习题目数（有学习记录的）
 	if err := s.db.Model(&database.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
-		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.created_at >= ?",
-			userID, studyPlan.QuestionBankID, studyPlan.CreatedAt).
+		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ?", userID, studyPlan.QuestionBankID).
 		Count(&progress.StudiedCount).Error; err != nil {
 		return nil, err
 	}
 
-	// 获取该学习计划创建后已掌握的题目数
+	// 获取已掌握题目数
 	if err := s.db.Model(&database.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
-		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ? AND user_question_progresses.created_at >= ?",
-			userID, studyPlan.QuestionBankID, true, studyPlan.CreatedAt).
+		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ?",
+			userID, studyPlan.QuestionBankID, true).
 		Count(&progress.CompletedCount).Error; err != nil {
 		return nil, err
 	}
 
-	// 获取待复习题目数（该学习计划创建后的，未完成且到了复习时间）
+	// 获取待复习题目数（未完成且到了复习时间）
 	today := time.Now().Truncate(24 * time.Hour)
 	if err := s.db.Model(&database.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
-		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ? AND user_question_progresses.next_review_date <= ? AND user_question_progresses.created_at >= ?",
-			userID, studyPlan.QuestionBankID, false, today, studyPlan.CreatedAt).
+		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ? AND user_question_progresses.next_review_date <= ?",
+			userID, studyPlan.QuestionBankID, false, today).
 		Count(&progress.ReviewCount).Error; err != nil {
 		return nil, err
 	}

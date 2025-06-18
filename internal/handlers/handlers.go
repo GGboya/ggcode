@@ -280,6 +280,14 @@ func (h *Handler) CreateStudyPlan(c *gin.Context) {
 		return
 	}
 
+	// 检查用户是否已经为该题库创建了学习计划
+	var existingPlan database.UserStudyPlan
+	err := h.db.Where("user_id = ? AND question_bank_id = ?", userID, req.QuestionBankID).First(&existingPlan).Error
+	if err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "您已经为该题库创建了学习计划，一个题库只能创建一个学习计划"})
+		return
+	}
+
 	studyPlan := database.UserStudyPlan{
 		UserID:         userID,
 		QuestionBankID: req.QuestionBankID,
