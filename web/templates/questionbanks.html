@@ -663,28 +663,6 @@ async function deleteQuestionConfirmed(questionId) {
     }
 }
 
-// 显示提示信息
-function showAlert(message, type) {
-    // 创建提示框
-    const alertHtml = `
-        <div class="alert alert-${type} alert-dismissible fade show position-fixed" 
-             style="top: 20px; right: 20px; z-index: 9999;" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', alertHtml);
-    
-    // 3秒后自动关闭
-    setTimeout(() => {
-        const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(alert => {
-            if (alert.textContent.includes(message)) {
-                alert.remove();
-            }
-        });
-    }, 3000);
-}
+
 </script>
 {{end}} 

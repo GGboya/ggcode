@@ -22,6 +22,25 @@ func New(db *gorm.DB) (*Server, error) {
 	// 使用glob模式加载模板，强制每次重新加载
 	router.LoadHTMLGlob("web/templates/*.html")
 
+	// 添加UTF-8编码中间件
+	router.Use(func(c *gin.Context) {
+		// 对于HTML页面请求，设置正确的Content-Type
+		accept := c.Request.Header.Get("Accept")
+		if accept != "" && (accept == "text/html" ||
+			accept == "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" ||
+			accept == "*/*" ||
+			c.Request.URL.Path == "/" ||
+			c.Request.URL.Path == "/dashboard" ||
+			c.Request.URL.Path == "/login" ||
+			c.Request.URL.Path == "/register" ||
+			c.Request.URL.Path == "/questionbanks" ||
+			c.Request.URL.Path == "/study-plans" ||
+			c.Request.URL.Path == "/study") {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+		}
+		c.Next()
+	})
+
 	server := &Server{
 		router: router,
 		db:     db,
