@@ -249,7 +249,8 @@ function renderQuestionBanks() {
     let html = '';
     questionBanks.forEach(bank => {
         const isOfficial = bank.is_official;
-        const isOwnBank = bank.created_by && bank.created_by === getCurrentUserId();
+        const currentUserId = getCurrentUserId();
+        const isOwnBank = bank.created_by && bank.created_by === currentUserId;
         const badgeClass = isOfficial ? 'bg-success' : 'bg-primary';
         const badgeText = isOfficial ? '官方' : '自定义';
         
@@ -348,16 +349,6 @@ function renderQuestionBanks() {
                                     <i class="fas fa-eye"></i> 查看
                                 </button>
                                 
-                                <!-- 共享题库操作 -->
-                                ${(bank.is_shared || bank.is_official) && !isOwnBank ? `
-                                    <button class="btn btn-outline-warning" onclick="starQuestionBank(${bank.id})" id="starBtn${bank.id}">
-                                        <i class="fas fa-star"></i> 收藏
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="forkQuestionBank(${bank.id})">
-                                        <i class="fas fa-code-branch"></i> Fork
-                                    </button>
-                                ` : ''}
-                                
                                 <!-- 个人题库操作 -->
                                 ${isOwnBank && !isOfficial ? `
                                     <button class="btn btn-outline-success" onclick="addQuestion(${bank.id})">
@@ -379,6 +370,16 @@ function renderQuestionBanks() {
                                         <i class="fas fa-trash"></i> 删除
                                     </button>
                                 ` : ''}
+                                
+                                <!-- 共享题库操作（针对非自己的题库） -->
+                                ${(bank.is_shared || bank.is_official) && !isOwnBank ? `
+                                    <button class="btn btn-outline-warning" onclick="toggleStarQuestionBank(${bank.id})" id="starBtn${bank.id}">
+                                        <i class="fas fa-star"></i> <span id="starText${bank.id}">收藏</span>
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="forkQuestionBank(${bank.id})">
+                                        <i class="fas fa-code-branch"></i> Fork
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -388,11 +389,39 @@ function renderQuestionBanks() {
     });
     
     container.innerHTML = html;
+    
+    // 初始化收藏按钮状态
+    initializeStarButtons();
+}
+
+// 初始化收藏按钮状态
+async function initializeStarButtons() {
+    try {
+        const response = await axios.get('/api/starred-questionbanks');
+        const starredBanks = response.data;
+        const starredBankIds = starredBanks.map(bank => bank.id);
+        
+        // 更新所有收藏按钮的状态
+        starredBankIds.forEach(bankId => {
+            const starBtn = document.getElementById(`starBtn${bankId}`);
+            const starText = document.getElementById(`starText${bankId}`);
+            if (starBtn && starText) {
+                starText.textContent = '已收藏';
+                starBtn.classList.remove('btn-outline-warning');
+                starBtn.classList.add('btn-warning');
+            }
+        });
+    } catch (error) {
+        console.log('初始化收藏状态失败:', error);
+    }
 }
 
 // 查看题目
 async function viewQuestions(bankId) {
     try {
+        // 记录当前查看的题库ID，用于删除题目后刷新
+        window.currentViewingBankId = bankId;
+        
         const response = await axios.get(`/api/questionbanks/${bankId}/questions`);
         const questions = response.data;
         
@@ -429,7 +458,7 @@ async function viewQuestions(bankId) {
                                                     <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary">
                                                         <i class="fas fa-external-link-alt"></i> 做题
                                                     </a>
-                                                    ${!bank.is_official ? `
+                                                    ${canEditBank(bank) ? `
                                                         <button class="btn btn-outline-warning" onclick="editQuestion(${q.id})">
                                                             <i class="fas fa-edit"></i> 编辑
                                                         </button>
@@ -718,8 +747,23 @@ async function deleteQuestionConfirmed(questionId) {
         
         showAlert('题目删除成功！', 'success');
         
-        // 如果当前有打开的题目列表模态框，可以选择刷新
-        // 这里为了简单起见，我们就不自动刷新了
+        // 关闭当前题目列表模态框并重新打开以刷新
+        const questionsModal = document.getElementById('questionsModal');
+        if (questionsModal) {
+            const modal = bootstrap.Modal.getInstance(questionsModal);
+            if (modal) {
+                modal.hide();
+                
+                // 等待模态框关闭动画完成后重新打开
+                setTimeout(() => {
+                    // 从题目的question_bank_id找到对应的题库并重新显示
+                    const currentBankId = window.currentViewingBankId;
+                    if (currentBankId) {
+                        viewQuestions(currentBankId);
+                    }
+                }, 300);
+            }
+        }
         
     } catch (error) {
         const message = error.response?.data?.error || '删除失败';
@@ -731,9 +775,37 @@ async function deleteQuestionConfirmed(questionId) {
 
 // 获取当前用户ID (从JWT token中解析或从全局变量获取)
 function getCurrentUserId() {
-    // 这里应该从JWT token中解析，或者从服务器模板中获取
-    // 暂时返回一个默认值，实际使用时需要替换为真实的用户ID获取逻辑
-    return window.currentUserId || null;
+    if (window.currentUserId) {
+        return window.currentUserId;
+    }
+    
+    // 尝试从localStorage中的token解析用户ID
+    try {
+        const token = localStorage.getItem('token');
+        if (token) {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.user_id || payload.sub || null;
+        }
+    } catch (e) {
+        console.log('无法从token解析用户ID:', e);
+    }
+    
+    return null;
+}
+
+// 判断用户是否可以编辑题库
+function canEditBank(bank) {
+    if (bank.is_official) {
+        return false; // 官方题库不能编辑
+    }
+    
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) {
+        return false;
+    }
+    
+    // 用户可以编辑自己创建的题库（包括Fork的题库）
+    return bank.created_by === currentUserId;
 }
 
 // 共享题库
@@ -768,6 +840,25 @@ async function unshareQuestionBank(bankId) {
     }
 }
 
+// 切换Star状态
+async function toggleStarQuestionBank(bankId) {
+    try {
+        // 先检查当前是否已收藏
+        const response = await axios.get('/api/starred-questionbanks');
+        const starredBanks = response.data;
+        const isStarred = starredBanks.some(bank => bank.id === bankId);
+        
+        if (isStarred) {
+            await unstarQuestionBank(bankId);
+        } else {
+            await starQuestionBank(bankId);
+        }
+    } catch (error) {
+        console.error('切换收藏状态失败:', error);
+        showAlert('操作失败', 'danger');
+    }
+}
+
 // Star题库
 async function starQuestionBank(bankId) {
     try {
@@ -776,11 +867,11 @@ async function starQuestionBank(bankId) {
         
         // 更新按钮状态
         const starBtn = document.getElementById(`starBtn${bankId}`);
-        if (starBtn) {
-            starBtn.innerHTML = '<i class="fas fa-star"></i> 已收藏';
+        const starText = document.getElementById(`starText${bankId}`);
+        if (starBtn && starText) {
+            starText.textContent = '已收藏';
             starBtn.classList.remove('btn-outline-warning');
             starBtn.classList.add('btn-warning');
-            starBtn.onclick = () => unstarQuestionBank(bankId);
         }
         
         loadQuestionBanks();
@@ -798,11 +889,11 @@ async function unstarQuestionBank(bankId) {
         
         // 更新按钮状态
         const starBtn = document.getElementById(`starBtn${bankId}`);
-        if (starBtn) {
-            starBtn.innerHTML = '<i class="fas fa-star"></i> 收藏';
+        const starText = document.getElementById(`starText${bankId}`);
+        if (starBtn && starText) {
+            starText.textContent = '收藏';
             starBtn.classList.remove('btn-warning');
             starBtn.classList.add('btn-outline-warning');
-            starBtn.onclick = () => starQuestionBank(bankId);
         }
         
         loadQuestionBanks();

@@ -62,26 +62,32 @@ func (h *Handler) Dashboard(c *gin.Context) {
 
 func (h *Handler) QuestionBanksPage(c *gin.Context) {
 	username := c.GetString("username")
+	userID := c.GetUint("user_id")
 	c.HTML(http.StatusOK, "questionbanks.html", gin.H{
 		"title":    "题库管理",
 		"username": username,
+		"userID":   userID,
 	})
 }
 
 func (h *Handler) StudyPlansPage(c *gin.Context) {
 	username := c.GetString("username")
+	userID := c.GetUint("user_id")
 	c.HTML(http.StatusOK, "study-plans.html", gin.H{
 		"title":    "学习计划管理",
 		"username": username,
+		"userID":   userID,
 		"pageType": "study-plans",
 	})
 }
 
 func (h *Handler) StudyPage(c *gin.Context) {
 	username := c.GetString("username")
+	userID := c.GetUint("user_id")
 	c.HTML(http.StatusOK, "study.html", gin.H{
 		"title":    "开始学习",
 		"username": username,
+		"userID":   userID,
 		"pageType": "study",
 	})
 }
