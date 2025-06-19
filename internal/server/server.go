@@ -67,8 +67,12 @@ func (s *Server) setupRoutes() {
 			// 题库相关
 			api.GET("/questionbanks", h.GetQuestionBanks)
 			api.POST("/questionbanks", h.CreateQuestionBank)
+			api.PUT("/questionbanks/:id", h.UpdateQuestionBank)
+			api.DELETE("/questionbanks/:id", h.DeleteQuestionBank)
 			api.GET("/questionbanks/:id/questions", h.GetQuestions)
 			api.POST("/questionbanks/:id/questions", h.CreateQuestion)
+			api.PUT("/questions/:id", h.UpdateQuestion)
+			api.DELETE("/questions/:id", h.DeleteQuestion)
 
 			// 学习计划相关
 			api.POST("/study-plan", h.CreateStudyPlan)

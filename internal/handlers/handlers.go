@@ -576,3 +576,201 @@ func (h *Handler) GetRandomMasteredQuestions(c *gin.Context) {
 
 	c.JSON(http.StatusOK, questions)
 }
+
+// UpdateQuestionBank 更新题库信息
+func (h *Handler) UpdateQuestionBank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		Description string `json:"description"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 检查题库是否存在且属于当前用户
+	var questionBank database.QuestionBank
+	if err := h.db.Where("id = ? AND created_by = ?", bankID, userID).First(&questionBank).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题库不存在或无权限修改"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题库失败"})
+		return
+	}
+
+	// 更新题库信息
+	questionBank.Name = req.Name
+	questionBank.Description = req.Description
+
+	if err := h.db.Save(&questionBank).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新题库失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, questionBank)
+}
+
+// DeleteQuestionBank 删除题库
+func (h *Handler) DeleteQuestionBank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	// 检查题库是否存在且属于当前用户
+	var questionBank database.QuestionBank
+	if err := h.db.Where("id = ? AND created_by = ?", bankID, userID).First(&questionBank).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题库不存在或无权限删除"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题库失败"})
+		return
+	}
+
+	// 检查是否有用户正在使用此题库的学习计划
+	var studyPlanCount int64
+	h.db.Model(&database.UserStudyPlan{}).Where("question_bank_id = ?", bankID).Count(&studyPlanCount)
+	if studyPlanCount > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "该题库正在被学习计划使用，无法删除"})
+		return
+	}
+
+	// 开始事务删除题库及其题目
+	tx := h.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除题库中的所有题目
+	if err := tx.Where("question_bank_id = ?", bankID).Delete(&database.Question{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除题目失败"})
+		return
+	}
+
+	// 删除题库
+	if err := tx.Delete(&questionBank).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除题库失败"})
+		return
+	}
+
+	tx.Commit()
+	c.JSON(http.StatusOK, gin.H{"message": "题库删除成功"})
+}
+
+// UpdateQuestion 更新题目信息
+func (h *Handler) UpdateQuestion(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	questionID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题目ID"})
+		return
+	}
+
+	var req struct {
+		Title       string `json:"title" binding:"required"`
+		LeetcodeURL string `json:"leetcode_url" binding:"required"`
+		Difficulty  string `json:"difficulty" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 检查题目是否存在且属于用户创建的题库
+	var question database.Question
+	if err := h.db.Preload("QuestionBank").Where("id = ?", questionID).First(&question).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题目不存在"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题目失败"})
+		return
+	}
+
+	// 检查权限：只能编辑自己创建的题库中的题目
+	if question.QuestionBank.CreatedBy == nil || *question.QuestionBank.CreatedBy != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权限修改此题目"})
+		return
+	}
+
+	// 更新题目信息
+	question.Title = req.Title
+	question.LeetcodeURL = req.LeetcodeURL
+	question.Difficulty = req.Difficulty
+
+	if err := h.db.Save(&question).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新题目失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, question)
+}
+
+// DeleteQuestion 删除题目
+func (h *Handler) DeleteQuestion(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	questionID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题目ID"})
+		return
+	}
+
+	// 检查题目是否存在且属于用户创建的题库
+	var question database.Question
+	if err := h.db.Preload("QuestionBank").Where("id = ?", questionID).First(&question).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题目不存在"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题目失败"})
+		return
+	}
+
+	// 检查权限：只能删除自己创建的题库中的题目
+	if question.QuestionBank.CreatedBy == nil || *question.QuestionBank.CreatedBy != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权限删除此题目"})
+		return
+	}
+
+	// 开始事务删除题目及相关学习进度
+	tx := h.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除该题目的所有学习进度记录
+	if err := tx.Where("question_id = ?", questionID).Delete(&database.UserQuestionProgress{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除学习进度失败"})
+		return
+	}
+
+	// 删除题目
+	if err := tx.Delete(&question).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除题目失败"})
+		return
+	}
+
+	tx.Commit()
+	c.JSON(http.StatusOK, gin.H{"message": "题目删除成功"})
+}

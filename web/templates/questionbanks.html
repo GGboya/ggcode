@@ -57,6 +57,38 @@
     </div>
 </div>
 
+<!-- 编辑题库模态框 -->
+<div class="modal fade" id="editBankModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit"></i> 编辑题库
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editBankForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editBankName" class="form-label">题库名称</label>
+                        <input type="text" class="form-control" id="editBankName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editBankDescription" class="form-label">题库描述</label>
+                        <textarea class="form-control" id="editBankDescription" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- 添加题目模态框 -->
 <div class="modal fade" id="addQuestionModal" tabindex="-1">
     <div class="modal-dialog">
@@ -92,6 +124,48 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> 添加
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑题目模态框 -->
+<div class="modal fade" id="editQuestionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit"></i> 编辑题目
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editQuestionForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editQuestionTitle" class="form-label">题目标题</label>
+                        <input type="text" class="form-control" id="editQuestionTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editQuestionURL" class="form-label">LeetCode链接</label>
+                        <input type="url" class="form-control" id="editQuestionURL" required>
+                        <div class="form-text">请输入完整的LeetCode题目链接</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editQuestionDifficulty" class="form-label">难度</label>
+                        <select class="form-select" id="editQuestionDifficulty" required>
+                            <option value="">请选择难度</option>
+                            <option value="Easy">简单</option>
+                            <option value="Medium">中等</option>
+                            <option value="Hard">困难</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存
                     </button>
                 </div>
             </form>
@@ -234,6 +308,12 @@ function renderQuestionBanks() {
                                     <button class="btn btn-outline-success" onclick="addQuestion(${bank.id})">
                                         <i class="fas fa-plus"></i> 添加题目
                                     </button>
+                                    <button class="btn btn-outline-warning" onclick="editQuestionBank(${bank.id})">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteQuestionBank(${bank.id})">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
                                 ` : ''}
                             </div>
                         </div>
@@ -281,9 +361,19 @@ async function viewQuestions(bankId) {
                                                     <h6 class="mb-1">${index + 1}. ${q.title}</h6>
                                                     <span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
                                                 </div>
-                                                <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                                    <i class="fas fa-external-link-alt"></i> 做题
-                                                </a>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary">
+                                                        <i class="fas fa-external-link-alt"></i> 做题
+                                                    </a>
+                                                    ${!bank.is_official ? `
+                                                        <button class="btn btn-outline-warning" onclick="editQuestion(${q.id})">
+                                                            <i class="fas fa-edit"></i> 编辑
+                                                        </button>
+                                                        <button class="btn btn-outline-danger" onclick="deleteQuestion(${q.id})">
+                                                            <i class="fas fa-trash"></i> 删除
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
                                             </div>
                                         </div>
                                     `).join('')}
@@ -397,5 +487,204 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
         showAlert(message, 'danger');
     }
 });
+
+// 编辑题库
+function editQuestionBank(bankId) {
+    const bank = questionBanks.find(b => b.id === bankId);
+    if (!bank) return;
+    
+    // 填充表单
+    document.getElementById('editBankName').value = bank.name;
+    document.getElementById('editBankDescription').value = bank.description || '';
+    
+    // 保存当前编辑的题库ID
+    currentBankId = bankId;
+    
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('editBankModal'));
+    modal.show();
+}
+
+// 编辑题库表单提交
+document.getElementById('editBankForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('editBankName').value;
+    const description = document.getElementById('editBankDescription').value;
+    
+    try {
+        await axios.put(`/api/questionbanks/${currentBankId}`, {
+            name: name,
+            description: description
+        });
+        
+        showAlert('题库更新成功！', 'success');
+        
+        // 关闭模态框
+        bootstrap.Modal.getInstance(document.getElementById('editBankModal')).hide();
+        
+        // 重新加载题库列表
+        loadQuestionBanks();
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '更新失败';
+        showAlert(message, 'danger');
+    }
+});
+
+// 删除题库
+function deleteQuestionBank(bankId) {
+    const bank = questionBanks.find(b => b.id === bankId);
+    if (!bank) return;
+    
+    if (confirm(`确定要删除题库"${bank.name}"吗？\n\n警告：此操作将删除题库中的所有题目，且无法恢复！`)) {
+        deleteQuestionBankConfirmed(bankId);
+    }
+}
+
+// 确认删除题库
+async function deleteQuestionBankConfirmed(bankId) {
+    try {
+        await axios.delete(`/api/questionbanks/${bankId}`);
+        
+        showAlert('题库删除成功！', 'success');
+        
+        // 重新加载题库列表
+        loadQuestionBanks();
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '删除失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// 编辑题目
+function editQuestion(questionId) {
+    // 先获取题目详情
+    const allQuestions = [];
+    questionBanks.forEach(bank => {
+        if (bank.questions) {
+            allQuestions.push(...bank.questions);
+        }
+    });
+    
+    // 由于题目详情可能不在当前数据中，我们需要通过API获取
+    fetchQuestionDetails(questionId);
+}
+
+// 获取题目详情
+async function fetchQuestionDetails(questionId) {
+    try {
+        // 这里我们需要先找到题目所属的题库，然后获取题目列表
+        let question = null;
+        for (const bank of questionBanks) {
+            try {
+                const response = await axios.get(`/api/questionbanks/${bank.id}/questions`);
+                const questions = response.data;
+                question = questions.find(q => q.id === questionId);
+                if (question) break;
+            } catch (error) {
+                continue;
+            }
+        }
+        
+        if (!question) {
+            showAlert('题目不存在', 'danger');
+            return;
+        }
+        
+        // 填充编辑表单
+        document.getElementById('editQuestionTitle').value = question.title;
+        document.getElementById('editQuestionURL').value = question.leetcode_url;
+        document.getElementById('editQuestionDifficulty').value = question.difficulty;
+        
+        // 保存当前编辑的题目ID
+        window.currentQuestionId = questionId;
+        
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('获取题目详情失败:', error);
+        showAlert('获取题目详情失败', 'danger');
+    }
+}
+
+// 编辑题目表单提交
+document.getElementById('editQuestionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const title = document.getElementById('editQuestionTitle').value;
+    const url = document.getElementById('editQuestionURL').value;
+    const difficulty = document.getElementById('editQuestionDifficulty').value;
+    
+    try {
+        await axios.put(`/api/questions/${window.currentQuestionId}`, {
+            title: title,
+            leetcode_url: url,
+            difficulty: difficulty
+        });
+        
+        showAlert('题目更新成功！', 'success');
+        
+        // 关闭模态框
+        bootstrap.Modal.getInstance(document.getElementById('editQuestionModal')).hide();
+        
+        // 如果当前有打开的题目列表模态框，可以选择刷新
+        // 这里为了简单起见，我们就不自动刷新了
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '更新失败';
+        showAlert(message, 'danger');
+    }
+});
+
+// 删除题目
+function deleteQuestion(questionId) {
+    if (confirm('确定要删除这个题目吗？\n\n警告：此操作将删除该题目的所有学习进度，且无法恢复！')) {
+        deleteQuestionConfirmed(questionId);
+    }
+}
+
+// 确认删除题目
+async function deleteQuestionConfirmed(questionId) {
+    try {
+        await axios.delete(`/api/questions/${questionId}`);
+        
+        showAlert('题目删除成功！', 'success');
+        
+        // 如果当前有打开的题目列表模态框，可以选择刷新
+        // 这里为了简单起见，我们就不自动刷新了
+        
+    } catch (error) {
+        const message = error.response?.data?.error || '删除失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// 显示提示信息
+function showAlert(message, type) {
+    // 创建提示框
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999;" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', alertHtml);
+    
+    // 3秒后自动关闭
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            if (alert.textContent.includes(message)) {
+                alert.remove();
+            }
+        });
+    }, 3000);
+}
 </script>
 {{end}} 
