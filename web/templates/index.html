@@ -1,76 +1,383 @@
 {{template "base.html" .}}
 
 {{define "content"}}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
+<!-- Hero Section -->
+<div class="row justify-content-center mb-5">
+    <div class="col-lg-10">
         <div class="text-center mb-5">
-            <h1 class="display-4 text-primary mb-4">
-                <i class="fas fa-brain"></i> GGCode
+            <div class="hero-icon mb-4">
+                <i class="fas fa-brain" style="font-size: 4rem; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;"></i>
+            </div>
+            <h1 class="display-4 mb-4" style="font-weight: 700; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                GGCode 智能学习平台
             </h1>
-            <p class="lead">基于艾宾浩斯遗忘曲线的智能算法学习平台</p>
-            <p class="text-muted">科学的复习节奏，让你的算法学习更高效</p>
-        </div>
-
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 text-center">
-                    <div class="card-body">
-                        <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
-                        <h5 class="card-title">智能复习</h5>
-                        <p class="card-text">基于艾宾浩斯遗忘曲线，智能安排每日复习内容</p>
-                    </div>
-                </div>
+            <p class="lead mb-4" style="font-size: 1.5rem; color: #4a5568; font-weight: 500;">
+                基于艾宾浩斯遗忘曲线的智能算法学习平台
+            </p>
+            <p class="text-muted mb-5" style="font-size: 1.1rem;">
+                科学的复习节奏，让你的算法学习更高效
+            </p>
+            <div class="hero-buttons">
+                <a href="/register" class="btn btn-primary btn-lg me-3 mb-3">
+                    <i class="fas fa-rocket"></i> 开始学习之旅
+                </a>
+                <a href="/login" class="btn btn-outline-primary btn-lg mb-3">
+                    <i class="fas fa-sign-in-alt"></i> 登录账户
+                </a>
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 text-center">
-                    <div class="card-body">
-                        <i class="fas fa-database fa-3x text-success mb-3"></i>
-                        <h5 class="card-title">丰富题库</h5>
-                        <p class="card-text">包含LeetCode Hot 100等官方题库，支持自定义题库</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 text-center">
-                    <div class="card-body">
-                        <i class="fas fa-trophy fa-3x text-warning mb-3"></i>
-                        <h5 class="card-title">学习追踪</h5>
-                        <p class="card-text">详细的学习进度追踪，可视化学习成果</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="text-center mt-5">
-            <a href="/register" class="btn btn-primary btn-lg me-3">
-                <i class="fas fa-rocket"></i> 开始学习
-            </a>
-            <a href="/login" class="btn btn-outline-primary btn-lg">
-                <i class="fas fa-sign-in-alt"></i> 登录
-            </a>
         </div>
     </div>
 </div>
 
-<div class="row mt-5">
+<!-- Features Section -->
+<div class="row mb-5">
     <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <h3 class="card-title text-center mb-4">
-                    <i class="fas fa-question-circle"></i> 什么是艾宾浩斯遗忘曲线？
-                </h3>
-                <p class="text-muted">
-                    艾宾浩斯遗忘曲线描述了人类大脑对新事物遗忘的规律。研究表明，学习后的第1天、第2天、第4天、第7天、第15天、第30天和第60天是复习的关键时间点。
-                    我们的平台基于这一科学理论，为每道题目安排最优的复习时间，帮助你更高效地掌握算法知识。
+        <h2 class="text-center mb-5" style="font-weight: 600; color: #2d3748;">
+            <i class="fas fa-star text-warning"></i> 核心功能特色
+        </h2>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-lg-4 mb-4">
+        <div class="feature-card card h-100 text-center" style="border: none; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);">
+            <div class="card-body p-4">
+                <div class="feature-icon mb-4" style="position: relative;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; background: var(--success-gradient); border-radius: 50%; opacity: 0.1;"></div>
+                    <i class="fas fa-chart-line" style="font-size: 3rem; background: var(--success-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative; z-index: 1;"></i>
+                </div>
+                <h5 class="card-title mb-3" style="font-weight: 600; color: #2d3748;">智能复习系统</h5>
+                <p class="card-text text-muted">
+                    基于艾宾浩斯遗忘曲线科学理论，智能安排每日复习内容，
+                    在最佳时机提醒你复习，确保知识长期记忆
                 </p>
+                <div class="feature-stats mt-4">
+                    <small class="text-success"><i class="fas fa-check-circle"></i> 记忆效率提升 85%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="feature-card card h-100 text-center" style="border: none; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);">
+            <div class="card-body p-4">
+                <div class="feature-icon mb-4" style="position: relative;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; background: var(--warning-gradient); border-radius: 50%; opacity: 0.1;"></div>
+                    <i class="fas fa-database" style="font-size: 3rem; background: var(--warning-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative; z-index: 1;"></i>
+                </div>
+                <h5 class="card-title mb-3" style="font-weight: 600; color: #2d3748;">丰富题库资源</h5>
+                <p class="card-text text-muted">
+                    包含LeetCode Hot 100等权威题库，涵盖数据结构、算法、
+                    系统设计等多个领域，支持自定义题库创建
+                </p>
+                <div class="feature-stats mt-4">
+                    <small class="text-warning"><i class="fas fa-star"></i> 1000+ 精选题目</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="feature-card card h-100 text-center" style="border: none; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);">
+            <div class="card-body p-4">
+                <div class="feature-icon mb-4" style="position: relative;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; background: var(--danger-gradient); border-radius: 50%; opacity: 0.1;"></div>
+                    <i class="fas fa-trophy" style="font-size: 3rem; background: var(--danger-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative; z-index: 1;"></i>
+                </div>
+                <h5 class="card-title mb-3" style="font-weight: 600; color: #2d3748;">学习追踪分析</h5>
+                <p class="card-text text-muted">
+                    详细的学习进度追踪，可视化学习成果，智能分析学习薄弱点，
+                    提供个性化学习建议
+                </p>
+                <div class="feature-stats mt-4">
+                    <small class="text-danger"><i class="fas fa-chart-bar"></i> 多维度数据分析</small>
+                </div>
             </div>
         </div>
     </div>
 </div>
-{{end}}
 
-{{define "scripts"}}
+<!-- How it works section -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card" style="background: var(--primary-gradient); color: white; border: none;">
+            <div class="card-body p-5">
+                <h3 class="card-title text-center mb-5" style="font-weight: 600;">
+                    <i class="fas fa-lightbulb"></i> 艾宾浩斯遗忘曲线原理
+                </h3>
+                
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <div class="timeline">
+                            <div class="timeline-item mb-4">
+                                <div class="timeline-icon">
+                                    <i class="fas fa-calendar-day"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-2">科学复习时间点</h6>
+                                    <p class="mb-0">第1天、第2天、第4天、第7天、第15天、第30天、第60天</p>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item mb-4">
+                                <div class="timeline-icon">
+                                    <i class="fas fa-brain"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-2">记忆强化机制</h6>
+                                    <p class="mb-0">在遗忘临界点进行复习，有效强化长期记忆</p>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item">
+                                <div class="timeline-icon">
+                                    <i class="fas fa-rocket"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-2">学习效率提升</h6>
+                                    <p class="mb-0">相比传统学习方法，记忆效果提升85%以上</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 text-center">
+                        <div class="forgetting-curve-visual">
+                            <div style="background: rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2rem;">
+                                <i class="fas fa-chart-area fa-4x mb-3" style="color: rgba(255, 255, 255, 0.8);"></i>
+                                <h5 style="font-weight: 600;">遗忘曲线图</h5>
+                                <p class="small mb-0">记忆保持率随时间变化</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics section -->
+<div class="row mb-5">
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-number" style="font-size: 2.5rem; font-weight: 700; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                1000+
+            </div>
+            <div class="stats-label" style="color: #718096; font-weight: 500;">
+                精选算法题目
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-number" style="font-size: 2.5rem; font-weight: 700; background: var(--success-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                85%
+            </div>
+            <div class="stats-label" style="color: #718096; font-weight: 500;">
+                记忆效率提升
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-number" style="font-size: 2.5rem; font-weight: 700; background: var(--warning-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                7
+            </div>
+            <div class="stats-label" style="color: #718096; font-weight: 500;">
+                科学复习节点
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-number" style="font-size: 2.5rem; font-weight: 700; background: var(--danger-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                24/7
+            </div>
+            <div class="stats-label" style="color: #718096; font-weight: 500;">
+                智能学习助手
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to action -->
+<div class="row">
+    <div class="col-12">
+        <div class="card text-center" style="background: var(--secondary-gradient); color: white; border: none;">
+            <div class="card-body p-5">
+                <h3 class="card-title mb-4" style="font-weight: 600;">
+                    <i class="fas fa-graduation-cap"></i> 立即开始你的算法学习之旅
+                </h3>
+                <p class="card-text mb-4" style="font-size: 1.1rem; opacity: 0.9;">
+                    加入数千名开发者，体验科学高效的算法学习方法
+                </p>
+                <a href="/register" class="btn btn-light btn-lg" style="color: #667eea; font-weight: 600;">
+                    <i class="fas fa-user-plus"></i> 免费注册账户
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 首页脚本 -->
 <script>
-// 首页不需要特殊脚本
+// 页面特效脚本
+document.addEventListener('DOMContentLoaded', function() {
+    // 特色卡片悬停效果
+    const featureCards = document.querySelectorAll('.feature-card');
+    featureCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-10px) scale(1.02)';
+            this.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.15)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+            this.style.boxShadow = 'var(--shadow-md)';
+        });
+    });
+    
+    // 统计数字动画
+    const statsNumbers = document.querySelectorAll('.stats-number');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const target = entry.target;
+                const finalValue = target.textContent.trim();
+                
+                // 数字动画效果
+                if (finalValue.includes('%')) {
+                    animateNumber(target, 0, parseInt(finalValue), '%');
+                } else if (finalValue.includes('+')) {
+                    animateNumber(target, 0, parseInt(finalValue), '+');
+                } else if (finalValue === '24/7') {
+                    target.style.animation = 'fadeIn 1s ease-in-out';
+                } else {
+                    animateNumber(target, 0, parseInt(finalValue) || 0, '');
+                }
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    statsNumbers.forEach(num => observer.observe(num));
+    
+    // 时间轴动画
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    timelineItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-20px)';
+        setTimeout(() => {
+            item.style.transition = 'all 0.6s ease-in-out';
+            item.style.opacity = '1';
+            item.style.transform = 'translateX(0)';
+        }, index * 200);
+    });
+});
+
+// 数字动画函数
+function animateNumber(element, start, end, suffix) {
+    const duration = 2000;
+    const increment = (end - start) / (duration / 16);
+    let current = start;
+    
+    const timer = setInterval(() => {
+        current += increment;
+        if (current >= end) {
+            current = end;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(current) + suffix;
+    }, 16);
+}
 </script>
+
+<style>
+/* 额外的样式 */
+.hero-icon {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.hero-buttons .btn {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.timeline {
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    height: 100%;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.timeline-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    padding-left: 60px;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: 0;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+}
+
+.timeline-content h6 {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-content p {
+    opacity: 0.9;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .timeline {
+        padding-left: 0;
+    }
+    
+    .timeline::before {
+        display: none;
+    }
+    
+    .timeline-item {
+        padding-left: 0;
+        margin-bottom: 2rem;
+    }
+    
+    .timeline-icon {
+        position: relative;
+        margin-right: 1rem;
+        margin-bottom: 1rem;
+    }
+}
+</style>
 {{end}} 

@@ -126,17 +126,15 @@
         </div>
     </div>
 </div>
-{{end}}
 
-{{define "study-plans-scripts"}}
+<!-- 学习计划页面脚本 -->
 <script>
 let questionBanks = [];
 let studyPlans = [];
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
-    loadQuestionBanks();
-    loadStudyPlans();
+    console.log('Study-plans DOM加载完成');
     
     // 设置滑动条事件
     document.getElementById('dailyCount').addEventListener('input', function() {
@@ -146,12 +144,24 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('editDailyCount').addEventListener('input', function() {
         document.getElementById('editDailyCountDisplay').textContent = this.value + '题';
     });
+    
+    // 等待一小段时间让base.html的setupAxios完成，然后加载数据
+    setTimeout(() => {
+        console.log('开始加载Study-plans数据');
+        loadQuestionBanks();
+        loadStudyPlans();
+    }, 200);
 });
 
 // 加载题库列表
 async function loadQuestionBanks() {
+    console.log('开始加载题库列表');
+    console.log('当前axios headers:', axios.defaults.headers.common);
+    
     try {
+        console.log('发送请求到 /api/questionbanks');
         const response = await axios.get('/api/questionbanks');
+        console.log('题库列表响应:', response.data);
         questionBanks = response.data;
         
         const select = document.getElementById('questionBankSelect');
@@ -172,9 +182,13 @@ async function loadQuestionBanks() {
 
 // 加载学习计划列表
 async function loadStudyPlans() {
+    console.log('开始加载学习计划列表');
+    console.log('当前axios headers:', axios.defaults.headers.common);
+    
     try {
-        console.log('开始加载学习计划...');
+        console.log('发送请求到 /api/study-plans');
         const response = await axios.get('/api/study-plans');
+        console.log('学习计划响应:', response.data);
         studyPlans = response.data;
         console.log('学习计划数据:', studyPlans);
         

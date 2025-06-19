@@ -1,65 +1,491 @@
 {{template "base.html" .}}
 
 {{define "login-content"}}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card">
-            <div class="card-body">
-                <h3 class="card-title text-center mb-4">
-                    <i class="fas fa-sign-in-alt"></i> 用户登录
-                </h3>
-                <form id="loginForm">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">用户名</label>
-                        <input type="text" class="form-control" id="username" required>
+<div class="row justify-content-center align-items-center min-vh-75">
+    <div class="col-md-8 col-lg-10">
+        <div class="row">
+            <!-- Left side - Login Form -->
+            <div class="col-lg-6 mb-4">
+                <div class="login-card card h-100" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2);">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <div class="login-icon mb-3">
+                                <i class="fas fa-user-circle" style="font-size: 3rem; background: var(--primary-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;"></i>
+                            </div>
+                            <h3 class="card-title mb-2" style="font-weight: 600; color: #2d3748;">
+                                欢迎回来
+                            </h3>
+                            <p class="text-muted">登录你的 GGCode 账户</p>
+                        </div>
+                        
+                        <form id="loginForm">
+                            <div class="mb-4">
+                                <label for="username" class="form-label">
+                                    <i class="fas fa-user me-2"></i>用户名
+                                </label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="username" required placeholder="请输入用户名">
+                                    <span class="input-group-text bg-transparent border-start-0">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>密码
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="password" required placeholder="请输入密码">
+                                    <span class="input-group-text bg-transparent border-start-0" style="cursor: pointer;" onclick="togglePassword()">
+                                        <i class="fas fa-eye text-muted" id="passwordToggle"></i>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="rememberMe">
+                                    <label class="form-check-label text-muted" for="rememberMe">
+                                        记住我
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100 mb-3" id="loginBtn">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                <span class="btn-text">登录</span>
+                                <div class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </button>
+                        </form>
+                        
+                        <div class="divider my-4">
+                            <span class="divider-text">或者</span>
+                        </div>
+                        
+                        <div class="text-center">
+                            <p class="text-muted mb-2">还没有账号？</p>
+                            <a href="/register" class="btn btn-outline-primary">
+                                <i class="fas fa-user-plus me-2"></i>立即注册
+                            </a>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">密码</label>
-                        <input type="password" class="form-control" id="password" required>
+                </div>
+            </div>
+            
+            <!-- Right side - Welcome Info -->
+            <div class="col-lg-6">
+                <div class="welcome-panel h-100 d-flex flex-column justify-content-center" style="background: var(--primary-gradient); color: white; border-radius: 16px; padding: 3rem;">
+                    <div class="text-center">
+                        <div class="welcome-icon mb-4">
+                            <i class="fas fa-brain fa-4x mb-3" style="opacity: 0.9;"></i>
+                        </div>
+                        <h2 class="mb-4" style="font-weight: 600;">开始你的学习之旅</h2>
+                        <p class="mb-4" style="font-size: 1.1rem; opacity: 0.9;">
+                            基于科学的艾宾浩斯遗忘曲线，让算法学习更高效
+                        </p>
+                        
+                        <div class="feature-highlights">
+                            <div class="highlight-item mb-3">
+                                <i class="fas fa-check-circle me-2"></i>
+                                智能复习提醒
+                            </div>
+                            <div class="highlight-item mb-3">
+                                <i class="fas fa-check-circle me-2"></i>
+                                个性化学习计划
+                            </div>
+                            <div class="highlight-item mb-3">
+                                <i class="fas fa-check-circle me-2"></i>
+                                学习进度追踪
+                            </div>
+                        </div>
+                        
+                        <div class="stats-preview mt-4 pt-4" style="border-top: 1px solid rgba(255, 255, 255, 0.3);">
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number">1000+</div>
+                                        <div class="stat-label">精选题目</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number">85%</div>
+                                        <div class="stat-label">效率提升</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number">7</div>
+                                        <div class="stat-label">复习节点</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-sign-in-alt"></i> 登录
-                    </button>
-                </form>
-                <div class="text-center mt-3">
-                    <p class="text-muted">还没有账号？ 
-                        <a href="/register" class="text-decoration-none">立即注册</a>
-                    </p>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{{end}}
 
-{{define "login-scripts"}}
+<!-- 登录页面脚本 -->
 <script>
+console.log('登录页面脚本已加载');
+
+// 密码显示/隐藏切换
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('passwordToggle');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('fa-eye');
+        toggleIcon.classList.add('fa-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
+    }
+}
+
+// 登录表单处理
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    console.log('登录表单提交事件触发');
     
-    const username = document.getElementById('username').value;
+    const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
+    const loginBtn = document.getElementById('loginBtn');
+    const btnText = loginBtn.querySelector('.btn-text');
+    const spinner = loginBtn.querySelector('.spinner-border');
+    
+    // 表单验证
+    if (!username) {
+        showAlert('请输入用户名', 'warning');
+        document.getElementById('username').focus();
+        return;
+    }
+    
+    if (!password) {
+        showAlert('请输入密码', 'warning');
+        document.getElementById('password').focus();
+        return;
+    }
+    
+    // 显示加载状态
+    loginBtn.disabled = true;
+    btnText.textContent = '登录中...';
+    spinner.classList.remove('d-none');
     
     try {
+        console.log('尝试登录:', { username, password: '***' });
+        
         const response = await axios.post('/api/login', {
             username: username,
             password: password
         });
         
+        console.log('登录响应:', response.data);
+        
+        // 检查响应中是否有token
+        if (!response.data.token) {
+            throw new Error('服务器响应中没有token');
+        }
+        
         // 保存token
         const token = response.data.token;
+        console.log('保存token:', token);
         localStorage.setItem('token', token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        showAlert('登录成功！', 'success');
+        // 设置cookie（后端已经设置了，但为了确保前端也能访问，再设置一次）
+        const expires = new Date();
+        expires.setTime(expires.getTime() + (7 * 24 * 60 * 60 * 1000));
+        document.cookie = `token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+        
+        // 立即设置axios header
+        if (typeof axios !== 'undefined') {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            console.log('已设置axios Authorization header:', axios.defaults.headers.common['Authorization']);
+        } else {
+            console.error('axios未定义，无法设置Authorization header');
+        }
+        
+        // 清除任何现有的认证检查定时器
+        if (window.authCheckTimer) {
+            clearTimeout(window.authCheckTimer);
+        }
+        
+        // 成功提示
+        showAlert('登录成功！正在跳转...', 'success');
+        btnText.textContent = '登录成功';
+        loginBtn.classList.remove('btn-primary');
+        loginBtn.classList.add('btn-success');
+        
+        // 页面跳转动画
+        console.log('开始跳转流程...');
         setTimeout(() => {
-            window.location.href = '/dashboard';
-        }, 1000);
+            console.log('执行卡片动画...');
+            const loginCard = document.querySelector('.login-card');
+            if (loginCard) {
+                loginCard.style.transform = 'translateY(-20px)';
+                loginCard.style.opacity = '0';
+            }
+            
+            setTimeout(() => {
+                console.log('登录成功，正在跳转到dashboard...');
+                console.log('当前页面:', window.location.href);
+                console.log('Cookie设置情况:', document.cookie);
+                console.log('localStorage token:', localStorage.getItem('token'));
+                console.log('axios默认headers:', axios.defaults.headers.common);
+                
+                // 直接跳转，不使用延迟
+                window.location.href = '/dashboard';
+            }, 300);
+        }, 500);
         
     } catch (error) {
-        const message = error.response?.data?.error || '登录失败';
+        console.error('Login error:', error);
+        console.error('Error details:', {
+            response: error.response,
+            status: error.response?.status,
+            data: error.response?.data
+        });
+        
+        const message = error.response?.data?.error || '登录失败，请检查用户名和密码';
         showAlert(message, 'danger');
+        
+        // 重置按钮状态
+        loginBtn.disabled = false;
+        btnText.textContent = '登录';
+        spinner.classList.add('d-none');
+        loginBtn.classList.remove('btn-success');
+        loginBtn.classList.add('btn-primary');
+        
+        // 震动效果
+        const form = document.getElementById('loginForm');
+        form.style.animation = 'shake 0.5s';
+        setTimeout(() => {
+            form.style.animation = '';
+        }, 500);
+    }
+});
+
+// 页面加载动画
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM内容已加载，开始初始化登录页面');
+    // 登录卡片淡入动画
+    const loginCard = document.querySelector('.login-card');
+    const welcomePanel = document.querySelector('.welcome-panel');
+    
+    loginCard.style.opacity = '0';
+    loginCard.style.transform = 'translateX(-30px)';
+    welcomePanel.style.opacity = '0';
+    welcomePanel.style.transform = 'translateX(30px)';
+    
+    setTimeout(() => {
+        loginCard.style.transition = 'all 0.6s ease-out';
+        loginCard.style.opacity = '1';
+        loginCard.style.transform = 'translateX(0)';
+    }, 100);
+    
+    setTimeout(() => {
+        welcomePanel.style.transition = 'all 0.6s ease-out';
+        welcomePanel.style.opacity = '1';
+        welcomePanel.style.transform = 'translateX(0)';
+    }, 300);
+    
+    // 统计数字动画
+    const statNumbers = document.querySelectorAll('.stat-number');
+    setTimeout(() => {
+        statNumbers.forEach((stat, index) => {
+            setTimeout(() => {
+                stat.style.animation = 'fadeInUp 0.6s ease-out';
+            }, index * 100);
+        });
+    }, 800);
+    
+    // 输入框聚焦动画
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'scale(1)';
+        });
+    });
+});
+
+// 键盘快捷键支持
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.target.id === 'username' || e.target.id === 'password')) {
+        e.preventDefault();
+        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
     }
 });
 </script>
+
+<style>
+/* 登录页面专用样式 */
+.min-vh-75 {
+    min-height: 75vh;
+}
+
+.login-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.login-icon {
+    animation: pulse 2s infinite;
+}
+
+.input-group .form-control {
+    border-right: none;
+}
+
+.input-group .input-group-text {
+    border-left: none;
+    background: transparent;
+}
+
+.input-group:focus-within .form-control,
+.input-group:focus-within .input-group-text {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.divider {
+    position: relative;
+    text-align: center;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(102, 126, 234, 0.2);
+}
+
+.divider-text {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0 1rem;
+    color: #718096;
+    font-size: 0.875rem;
+}
+
+.welcome-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-panel::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+    33% { transform: translate(30px, -30px) rotate(120deg); }
+    66% { transform: translate(-20px, 20px) rotate(240deg); }
+}
+
+.welcome-icon {
+    animation: bounce 3s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.highlight-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.9;
+    transition: all 0.3s ease;
+}
+
+.highlight-item:hover {
+    opacity: 1;
+    transform: translateX(5px);
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+/* 动画关键帧 */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 991px) {
+    .welcome-panel {
+        margin-top: 2rem;
+        padding: 2rem !important;
+    }
+    
+    .login-card .card-body {
+        padding: 2rem !important;
+    }
+    
+    .stat-number {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-panel {
+        padding: 1.5rem !important;
+    }
+    
+    .login-card .card-body {
+        padding: 1.5rem !important;
+    }
+}
+</style>
 {{end}} 

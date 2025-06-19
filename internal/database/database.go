@@ -30,6 +30,7 @@ func Init() (*gorm.DB, error) {
 	err = db.AutoMigrate(
 		&User{},
 		&QuestionBank{},
+		&QuestionBankStar{},
 		&Question{},
 		&UserStudyPlan{},
 		&UserQuestionProgress{},

@@ -8,9 +8,39 @@
                 <i class="fas fa-book"></i> 题库管理
                 <small class="text-muted">管理你的算法题库</small>
             </h2>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBankModal">
-                <i class="fas fa-plus"></i> 创建题库
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBankModal">
+                    <i class="fas fa-plus"></i> 创建题库
+                </button>
+            </div>
+        </div>
+
+        <!-- 筛选和排序控件 -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="btn-group" role="group" aria-label="题库类型筛选">
+                    <input type="radio" class="btn-check" name="bankType" id="allBanks" value="all" checked autocomplete="off">
+                    <label class="btn btn-outline-primary" for="allBanks">全部题库</label>
+
+                    <input type="radio" class="btn-check" name="bankType" id="sharedBanks" value="shared" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="sharedBanks">共享题库</label>
+
+                    <input type="radio" class="btn-check" name="bankType" id="personalBanks" value="personal" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="personalBanks">我的题库</label>
+
+                    <input type="radio" class="btn-check" name="bankType" id="starredBanks" value="starred" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="starredBanks">
+                        <i class="fas fa-star"></i> 已收藏
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="sortBy">
+                    <option value="created_at">按创建时间排序</option>
+                    <option value="star_count">按收藏数排序</option>
+                    <option value="fork_count">按Fork数排序</option>
+                </select>
+            </div>
         </div>
     </div>
 </div>
@@ -172,9 +202,8 @@
         </div>
     </div>
 </div>
-{{end}}
 
-{{define "scripts"}}
+<!-- 题库管理页面脚本 -->
 <script>
 let questionBanks = [];
 let questionBanksProgress = [];
@@ -182,28 +211,15 @@ let currentBankId = null;
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
-    loadQuestionBanks();
-    loadQuestionBanksProgress();
+    console.log('Questionbanks DOM加载完成');
+    
+    // 等待一小段时间让base.html的setupAxios完成，然后加载数据
+    setTimeout(() => {
+        console.log('开始加载Questionbanks数据');
+        loadQuestionBanks();
+        loadQuestionBanksProgress();
+    }, 200);
 });
-
-// 加载题库列表
-async function loadQuestionBanks() {
-    try {
-        const response = await axios.get('/api/questionbanks');
-        questionBanks = response.data;
-        renderQuestionBanks();
-    } catch (error) {
-        console.error('加载题库失败:', error);
-        document.getElementById('questionBanksList').innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                <h5>加载失败</h5>
-                <p class="text-muted">无法加载题库列表</p>
-                <button class="btn btn-primary" onclick="loadQuestionBanks()">重试</button>
-            </div>
-        `;
-    }
-}
 
 // 加载题库学习进度
 async function loadQuestionBanksProgress() {
@@ -238,6 +254,8 @@ function renderQuestionBanks() {
     let html = '';
     questionBanks.forEach(bank => {
         const isOfficial = bank.is_official;
+        const currentUserId = getCurrentUserId();
+        const isOwnBank = bank.created_by && bank.created_by === currentUserId;
         const badgeClass = isOfficial ? 'bg-success' : 'bg-primary';
         const badgeText = isOfficial ? '官方' : '自定义';
         
@@ -249,10 +267,41 @@ function renderQuestionBanks() {
                 <div class="card h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-3">
-                            <h5 class="card-title mb-0">${bank.name}</h5>
-                            <span class="badge ${badgeClass}">${badgeText}</span>
+                            <h5 class="card-title mb-0">
+                                ${bank.name}
+                                ${bank.forked_from ? '<i class="fas fa-code-branch text-muted ms-1" title="Fork来源"></i>' : ''}
+                            </h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge ${badgeClass}">${badgeText}</span>
+                                ${bank.is_shared ? '<span class="badge bg-info">共享</span>' : ''}
+                            </div>
                         </div>
                         <p class="card-text text-muted">${bank.description || '暂无描述'}</p>
+                        
+                        <!-- Fork来源信息 -->
+                        ${bank.original_bank ? `
+                            <div class="alert alert-info py-1 px-2 mb-3">
+                                <small><i class="fas fa-code-branch"></i> Fork自: ${bank.original_bank.name}</small>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Star和Fork统计 -->
+                        ${(bank.is_shared || bank.is_official) ? `
+                            <div class="row text-center mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">收藏</small>
+                                    <div class="fw-bold text-warning">
+                                        <i class="fas fa-star"></i> ${bank.star_count || 0}
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Fork</small>
+                                    <div class="fw-bold text-info">
+                                        <i class="fas fa-code-branch"></i> ${bank.fork_count || 0}
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
                         
                         ${progress ? `
                             <!-- 学习进度部分 -->
@@ -304,15 +353,36 @@ function renderQuestionBanks() {
                                 <button class="btn btn-outline-primary" onclick="viewQuestions(${bank.id})">
                                     <i class="fas fa-eye"></i> 查看
                                 </button>
-                                ${!isOfficial ? `
+                                
+                                <!-- 个人题库操作 -->
+                                ${isOwnBank && !isOfficial ? `
                                     <button class="btn btn-outline-success" onclick="addQuestion(${bank.id})">
                                         <i class="fas fa-plus"></i> 添加题目
                                     </button>
                                     <button class="btn btn-outline-warning" onclick="editQuestionBank(${bank.id})">
                                         <i class="fas fa-edit"></i> 编辑
                                     </button>
+                                    ${bank.is_shared ? `
+                                        <button class="btn btn-outline-secondary" onclick="unshareQuestionBank(${bank.id})">
+                                            <i class="fas fa-lock"></i> 取消共享
+                                        </button>
+                                    ` : `
+                                        <button class="btn btn-outline-info" onclick="shareQuestionBank(${bank.id})">
+                                            <i class="fas fa-share"></i> 共享
+                                        </button>
+                                    `}
                                     <button class="btn btn-outline-danger" onclick="deleteQuestionBank(${bank.id})">
                                         <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                ` : ''}
+                                
+                                <!-- 共享题库操作（针对非自己的题库） -->
+                                ${(bank.is_shared || bank.is_official) && !isOwnBank ? `
+                                    <button class="btn btn-outline-warning" onclick="toggleStarQuestionBank(${bank.id})" id="starBtn${bank.id}">
+                                        <i class="fas fa-star"></i> <span id="starText${bank.id}">收藏</span>
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="forkQuestionBank(${bank.id})">
+                                        <i class="fas fa-code-branch"></i> Fork
                                     </button>
                                 ` : ''}
                             </div>
@@ -324,11 +394,39 @@ function renderQuestionBanks() {
     });
     
     container.innerHTML = html;
+    
+    // 初始化收藏按钮状态
+    initializeStarButtons();
+}
+
+// 初始化收藏按钮状态
+async function initializeStarButtons() {
+    try {
+        const response = await axios.get('/api/starred-questionbanks');
+        const starredBanks = response.data;
+        const starredBankIds = starredBanks.map(bank => bank.id);
+        
+        // 更新所有收藏按钮的状态
+        starredBankIds.forEach(bankId => {
+            const starBtn = document.getElementById(`starBtn${bankId}`);
+            const starText = document.getElementById(`starText${bankId}`);
+            if (starBtn && starText) {
+                starText.textContent = '已收藏';
+                starBtn.classList.remove('btn-outline-warning');
+                starBtn.classList.add('btn-warning');
+            }
+        });
+    } catch (error) {
+        console.log('初始化收藏状态失败:', error);
+    }
 }
 
 // 查看题目
 async function viewQuestions(bankId) {
     try {
+        // 记录当前查看的题库ID，用于删除题目后刷新
+        window.currentViewingBankId = bankId;
+        
         const response = await axios.get(`/api/questionbanks/${bankId}/questions`);
         const questions = response.data;
         
@@ -365,7 +463,7 @@ async function viewQuestions(bankId) {
                                                     <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary">
                                                         <i class="fas fa-external-link-alt"></i> 做题
                                                     </a>
-                                                    ${!bank.is_official ? `
+                                                    ${canEditBank(bank) ? `
                                                         <button class="btn btn-outline-warning" onclick="editQuestion(${q.id})">
                                                             <i class="fas fa-edit"></i> 编辑
                                                         </button>
@@ -468,7 +566,7 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
     const difficulty = document.getElementById('questionDifficulty').value;
     
     try {
-        await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
+        const response = await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
             title: title,
             leetcode_url: url,
             difficulty: difficulty
@@ -482,11 +580,77 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
         // 清空表单
         this.reset();
         
+        // 如果题目列表模态框是打开的，动态添加新题目到列表中
+        const questionsModal = document.getElementById('questionsModal');
+        if (questionsModal && questionsModal.classList.contains('show')) {
+            addQuestionToModal(response.data, questionsModal);
+        }
+        
     } catch (error) {
         const message = error.response?.data?.error || '添加失败';
         showAlert(message, 'danger');
     }
 });
+
+// 动态添加题目到模态框列表
+function addQuestionToModal(newQuestion, modal) {
+    const modalBody = modal.querySelector('.modal-body');
+    let listGroup = modal.querySelector('.list-group');
+    
+    // 如果当前显示的是空状态，先清除它
+    if (!listGroup) {
+        const emptyState = modalBody.querySelector('.text-center');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        // 创建新的列表容器
+        modalBody.innerHTML = '<div class="list-group"></div>';
+        listGroup = modal.querySelector('.list-group');
+    }
+    
+    // 计算新题目的编号
+    const existingItems = listGroup.querySelectorAll('.list-group-item');
+    const newIndex = existingItems.length + 1;
+    
+    // 获取当前题库信息来判断是否可编辑
+    const bank = questionBanks.find(b => b.id === currentBankId);
+    const canEdit = bank && canEditBank(bank);
+    
+    // 创建新题目的HTML
+    const newQuestionHtml = `
+        <div class="list-group-item" style="opacity: 0;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${newIndex}. ${newQuestion.title}</h6>
+                    <span class="badge ${getDifficultyClass(newQuestion.difficulty)}">${newQuestion.difficulty}</span>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <a href="${newQuestion.leetcode_url}" target="_blank" class="btn btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i> 做题
+                    </a>
+                    ${canEdit ? `
+                        <button class="btn btn-outline-warning" onclick="editQuestion(${newQuestion.id})">
+                            <i class="fas fa-edit"></i> 编辑
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteQuestion(${newQuestion.id})">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 添加到列表末尾
+    listGroup.insertAdjacentHTML('beforeend', newQuestionHtml);
+    
+    // 获取新添加的元素并添加淡入动画
+    const newElement = listGroup.lastElementChild;
+    newElement.style.transition = 'opacity 0.3s ease-in';
+    setTimeout(() => {
+        newElement.style.opacity = '1';
+    }, 50);
+}
 
 // 编辑题库
 function editQuestionBank(bankId) {
@@ -620,7 +784,7 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
     const difficulty = document.getElementById('editQuestionDifficulty').value;
     
     try {
-        await axios.put(`/api/questions/${window.currentQuestionId}`, {
+        const response = await axios.put(`/api/questions/${window.currentQuestionId}`, {
             title: title,
             leetcode_url: url,
             difficulty: difficulty
@@ -631,14 +795,56 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
         // 关闭模态框
         bootstrap.Modal.getInstance(document.getElementById('editQuestionModal')).hide();
         
-        // 如果当前有打开的题目列表模态框，可以选择刷新
-        // 这里为了简单起见，我们就不自动刷新了
+        // 无感更新：直接更新题目列表中的对应项
+        updateQuestionInModal(response.data || {
+            id: window.currentQuestionId,
+            title: title,
+            leetcode_url: url,
+            difficulty: difficulty
+        });
         
     } catch (error) {
         const message = error.response?.data?.error || '更新失败';
         showAlert(message, 'danger');
     }
 });
+
+// 更新模态框中的题目信息
+function updateQuestionInModal(updatedQuestion) {
+    const questionsModal = document.getElementById('questionsModal');
+    if (questionsModal && questionsModal.classList.contains('show')) {
+        const questionItems = questionsModal.querySelectorAll('.list-group-item');
+        questionItems.forEach(item => {
+            const editBtn = item.querySelector(`button[onclick*="editQuestion(${updatedQuestion.id})"]`);
+            if (editBtn) {
+                // 找到题目标题和难度标签元素
+                const titleElement = item.querySelector('h6');
+                const difficultyElement = item.querySelector('.badge');
+                const linkElement = item.querySelector('a[target="_blank"]');
+                
+                if (titleElement && difficultyElement && linkElement) {
+                    // 保持原有的编号
+                    const titleText = titleElement.textContent;
+                    const numberPart = titleText.match(/^\d+\.\s*/);
+                    const newTitleText = numberPart ? numberPart[0] + updatedQuestion.title : updatedQuestion.title;
+                    
+                    // 更新内容
+                    titleElement.textContent = newTitleText;
+                    difficultyElement.className = `badge ${getDifficultyClass(updatedQuestion.difficulty)}`;
+                    difficultyElement.textContent = updatedQuestion.difficulty;
+                    linkElement.href = updatedQuestion.leetcode_url;
+                    
+                    // 添加更新动画效果
+                    item.style.transition = 'background-color 0.3s ease';
+                    item.style.backgroundColor = '#e3f2fd';
+                    setTimeout(() => {
+                        item.style.backgroundColor = '';
+                    }, 1000);
+                }
+            }
+        });
+    }
+}
 
 // 删除题目
 function deleteQuestion(questionId) {
@@ -654,12 +860,280 @@ async function deleteQuestionConfirmed(questionId) {
         
         showAlert('题目删除成功！', 'success');
         
-        // 如果当前有打开的题目列表模态框，可以选择刷新
-        // 这里为了简单起见，我们就不自动刷新了
+        // 无感删除：直接从DOM中移除对应的题目元素
+        const questionsModal = document.getElementById('questionsModal');
+        if (questionsModal) {
+            // 找到包含该题目的列表项并移除
+            const questionItems = questionsModal.querySelectorAll('.list-group-item');
+            questionItems.forEach(item => {
+                const deleteBtn = item.querySelector(`button[onclick*="deleteQuestion(${questionId})"]`);
+                if (deleteBtn) {
+                    // 添加淡出动画效果
+                    item.style.transition = 'opacity 0.3s ease-out';
+                    item.style.opacity = '0';
+                    
+                    // 动画完成后移除元素
+                    setTimeout(() => {
+                        item.remove();
+                        
+                        // 检查是否还有题目，如果没有显示空状态
+                        const remainingItems = questionsModal.querySelectorAll('.list-group-item');
+                        if (remainingItems.length === 0) {
+                            const modalBody = questionsModal.querySelector('.modal-body');
+                            modalBody.innerHTML = `
+                                <div class="text-center py-4">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <h6>暂无题目</h6>
+                                    <p class="text-muted">该题库还没有题目</p>
+                                </div>
+                            `;
+                        } else {
+                            // 重新编号剩余题目
+                            renumberQuestions(questionsModal);
+                        }
+                    }, 300);
+                }
+            });
+        }
         
     } catch (error) {
         const message = error.response?.data?.error || '删除失败';
         showAlert(message, 'danger');
+    }
+}
+
+// 重新编号题目列表
+function renumberQuestions(modal) {
+    const questionItems = modal.querySelectorAll('.list-group-item');
+    questionItems.forEach((item, index) => {
+        const titleElement = item.querySelector('h6');
+        if (titleElement) {
+            const titleText = titleElement.textContent;
+            // 替换开头的数字编号
+            const newTitle = titleText.replace(/^\d+\./, `${index + 1}.`);
+            titleElement.textContent = newTitle;
+        }
+    });
+}
+
+// 共享题库相关功能
+
+// 获取当前用户ID (从JWT token中解析或从全局变量获取)
+function getCurrentUserId() {
+    if (window.currentUserId) {
+        return window.currentUserId;
+    }
+    
+    // 尝试从localStorage中的token解析用户ID
+    try {
+        const token = localStorage.getItem('token');
+        if (token) {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.user_id || payload.sub || null;
+        }
+    } catch (e) {
+        console.log('无法从token解析用户ID:', e);
+    }
+    
+    return null;
+}
+
+// 判断用户是否可以编辑题库
+function canEditBank(bank) {
+    if (bank.is_official) {
+        return false; // 官方题库不能编辑
+    }
+    
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) {
+        return false;
+    }
+    
+    // 用户可以编辑自己创建的题库（包括Fork的题库）
+    return bank.created_by === currentUserId;
+}
+
+// 共享题库
+async function shareQuestionBank(bankId) {
+    if (!confirm('确定要将此题库设为共享吗？共享后其他用户可以看到和Fork此题库。')) {
+        return;
+    }
+    
+    try {
+        await axios.post(`/api/questionbanks/${bankId}/share`);
+        showAlert('题库已设为共享！', 'success');
+        loadQuestionBanks();
+    } catch (error) {
+        const message = error.response?.data?.error || '设置共享失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// 取消共享题库
+async function unshareQuestionBank(bankId) {
+    if (!confirm('确定要取消共享此题库吗？取消后其他用户将无法看到此题库。')) {
+        return;
+    }
+    
+    try {
+        await axios.delete(`/api/questionbanks/${bankId}/share`);
+        showAlert('题库已取消共享！', 'success');
+        loadQuestionBanks();
+    } catch (error) {
+        const message = error.response?.data?.error || '取消共享失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// 切换Star状态
+async function toggleStarQuestionBank(bankId) {
+    try {
+        // 先检查当前是否已收藏
+        const response = await axios.get('/api/starred-questionbanks');
+        const starredBanks = response.data;
+        const isStarred = starredBanks.some(bank => bank.id === bankId);
+        
+        if (isStarred) {
+            await unstarQuestionBank(bankId);
+        } else {
+            await starQuestionBank(bankId);
+        }
+    } catch (error) {
+        console.error('切换收藏状态失败:', error);
+        showAlert('操作失败', 'danger');
+    }
+}
+
+// Star题库
+async function starQuestionBank(bankId) {
+    try {
+        await axios.post(`/api/questionbanks/${bankId}/star`);
+        showAlert('题库已收藏！', 'success');
+        
+        // 更新按钮状态
+        const starBtn = document.getElementById(`starBtn${bankId}`);
+        const starText = document.getElementById(`starText${bankId}`);
+        if (starBtn && starText) {
+            starText.textContent = '已收藏';
+            starBtn.classList.remove('btn-outline-warning');
+            starBtn.classList.add('btn-warning');
+        }
+        
+        loadQuestionBanks();
+    } catch (error) {
+        const message = error.response?.data?.error || '收藏失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// 取消Star题库
+async function unstarQuestionBank(bankId) {
+    try {
+        await axios.delete(`/api/questionbanks/${bankId}/star`);
+        showAlert('已取消收藏！', 'success');
+        
+        // 更新按钮状态
+        const starBtn = document.getElementById(`starBtn${bankId}`);
+        const starText = document.getElementById(`starText${bankId}`);
+        if (starBtn && starText) {
+            starText.textContent = '收藏';
+            starBtn.classList.remove('btn-warning');
+            starBtn.classList.add('btn-outline-warning');
+        }
+        
+        loadQuestionBanks();
+    } catch (error) {
+        const message = error.response?.data?.error || '取消收藏失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// Fork题库
+async function forkQuestionBank(bankId) {
+    const bank = questionBanks.find(b => b.id === bankId);
+    if (!bank) return;
+    
+    if (!confirm(`确定要Fork题库"${bank.name}"吗？\n\nFork后将创建一个你自己的副本，你可以在副本中添加、修改题目。`)) {
+        return;
+    }
+    
+    try {
+        const response = await axios.post(`/api/questionbanks/${bankId}/fork`);
+        showAlert('Fork成功！已创建题库副本。', 'success');
+        loadQuestionBanks();
+    } catch (error) {
+        const message = error.response?.data?.error || 'Fork失败';
+        showAlert(message, 'danger');
+    }
+}
+
+// 筛选和排序事件监听
+document.addEventListener('DOMContentLoaded', function() {
+    // 题库类型筛选
+    document.querySelectorAll('input[name="bankType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const type = this.value;
+            if (type === 'starred') {
+                loadStarredBanks();
+            } else {
+                loadQuestionBanks();
+            }
+        });
+    });
+    
+    // 排序选择
+    document.getElementById('sortBy').addEventListener('change', function() {
+        loadQuestionBanks();
+    });
+});
+
+// 加载题库列表(更新版本，支持筛选和排序)
+async function loadQuestionBanks() {
+    console.log('开始加载题库列表');
+    console.log('当前axios headers:', axios.defaults.headers.common);
+    
+    try {
+        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'all';
+        const sortBy = document.getElementById('sortBy').value;
+        
+        const params = new URLSearchParams();
+        if (bankType !== 'all') params.append('type', bankType);
+        if (sortBy) params.append('sort', sortBy);
+        
+        const url = `/api/questionbanks${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('发送请求到:', url);
+        const response = await axios.get(url);
+        console.log('题库列表响应:', response.data);
+        questionBanks = response.data;
+        renderQuestionBanks();
+    } catch (error) {
+        console.error('加载题库失败:', error);
+        document.getElementById('questionBanksList').innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5>加载失败</h5>
+                <p class="text-muted">无法加载题库列表</p>
+                <button class="btn btn-primary" onclick="loadQuestionBanks()">重试</button>
+            </div>
+        `;
+    }
+}
+
+// 加载已收藏的题库
+async function loadStarredBanks() {
+    try {
+        const response = await axios.get('/api/starred-questionbanks');
+        questionBanks = response.data;
+        renderQuestionBanks();
+    } catch (error) {
+        console.error('加载收藏题库失败:', error);
+        document.getElementById('questionBanksList').innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-star fa-3x text-warning mb-3"></i>
+                <h5>暂无收藏</h5>
+                <p class="text-muted">您还没有收藏任何题库</p>
+            </div>
+        `;
     }
 }
 
