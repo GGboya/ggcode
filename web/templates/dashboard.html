@@ -172,70 +172,75 @@
 
 <!-- 主要内容区域 -->
 <div class="row">
-    <!-- 今日学习任务 -->
+    <!-- 我的学习计划 (主要区域) -->
     <div class="col-lg-8 mb-4">
         <div class="card modern-card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 d-flex align-items-center">
-                    <i class="fas fa-brain me-2"></i>
-                    今日学习任务
-                    <span class="badge bg-primary ms-2" id="taskCount">0</span>
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    我的学习计划
+                    <span class="badge bg-primary ms-2" id="planCount">0</span>
                 </h5>
                 <div class="header-actions">
-                    <button class="btn btn-sm btn-outline-primary me-2" onclick="refreshTasks()">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                    <a href="/study-plans" class="btn btn-sm btn-primary" id="startStudyBtn">
-                        <i class="fas fa-play me-1"></i>开始学习
+                    <a href="/questionbanks" class="btn btn-sm btn-outline-secondary me-2">
+                        <i class="fas fa-database me-1"></i>题库管理
+                    </a>
+                    <a href="/study-plans" class="btn btn-sm btn-primary">
+                        <i class="fas fa-cog me-1"></i>管理计划
                     </a>
                 </div>
             </div>
             <div class="card-body">
-                <div id="dailyQuestions">
+                <div id="studyPlansMainList">
                     <div class="loading-state text-center py-5">
                         <div class="spinner-border text-primary mb-3" role="status">
                             <span class="visually-hidden">加载中...</span>
                         </div>
-                        <p class="text-muted">正在加载今日学习任务...</p>
+                        <p class="text-muted">正在加载学习计划...</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- 右侧面板 -->
-    <div class="col-lg-4">
-        <!-- 学习计划 -->
-        <div class="card modern-card mb-4">
+    <!-- 学习活动 & 进度 -->
+    <div class="col-lg-4 mb-4">
+        <div class="card modern-card">
             <div class="card-header">
                 <h6 class="mb-0 d-flex align-items-center">
-                    <i class="fas fa-clipboard-list me-2"></i>
-                    我的学习计划
+                    <i class="fas fa-chart-line me-2"></i>
+                    学习进度
                 </h6>
             </div>
             <div class="card-body">
-                <div id="studyPlansList">
+                <div id="studyProgressSummary">
                     <div class="loading-state text-center py-3">
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                         <p class="mt-2 text-muted small">加载中...</p>
                     </div>
                 </div>
                 
-                <div class="mt-3">
-                    <div class="d-grid gap-2">
-                        <a href="/study-plans" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-cog me-1"></i>管理学习计划
-                        </a>
-                        <a href="/questionbanks" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-database me-1"></i>题库管理
-                        </a>
+                <!-- 最近学习活动 -->
+                <div class="mt-4">
+                    <h6 class="mb-3">
+                        <i class="fas fa-history me-2"></i>
+                        最近活动
+                    </h6>
+                    <div id="recentActivity">
+                        <div class="text-center py-3">
+                            <small class="text-muted">暂无学习记录</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- 学习激励与提示 -->
-        <div class="card modern-card">
+    </div>
+</div>
+
+<!-- 学习激励与提示 (横向布局) -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card modern-card h-100">
             <div class="card-body text-center">
                 <div class="motivation-icon mb-3">
                     <i class="fas fa-quote-left fa-2x" style="color: var(--primary-gradient);"></i>
@@ -246,15 +251,35 @@
                 <footer class="blockquote-footer">
                     <cite title="Source Title">每日励志</cite>
                 </footer>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card modern-card h-100">
+            <div class="card-body">
+                <h6 class="mb-3">
+                    <i class="fas fa-lightbulb me-2 text-warning"></i>
+                    学习小贴士
+                </h6>
+                <div class="tip-card p-3" style="background: var(--light-bg); border-radius: 12px;">
+                    <p class="small mb-2" id="studyTip">加载中...</p>
+                    <small class="text-muted">💡 点击刷新获取新的建议</small>
+                </div>
                 
-                <div class="study-tips mt-4 pt-4" style="border-top: 1px solid rgba(0,0,0,0.1);">
+                <!-- 快捷操作 -->
+                <div class="mt-4">
                     <h6 class="mb-3">
-                        <i class="fas fa-lightbulb me-2 text-warning"></i>
-                        学习小贴士
+                        <i class="fas fa-rocket me-2"></i>
+                        快捷操作
                     </h6>
-                    <div class="tip-card p-3" style="background: var(--light-bg); border-radius: 12px;">
-                        <p class="small mb-2" id="studyTip">加载中...</p>
-                        <small class="text-muted">💡 点击刷新获取新的建议</small>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="showRandomTip()">
+                            <i class="fas fa-dice me-1"></i>换个提示
+                        </button>
+                        <a href="/study-plans" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>创建学习计划
+                        </a>
                     </div>
                 </div>
             </div>
@@ -315,9 +340,7 @@
 
 <!-- Dashboard页面脚本 -->
 <script>
-let dailyQuestions = [];
 let checkInStats = {};
-let selectedStudyPlan = null;
 
 // 励志名言和学习贴士
 const quotes = [
@@ -347,10 +370,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         console.log('开始加载Dashboard数据');
         loadStats();
-        loadStudyPlans();
-        loadCheckInStats().then(() => {
-            loadDailyQuestions();
-        });
+        loadCheckInStats();
+        loadMainStudyPlans();
+        loadStudyProgressSummary();
     }, 200);
     
     // 设置定时刷新
@@ -530,22 +552,20 @@ function updateCheckinProgress() {
     }
 }
 
-// 加载今日题目
-async function loadDailyQuestions() {
-    console.log('开始加载今日题目');
+// 加载主要学习计划列表
+async function loadMainStudyPlans() {
+    console.log('开始加载主要学习计划列表');
     
     try {
-        // 首先获取用户的学习计划
         console.log('发送请求获取学习计划');
         const plansResponse = await axios.get('/api/study-plans');
         console.log('学习计划响应:', plansResponse.data);
         
         const studyPlans = plansResponse.data;
+        document.getElementById('planCount').textContent = studyPlans.length;
         
         if (studyPlans.length === 0) {
-            // 没有学习计划，显示引导用户创建
-            document.getElementById('taskCount').textContent = '0';
-            document.getElementById('dailyQuestions').innerHTML = `
+            document.getElementById('studyPlansMainList').innerHTML = `
                 <div class="empty-state text-center py-5">
                     <i class="fas fa-clipboard-list fa-4x text-primary mb-3"></i>
                     <h5 class="text-primary mb-3">还没有学习计划</h5>
@@ -563,38 +583,14 @@ async function loadDailyQuestions() {
             return;
         }
         
-        // 合并所有学习计划的今日任务
-        let allDailyQuestions = [];
-        
-        for (const plan of studyPlans) {
-            try {
-                console.log(`获取学习计划 ${plan.id} 的今日任务`);
-                const questionsResponse = await axios.get(`/api/study-plan/${plan.id}/daily-questions`);
-                const questions = questionsResponse.data || [];
-                
-                // 为每个题目添加学习计划信息
-                questions.forEach(item => {
-                    item.study_plan = plan;
-                });
-                
-                allDailyQuestions = allDailyQuestions.concat(questions);
-            } catch (error) {
-                console.warn(`获取学习计划 ${plan.id} 的任务失败:`, error);
-            }
-        }
-        
-        console.log('合并后的今日题目:', allDailyQuestions);
-        dailyQuestions = allDailyQuestions;
-        
-        document.getElementById('taskCount').textContent = dailyQuestions.length;
-        renderDailyQuestions();
+        renderMainStudyPlans(studyPlans);
         
     } catch (error) {
-        console.error('加载今日题目失败:', error);
-        document.getElementById('dailyQuestions').innerHTML = `
+        console.error('加载学习计划失败:', error);
+        document.getElementById('studyPlansMainList').innerHTML = `
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                加载今日任务失败，请稍后重试
+                加载学习计划失败，请稍后重试
                 <br>
                 <small class="text-muted">错误信息: ${error.response?.data?.error || error.message}</small>
             </div>
@@ -602,65 +598,47 @@ async function loadDailyQuestions() {
     }
 }
 
-// 渲染今日题目
-function renderDailyQuestions() {
-    const container = document.getElementById('dailyQuestions');
+// 渲染主要学习计划列表
+function renderMainStudyPlans(studyPlans) {
+    let html = '<div class="row">';
     
-    if (dailyQuestions.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state text-center py-5">
-                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-                <h5 class="text-success mb-3">今日任务已完成！</h5>
-                <p class="text-muted mb-4">恭喜你完成了今天的学习任务，明天继续加油！</p>
-                <a href="/study-plans" class="btn btn-outline-primary">
-                    <i class="fas fa-cog me-1"></i>管理学习计划
-                </a>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '<div class="questions-list">';
-    
-    dailyQuestions.forEach((item, index) => {
-        const question = item.question;
-        const isReview = item.is_review;
-        const studyPlan = item.study_plan;
-        
-        const difficultyClass = getDifficultyClass(question.difficulty);
-        const statusIcon = isReview ? '<i class="fas fa-redo"></i>' : '<i class="fas fa-play"></i>';
+    studyPlans.forEach((plan, index) => {
+        const bankName = plan.question_bank ? plan.question_bank.name : '未知题库';
+        const dailyCount = plan.daily_count || 5;
+        const createdDate = new Date(plan.created_at).toLocaleDateString();
         
         html += `
-            <div class="question-item mb-3" data-question-id="${question.id}">
-                <div class="d-flex align-items-center justify-content-between p-3 rounded-3" style="background: var(--light-bg);">
-                    <div class="question-info flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="question-number me-2">${index + 1}</span>
-                            <h6 class="mb-0 me-2">${question.title}</h6>
-                            <span class="badge ${difficultyClass}">${question.difficulty}</span>
-                            ${isReview ? '<span class="badge bg-warning text-dark ms-1">复习</span>' : '<span class="badge bg-primary ms-1">新题</span>'}
-                        </div>
-                        <div class="question-meta">
+            <div class="col-md-6 mb-3">
+                <div class="study-plan-card h-100 p-4 rounded-3" style="background: var(--light-bg); border: 2px solid transparent; transition: all 0.3s ease;">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 fw-bold">${bankName}</h6>
                             <small class="text-muted">
-                                <i class="fas fa-book me-1"></i>
-                                ${studyPlan ? studyPlan.question_bank.name : '未知题库'}
-                                <i class="fas fa-clock ms-2 me-1"></i>
-                                ${isReview ? '复习时间到' : '首次学习'}
+                                <i class="fas fa-calendar-day me-1"></i>
+                                每日 ${dailyCount} 题
                             </small>
                         </div>
+                        <div class="text-end">
+                            <a href="/study?plan=${plan.id}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-play me-1"></i>开始学习
+                            </a>
+                        </div>
                     </div>
-                    <div class="question-actions">
-                        <a href="${question.leetcode_url}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
-                            <i class="fas fa-external-link-alt"></i>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            创建于 ${createdDate}
+                        </small>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="/study-plans" class="btn btn-outline-secondary btn-xs">
+                            <i class="fas fa-cog"></i> 管理
                         </a>
-                        ${studyPlan && studyPlan.id ? 
-                            `<a href="/study?plan=${studyPlan.id}" class="btn btn-sm btn-primary">
-                                ${statusIcon} 开始
-                            </a>` :
-                            `<a href="/study-plans" class="btn btn-sm btn-warning">
-                                <i class="fas fa-exclamation-triangle"></i> 需要学习计划
-                            </a>`
-                        }
+                        <button class="btn btn-outline-info btn-xs" onclick="loadPlanProgress(${plan.id})">
+                            <i class="fas fa-chart-bar"></i> 进度
+                        </button>
                     </div>
                 </div>
             </div>
@@ -668,7 +646,126 @@ function renderDailyQuestions() {
     });
     
     html += '</div>';
-    container.innerHTML = html;
+    
+    if (studyPlans.length % 2 !== 0) {
+        html += `
+            <div class="text-center mt-4">
+                <a href="/study-plans" class="btn btn-outline-primary">
+                    <i class="fas fa-plus me-1"></i>创建更多学习计划
+                </a>
+            </div>
+        `;
+    }
+    
+    document.getElementById('studyPlansMainList').innerHTML = html;
+}
+
+// 加载学习进度汇总
+async function loadStudyProgressSummary() {
+    console.log('开始加载学习进度汇总');
+    
+    try {
+        const [statsResponse, progressResponse] = await Promise.all([
+            axios.get('/api/study-stats'),
+            axios.get('/api/questionbanks-progress')
+        ]);
+        
+        const stats = statsResponse.data;
+        const progressList = progressResponse.data;
+        
+        renderStudyProgressSummary(stats, progressList);
+        
+    } catch (error) {
+        console.error('加载学习进度汇总失败:', error);
+        document.getElementById('studyProgressSummary').innerHTML = `
+            <div class="alert alert-warning alert-sm">
+                <small>加载进度信息失败</small>
+            </div>
+        `;
+    }
+}
+
+// 渲染学习进度汇总
+function renderStudyProgressSummary(stats, progressList) {
+    const totalQuestions = progressList.reduce((sum, p) => sum + p.total_questions, 0);
+    const studiedCount = progressList.reduce((sum, p) => sum + p.studied_count, 0);
+    const completedCount = progressList.reduce((sum, p) => sum + p.completed_count, 0);
+    
+    const studyRate = totalQuestions > 0 ? Math.round((studiedCount / totalQuestions) * 100) : 0;
+    const masteryRate = totalQuestions > 0 ? Math.round((completedCount / totalQuestions) * 100) : 0;
+    
+    const html = `
+        <div class="progress-summary">
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small text-muted">总体学习进度</span>
+                    <span class="small fw-bold text-primary">${studyRate}%</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-primary" style="width: ${studyRate}%"></div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small text-muted">掌握率</span>
+                    <span class="small fw-bold text-success">${masteryRate}%</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-success" style="width: ${masteryRate}%"></div>
+                </div>
+            </div>
+            
+            <div class="row text-center">
+                <div class="col-4">
+                    <div class="metric-item">
+                        <div class="metric-number text-primary">${studiedCount}</div>
+                        <div class="metric-label">已学习</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="metric-item">
+                        <div class="metric-number text-success">${completedCount}</div>
+                        <div class="metric-label">已掌握</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="metric-item">
+                        <div class="metric-number text-warning">${stats.today_review || 0}</div>
+                        <div class="metric-label">待复习</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('studyProgressSummary').innerHTML = html;
+}
+
+// 随机显示提示
+function showRandomTip() {
+    const randomTip = studyTips[Math.floor(Math.random() * studyTips.length)];
+    document.getElementById('studyTip').textContent = randomTip;
+    
+    // 添加一个小动画效果
+    const tipElement = document.getElementById('studyTip');
+    tipElement.style.opacity = '0.5';
+    setTimeout(() => {
+        tipElement.style.opacity = '1';
+    }, 200);
+}
+
+// 加载学习计划进度详情
+async function loadPlanProgress(planId) {
+    try {
+        const response = await axios.get(`/api/study-plan/${planId}/progress`);
+        const progress = response.data;
+        
+        showAlert(`学习进度：${progress.progress_rate}% | 掌握率：${progress.mastery_rate}%`, 'info');
+    } catch (error) {
+        console.error('加载学习计划进度失败:', error);
+        showAlert('加载进度信息失败', 'warning');
+    }
 }
 
 // 获取难度样式类
@@ -681,84 +778,9 @@ function getDifficultyClass(difficulty) {
     }
 }
 
-// 加载学习计划
-async function loadStudyPlans() {
-    try {
-        const response = await axios.get('/api/study-plans');
-        const studyPlans = response.data;
-        
-        renderStudyPlans(studyPlans);
-        
-    } catch (error) {
-        console.error('加载学习计划失败:', error);
-        document.getElementById('studyPlansList').innerHTML = `
-            <div class="alert alert-warning alert-sm">
-                <small>加载学习计划失败</small>
-            </div>
-        `;
-    }
-}
 
-// 渲染学习计划
-function renderStudyPlans(studyPlans) {
-    const container = document.getElementById('studyPlansList');
-    
-    if (studyPlans.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-3">
-                <i class="fas fa-clipboard-list fa-2x text-muted mb-2"></i>
-                <p class="text-muted small mb-2">暂无学习计划</p>
-                <a href="/study-plans" class="btn btn-sm btn-primary">
-                    <i class="fas fa-plus me-1"></i>创建计划
-                </a>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '';
-    studyPlans.slice(0, 3).forEach(plan => {
-        // 如果没有题库名称，显示默认名称
-        const bankName = plan.question_bank ? plan.question_bank.name : '未知题库';
-        const dailyCount = plan.daily_count || 5;
-        
-        html += `
-            <div class="study-plan-item mb-3 p-3 rounded-3" style="background: var(--light-bg);">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h6 class="mb-0">${bankName}</h6>
-                    <a href="/study?plan=${plan.id}" class="btn btn-xs btn-primary">
-                        <i class="fas fa-play"></i>
-                    </a>
-                </div>
-                <div class="mb-2">
-                    <small class="text-muted">
-                        <i class="fas fa-calendar-day me-1"></i>每日 ${dailyCount} 题
-                    </small>
-                </div>
-                <small class="text-muted">
-                    <i class="fas fa-clock me-1"></i>
-                    创建于 ${new Date(plan.created_at).toLocaleDateString()}
-                </small>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
-}
 
-// 刷新任务
-function refreshTasks() {
-    const button = event.target.closest('button');
-    const icon = button.querySelector('i');
-    
-    icon.classList.add('fa-spin');
-    
-    loadDailyQuestions().finally(() => {
-        setTimeout(() => {
-            icon.classList.remove('fa-spin');
-        }, 500);
-    });
-}
+
 
 // 更新基于时间的内容
 function updateTimeBasedContent() {
@@ -1045,6 +1067,31 @@ function updateTimeBasedContent() {
     font-size: 0.75rem;
     line-height: 1.2;
     border-radius: 0.375rem;
+}
+
+.study-plan-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.study-plan-card:hover {
+    border-color: var(--bs-primary) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.metric-item {
+    padding: 0.5rem;
+}
+
+.metric-number {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: #6c757d;
 }
 </style>
 {{end}} 
