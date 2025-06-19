@@ -561,7 +561,7 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
     const difficulty = document.getElementById('questionDifficulty').value;
     
     try {
-        await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
+        const response = await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
             title: title,
             leetcode_url: url,
             difficulty: difficulty
@@ -575,11 +575,77 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
         // 清空表单
         this.reset();
         
+        // 如果题目列表模态框是打开的，动态添加新题目到列表中
+        const questionsModal = document.getElementById('questionsModal');
+        if (questionsModal && questionsModal.classList.contains('show')) {
+            addQuestionToModal(response.data, questionsModal);
+        }
+        
     } catch (error) {
         const message = error.response?.data?.error || '添加失败';
         showAlert(message, 'danger');
     }
 });
+
+// 动态添加题目到模态框列表
+function addQuestionToModal(newQuestion, modal) {
+    const modalBody = modal.querySelector('.modal-body');
+    let listGroup = modal.querySelector('.list-group');
+    
+    // 如果当前显示的是空状态，先清除它
+    if (!listGroup) {
+        const emptyState = modalBody.querySelector('.text-center');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        // 创建新的列表容器
+        modalBody.innerHTML = '<div class="list-group"></div>';
+        listGroup = modal.querySelector('.list-group');
+    }
+    
+    // 计算新题目的编号
+    const existingItems = listGroup.querySelectorAll('.list-group-item');
+    const newIndex = existingItems.length + 1;
+    
+    // 获取当前题库信息来判断是否可编辑
+    const bank = questionBanks.find(b => b.id === currentBankId);
+    const canEdit = bank && canEditBank(bank);
+    
+    // 创建新题目的HTML
+    const newQuestionHtml = `
+        <div class="list-group-item" style="opacity: 0;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${newIndex}. ${newQuestion.title}</h6>
+                    <span class="badge ${getDifficultyClass(newQuestion.difficulty)}">${newQuestion.difficulty}</span>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <a href="${newQuestion.leetcode_url}" target="_blank" class="btn btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i> 做题
+                    </a>
+                    ${canEdit ? `
+                        <button class="btn btn-outline-warning" onclick="editQuestion(${newQuestion.id})">
+                            <i class="fas fa-edit"></i> 编辑
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteQuestion(${newQuestion.id})">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 添加到列表末尾
+    listGroup.insertAdjacentHTML('beforeend', newQuestionHtml);
+    
+    // 获取新添加的元素并添加淡入动画
+    const newElement = listGroup.lastElementChild;
+    newElement.style.transition = 'opacity 0.3s ease-in';
+    setTimeout(() => {
+        newElement.style.opacity = '1';
+    }, 50);
+}
 
 // 编辑题库
 function editQuestionBank(bankId) {
@@ -713,7 +779,7 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
     const difficulty = document.getElementById('editQuestionDifficulty').value;
     
     try {
-        await axios.put(`/api/questions/${window.currentQuestionId}`, {
+        const response = await axios.put(`/api/questions/${window.currentQuestionId}`, {
             title: title,
             leetcode_url: url,
             difficulty: difficulty
@@ -724,14 +790,56 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
         // 关闭模态框
         bootstrap.Modal.getInstance(document.getElementById('editQuestionModal')).hide();
         
-        // 如果当前有打开的题目列表模态框，可以选择刷新
-        // 这里为了简单起见，我们就不自动刷新了
+        // 无感更新：直接更新题目列表中的对应项
+        updateQuestionInModal(response.data || {
+            id: window.currentQuestionId,
+            title: title,
+            leetcode_url: url,
+            difficulty: difficulty
+        });
         
     } catch (error) {
         const message = error.response?.data?.error || '更新失败';
         showAlert(message, 'danger');
     }
 });
+
+// 更新模态框中的题目信息
+function updateQuestionInModal(updatedQuestion) {
+    const questionsModal = document.getElementById('questionsModal');
+    if (questionsModal && questionsModal.classList.contains('show')) {
+        const questionItems = questionsModal.querySelectorAll('.list-group-item');
+        questionItems.forEach(item => {
+            const editBtn = item.querySelector(`button[onclick*="editQuestion(${updatedQuestion.id})"]`);
+            if (editBtn) {
+                // 找到题目标题和难度标签元素
+                const titleElement = item.querySelector('h6');
+                const difficultyElement = item.querySelector('.badge');
+                const linkElement = item.querySelector('a[target="_blank"]');
+                
+                if (titleElement && difficultyElement && linkElement) {
+                    // 保持原有的编号
+                    const titleText = titleElement.textContent;
+                    const numberPart = titleText.match(/^\d+\.\s*/);
+                    const newTitleText = numberPart ? numberPart[0] + updatedQuestion.title : updatedQuestion.title;
+                    
+                    // 更新内容
+                    titleElement.textContent = newTitleText;
+                    difficultyElement.className = `badge ${getDifficultyClass(updatedQuestion.difficulty)}`;
+                    difficultyElement.textContent = updatedQuestion.difficulty;
+                    linkElement.href = updatedQuestion.leetcode_url;
+                    
+                    // 添加更新动画效果
+                    item.style.transition = 'background-color 0.3s ease';
+                    item.style.backgroundColor = '#e3f2fd';
+                    setTimeout(() => {
+                        item.style.backgroundColor = '';
+                    }, 1000);
+                }
+            }
+        });
+    }
+}
 
 // 删除题目
 function deleteQuestion(questionId) {
@@ -747,28 +855,60 @@ async function deleteQuestionConfirmed(questionId) {
         
         showAlert('题目删除成功！', 'success');
         
-        // 关闭当前题目列表模态框并重新打开以刷新
+        // 无感删除：直接从DOM中移除对应的题目元素
         const questionsModal = document.getElementById('questionsModal');
         if (questionsModal) {
-            const modal = bootstrap.Modal.getInstance(questionsModal);
-            if (modal) {
-                modal.hide();
-                
-                // 等待模态框关闭动画完成后重新打开
-                setTimeout(() => {
-                    // 从题目的question_bank_id找到对应的题库并重新显示
-                    const currentBankId = window.currentViewingBankId;
-                    if (currentBankId) {
-                        viewQuestions(currentBankId);
-                    }
-                }, 300);
-            }
+            // 找到包含该题目的列表项并移除
+            const questionItems = questionsModal.querySelectorAll('.list-group-item');
+            questionItems.forEach(item => {
+                const deleteBtn = item.querySelector(`button[onclick*="deleteQuestion(${questionId})"]`);
+                if (deleteBtn) {
+                    // 添加淡出动画效果
+                    item.style.transition = 'opacity 0.3s ease-out';
+                    item.style.opacity = '0';
+                    
+                    // 动画完成后移除元素
+                    setTimeout(() => {
+                        item.remove();
+                        
+                        // 检查是否还有题目，如果没有显示空状态
+                        const remainingItems = questionsModal.querySelectorAll('.list-group-item');
+                        if (remainingItems.length === 0) {
+                            const modalBody = questionsModal.querySelector('.modal-body');
+                            modalBody.innerHTML = `
+                                <div class="text-center py-4">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <h6>暂无题目</h6>
+                                    <p class="text-muted">该题库还没有题目</p>
+                                </div>
+                            `;
+                        } else {
+                            // 重新编号剩余题目
+                            renumberQuestions(questionsModal);
+                        }
+                    }, 300);
+                }
+            });
         }
         
     } catch (error) {
         const message = error.response?.data?.error || '删除失败';
         showAlert(message, 'danger');
     }
+}
+
+// 重新编号题目列表
+function renumberQuestions(modal) {
+    const questionItems = modal.querySelectorAll('.list-group-item');
+    questionItems.forEach((item, index) => {
+        const titleElement = item.querySelector('h6');
+        if (titleElement) {
+            const titleText = titleElement.textContent;
+            // 替换开头的数字编号
+            const newTitle = titleText.replace(/^\d+\./, `${index + 1}.`);
+            titleElement.textContent = newTitle;
+        }
+    });
 }
 
 // 共享题库相关功能
