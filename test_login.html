@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录测试页面</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
+</head>
+<body>
+    <h1>登录测试页面</h1>
+    
+    <form id="testLoginForm">
+        <div>
+            <label for="username">用户名:</label>
+            <input type="text" id="username" value="test" required>
+        </div>
+        <div>
+            <label for="password">密码:</label>
+            <input type="password" id="password" value="test123" required>
+        </div>
+        <button type="submit">登录</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        console.log('测试页面脚本已加载');
+        
+        // 测试登录
+        document.getElementById('testLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            console.log('测试表单提交');
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            console.log('尝试登录:', { username, password });
+            
+            try {
+                console.log('发送登录请求到:', '/api/login');
+                
+                const response = await axios.post('/api/login', {
+                    username: username,
+                    password: password
+                });
+                
+                console.log('登录成功:', response.data);
+                resultDiv.innerHTML = '<p style="color: green;">登录成功: ' + JSON.stringify(response.data) + '</p>';
+                
+            } catch (error) {
+                console.error('登录失败:', error);
+                const errorMsg = error.response?.data?.error || error.message;
+                resultDiv.innerHTML = '<p style="color: red;">登录失败: ' + errorMsg + '</p>';
+            }
+        });
+        
+        // 测试基本功能
+        console.log('测试axios:', typeof axios);
+        console.log('当前URL:', window.location.href);
+    </script>
+</body>
+</html> 

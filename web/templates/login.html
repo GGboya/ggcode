@@ -130,10 +130,11 @@
         </div>
     </div>
 </div>
-{{end}}
 
-{{define "login-scripts"}}
+<!-- 登录页面脚本 -->
 <script>
+console.log('登录页面脚本已加载');
+
 // 密码显示/隐藏切换
 function togglePassword() {
     const passwordInput = document.getElementById('password');
@@ -153,6 +154,7 @@ function togglePassword() {
 // 登录表单处理
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    console.log('登录表单提交事件触发');
     
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
@@ -201,7 +203,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         // 设置cookie（后端已经设置了，但为了确保前端也能访问，再设置一次）
         const expires = new Date();
         expires.setTime(expires.getTime() + (7 * 24 * 60 * 60 * 1000));
-        document.cookie = `token=${token}; expires=${expires.toUTCString()}; path=/`;
+        document.cookie = `token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
         
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
@@ -230,11 +232,13 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
                 console.log('登录成功，正在跳转到dashboard...');
                 console.log('当前页面:', window.location.href);
                 console.log('Cookie设置情况:', document.cookie);
+                console.log('localStorage token:', localStorage.getItem('token'));
+                console.log('axios默认headers:', axios.defaults.headers.common);
                 
-                // 使用 window.location.href 跳转，让cookie生效
+                // 直接跳转，不使用延迟
                 window.location.href = '/dashboard';
-            }, 500);
-        }, 1500);
+            }, 300);
+        }, 500);
         
     } catch (error) {
         console.error('Login error:', error);
@@ -265,6 +269,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 
 // 页面加载动画
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM内容已加载，开始初始化登录页面');
     // 登录卡片淡入动画
     const loginCard = document.querySelector('.login-card');
     const welcomePanel = document.querySelector('.welcome-panel');
