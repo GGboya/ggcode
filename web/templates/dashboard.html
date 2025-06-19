@@ -341,16 +341,26 @@ const studyTips = [
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard DOM加载完成');
     initializePage();
+    
+    // 等待base.html的认证流程完成后再加载数据
+    // 这里我们不直接调用API，而是等待base.html的triggerPageDataLoad调用
+    console.log('Dashboard初始化完成，等待认证流程触发数据加载');
+    
+    // 设置定时刷新
+    setInterval(updateTimeBasedContent, 60000); // 每分钟更新一次
+});
+
+// 提供给base.html调用的数据加载函数
+function loadDashboardData() {
+    console.log('开始加载Dashboard数据');
     loadStats();
     loadStudyPlans();
     loadCheckInStats().then(() => {
         loadDailyQuestions();
     });
-    
-    // 设置定时刷新
-    setInterval(updateTimeBasedContent, 60000); // 每分钟更新一次
-});
+}
 
 // 初始化页面
 function initializePage() {
@@ -408,8 +418,13 @@ function animateCards() {
 
 // 加载统计信息
 async function loadStats() {
+    console.log('开始加载统计信息');
+    console.log('当前axios headers:', axios.defaults.headers.common);
+    
     try {
+        console.log('发送请求到 /api/study-stats');
         const response = await axios.get('/api/study-stats');
+        console.log('统计信息响应:', response.data);
         const stats = response.data;
         
         // 更新统计数字
@@ -469,8 +484,12 @@ function updateProgressBars(stats) {
 
 // 加载打卡统计
 async function loadCheckInStats() {
+    console.log('开始加载打卡统计');
+    
     try {
+        console.log('发送请求到 /api/checkin-stats');
         const response = await axios.get('/api/checkin-stats');
+        console.log('打卡统计响应:', response.data);
         checkInStats = response.data;
         
         document.getElementById('totalCheckInDays').textContent = checkInStats.total_days || 0;
@@ -515,8 +534,12 @@ function updateCheckinProgress() {
 
 // 加载今日题目
 async function loadDailyQuestions() {
+    console.log('开始加载今日题目');
+    
     try {
+        console.log('发送请求到 /api/daily-questions');
         const response = await axios.get('/api/daily-questions');
+        console.log('今日题目响应:', response.data);
         dailyQuestions = response.data;
         
         document.getElementById('taskCount').textContent = dailyQuestions.length;

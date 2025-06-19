@@ -529,49 +529,64 @@
         };
         window.currentUserId = getUserId();
         
-        // 设置axios默认配置（添加错误处理）
-        try {
-            // 配置axios基本设置
-            if (typeof axios !== 'undefined') {
-                // 移除withCredentials设置，让服务器通过Set-Cookie头来处理
-                // axios.defaults.withCredentials = true;
-            }
+        // 设置axios默认配置
+        function setupAxios() {
+            console.log('开始设置axios配置');
             
-            let token = localStorage.getItem('token');
-            
-            // 如果localStorage中没有token，尝试从cookie获取
-            if (!token) {
-                const cookies = document.cookie.split(';');
-                for (let cookie of cookies) {
-                    const [name, value] = cookie.trim().split('=');
-                    if (name === 'token' && value) {
-                        token = value;
-                        // 同步到localStorage
-                        localStorage.setItem('token', token);
-                        break;
+            try {
+                if (typeof axios === 'undefined') {
+                    console.error('axios未加载');
+                    return false;
+                }
+                
+                let token = localStorage.getItem('token');
+                console.log('从localStorage获取token:', token ? '存在' : '不存在');
+                
+                // 如果localStorage中没有token，尝试从cookie获取
+                if (!token) {
+                    console.log('尝试从cookie获取token');
+                    const cookies = document.cookie.split(';');
+                    for (let cookie of cookies) {
+                        const [name, value] = cookie.trim().split('=');
+                        if (name === 'token' && value) {
+                            token = value;
+                            localStorage.setItem('token', token);
+                            console.log('从cookie获取到token并同步到localStorage');
+                            break;
+                        }
                     }
                 }
-            }
-            
-            if (token && typeof axios !== 'undefined') {
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                
+                if (token) {
+                    console.log('设置axios Authorization header');
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                } else {
+                    console.log('没有找到token');
+                }
                 
                 // 添加请求拦截器
                 axios.interceptors.response.use(
-                    response => response,
+                    response => {
+                        console.log('API请求成功:', response.config.url);
+                        return response;
+                    },
                     error => {
+                        console.error('API请求失败:', error.config?.url, error.response?.status);
                         if (error.response && error.response.status === 401) {
+                            console.log('认证失败，清除token并跳转登录');
                             localStorage.removeItem('token');
-                            // 清除cookie
                             document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
                             window.location.href = '/login';
                         }
                         return Promise.reject(error);
                     }
                 );
+                
+                return true;
+            } catch (e) {
+                console.error('Axios配置失败:', e.message);
+                return false;
             }
-        } catch (e) {
-            console.log('Axios configuration skipped:', e.message);
         }
 
         // 通用函数
@@ -608,6 +623,12 @@
 
         // 页面加载完成后添加动画
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成，当前页面:', window.location.pathname);
+            
+            // 设置axios配置
+            const axiosReady = setupAxios();
+            console.log('Axios配置结果:', axiosReady);
+            
             // 为所有卡片添加淡入动画
             const cards = document.querySelectorAll('.card');
             cards.forEach((card, index) => {
@@ -624,59 +645,109 @@
             const token = localStorage.getItem('token');
             const currentPath = window.location.pathname;
             
+            console.log('检查认证状态 - 页面:', currentPath, 'Token:', token ? '存在' : '不存在');
+            
             // 如果在登录或注册页面，不需要检查认证
             if (currentPath === '/login' || currentPath === '/register') {
+                console.log('在登录/注册页面，跳过认证检查');
                 return;
             }
             
             // 如果有token，验证其有效性
             if (token) {
-                // 验证token有效性
+                console.log('有token，验证有效性');
                 validateTokenAndShowContent(token);
             } else {
                 // 没有token且在需要认证的页面，重定向到登录
                 const authRequiredPages = ['/dashboard', '/questionbanks', '/study-plans', '/study'];
                 if (authRequiredPages.includes(currentPath)) {
+                    console.log('需要认证的页面但没有token，重定向到登录');
                     showAlert('请先登录', 'warning');
                     setTimeout(() => {
                         window.location.href = '/login';
                     }, 1500);
+                } else {
+                    console.log('不需要认证的页面');
                 }
             }
         }
         
         // 验证token有效性并显示内容
         async function validateTokenAndShowContent(token) {
+            console.log('开始验证token有效性');
+            
             try {
-                // 设置axios header
+                // 确保axios header设置
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                console.log('已设置Authorization header');
                 
-                // 通过调用简单的API验证token（可能需要根据你的后端调整）
-                // 先尝试直接显示内容，如果后续API调用失败再处理
+                // 显示认证内容
                 const authRequiredElements = document.querySelectorAll('.auth-required');
+                console.log('找到需要认证的元素:', authRequiredElements.length);
                 authRequiredElements.forEach(element => {
                     element.classList.add('authenticated');
                 });
                 
-                // 异步验证token（不阻塞页面显示）
-                setTimeout(async () => {
-                    try {
-                        await axios.get('/api/study-stats');
-                    } catch (error) {
-                        if (error.response && error.response.status === 401) {
-                            localStorage.removeItem('token');
-                            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-                            showAlert('登录已过期，请重新登录', 'warning');
-                            setTimeout(() => {
-                                window.location.href = '/login';
-                            }, 1500);
-                        }
-                    }
-                }, 1000);
+                // 立即触发页面特定的数据加载
+                triggerPageDataLoad();
                 
             } catch (error) {
-                console.error('Token validation error:', error);
+                console.error('Token验证出错:', error);
             }
+        }
+        
+        // 触发页面特定的数据加载
+        function triggerPageDataLoad() {
+            const currentPath = window.location.pathname;
+            console.log('触发页面数据加载:', currentPath);
+            
+            // 等待一小段时间确保页面初始化完成
+            setTimeout(() => {
+                try {
+                    switch(currentPath) {
+                        case '/dashboard':
+                            if (typeof loadDashboardData === 'function') {
+                                console.log('调用dashboard的loadDashboardData');
+                                loadDashboardData();
+                            } else {
+                                console.log('loadDashboardData函数不存在，尝试单独调用');
+                                if (typeof loadStats === 'function') {
+                                    console.log('调用dashboard的loadStats');
+                                    loadStats();
+                                }
+                                if (typeof loadCheckInStats === 'function') {
+                                    console.log('调用dashboard的loadCheckInStats');
+                                    loadCheckInStats();
+                                }
+                                if (typeof loadDailyQuestions === 'function') {
+                                    console.log('调用dashboard的loadDailyQuestions');
+                                    loadDailyQuestions();
+                                }
+                            }
+                            break;
+                        case '/questionbanks':
+                            if (typeof loadQuestionBanks === 'function') {
+                                console.log('调用questionbanks的loadQuestionBanks');
+                                loadQuestionBanks();
+                            }
+                            break;
+                        case '/study-plans':
+                            if (typeof loadStudyPlans === 'function') {
+                                console.log('调用study-plans的loadStudyPlans');
+                                loadStudyPlans();
+                            }
+                            if (typeof loadQuestionBanksForPlan === 'function') {
+                                console.log('调用study-plans的loadQuestionBanksForPlan');
+                                loadQuestionBanksForPlan();
+                            }
+                            break;
+                        default:
+                            console.log('未知页面，不触发特定数据加载');
+                    }
+                } catch (error) {
+                    console.error('触发页面数据加载时出错:', error);
+                }
+            }, 100);
         }
     </script>
 </body>

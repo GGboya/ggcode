@@ -205,7 +205,13 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         expires.setTime(expires.getTime() + (7 * 24 * 60 * 60 * 1000));
         document.cookie = `token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
         
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // 立即设置axios header
+        if (typeof axios !== 'undefined') {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            console.log('已设置axios Authorization header:', axios.defaults.headers.common['Authorization']);
+        } else {
+            console.error('axios未定义，无法设置Authorization header');
+        }
         
         // 清除任何现有的认证检查定时器
         if (window.authCheckTimer) {
