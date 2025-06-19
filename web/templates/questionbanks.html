@@ -320,16 +320,60 @@ function renderQuestionBanks() {
     const container = document.getElementById('questionBanksList');
     
     if (questionBanks.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="fas fa-book fa-3x text-muted mb-3"></i>
-                <h5>暂无题库</h5>
-                <p class="text-muted">创建你的第一个题库开始学习</p>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBankModal">
-                    <i class="fas fa-plus"></i> 创建题库
-                </button>
-            </div>
-        `;
+        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
+        let emptyStateHTML = '';
+        
+        switch (bankType) {
+            case 'official':
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-award fa-3x text-muted mb-3"></i>
+                        <h5>暂无官方题库</h5>
+                        <p class="text-muted">官方题库正在准备中，敬请期待</p>
+                    </div>
+                `;
+                break;
+            case 'shared':
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-share-alt fa-3x text-muted mb-3"></i>
+                        <h5>暂无共享题库</h5>
+                        <p class="text-muted">还没有用户分享题库，您可以成为第一个</p>
+                    </div>
+                `;
+                break;
+            case 'personal':
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <h5>暂无个人题库</h5>
+                        <p class="text-muted">创建你的第一个题库开始学习</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBankModal">
+                            <i class="fas fa-plus"></i> 创建题库
+                        </button>
+                    </div>
+                `;
+                break;
+            case 'starred':
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                        <h5>暂无收藏</h5>
+                        <p class="text-muted">您还没有收藏任何题库，去发现一些有趣的题库吧</p>
+                    </div>
+                `;
+                break;
+            default:
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <h5>暂无题库</h5>
+                        <p class="text-muted">暂时没有题库</p>
+                    </div>
+                `;
+        }
+        
+        container.innerHTML = emptyStateHTML;
         return;
     }
     
@@ -1307,13 +1351,8 @@ async function loadStarredBanks() {
         renderQuestionBanks();
     } catch (error) {
         console.error('加载收藏题库失败:', error);
-        document.getElementById('questionBanksList').innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="fas fa-star fa-3x text-warning mb-3"></i>
-                <h5>暂无收藏</h5>
-                <p class="text-muted">您还没有收藏任何题库</p>
-            </div>
-        `;
+        questionBanks = []; // 设置为空数组，让renderQuestionBanks处理空状态
+        renderQuestionBanks();
     }
 }
 
