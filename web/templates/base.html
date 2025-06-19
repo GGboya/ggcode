@@ -59,7 +59,7 @@
         }
     </style>
 </head>
-<body>
+<body{{if .userID}} data-user-id="{{.userID}}"{{end}}>
     <!-- 导航栏 -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
@@ -146,6 +146,13 @@
     <script>
         // 页面加载性能优化
         let pageLoaded = false;
+        
+        // 设置全局用户信息
+        const getUserId = () => {
+            const userInfo = document.querySelector('body').dataset.userId;
+            return userInfo ? parseInt(userInfo) : null;
+        };
+        window.currentUserId = getUserId();
         
         // 设置axios默认配置（添加错误处理）
         try {

@@ -178,13 +178,57 @@ func (h *Handler) Register(c *gin.Context) {
 
 func (h *Handler) GetQuestionBanks(c *gin.Context) {
 	userID := c.GetUint("user_id")
+	bankType := c.Query("type") // "shared", "personal", "all"
+	sortBy := c.Query("sort")   // "star_count", "fork_count", "created_at"
 
 	var questionBanks []database.QuestionBank
-	// 获取官方题库和用户创建的题库
-	if err := h.db.Where("is_official = ? OR created_by = ?", true, userID).
-		Preload("Creator").Find(&questionBanks).Error; err != nil {
+	query := h.db.Model(&database.QuestionBank{})
+
+	switch bankType {
+	case "shared":
+		// 获取共享题库，包括官方题库和其他用户分享的题库
+		query = query.Where("is_official = ? OR is_shared = ?", true, true)
+	case "personal":
+		// 获取个人题库（包括自己创建的和Fork的）
+		query = query.Where("created_by = ?", userID)
+	default:
+		// 默认获取所有可见题库：官方题库、共享题库、用户创建的题库
+		query = query.Where("is_official = ? OR is_shared = ? OR created_by = ?", true, true, userID)
+	}
+
+	// 排序
+	switch sortBy {
+	case "star_count":
+		query = query.Order("star_count DESC")
+	case "fork_count":
+		query = query.Order("fork_count DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
+
+	if err := query.Preload("Creator").Preload("OriginalBank").Find(&questionBanks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取题库失败"})
 		return
+	}
+
+	// 查询当前用户是否已经Star了这些题库
+	var starredBankIDs []uint
+	if bankType != "personal" {
+		h.db.Model(&database.QuestionBankStar{}).
+			Where("user_id = ?", userID).
+			Pluck("question_bank_id", &starredBankIDs)
+	}
+
+	// 为每个题库添加是否被当前用户Star的标记
+	for i := range questionBanks {
+		questionBanks[i].ID = questionBanks[i].ID // 确保ID被包含
+		// 检查是否被当前用户Star
+		for _, starredID := range starredBankIDs {
+			if questionBanks[i].ID == starredID {
+				// 这里可以添加一个字段表示已Star，暂时通过前端处理
+				break
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, questionBanks)
@@ -773,4 +817,281 @@ func (h *Handler) DeleteQuestion(c *gin.Context) {
 
 	tx.Commit()
 	c.JSON(http.StatusOK, gin.H{"message": "题目删除成功"})
+}
+
+// 共享题库相关功能
+
+// ShareQuestionBank 将个人题库设为共享
+func (h *Handler) ShareQuestionBank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	// 检查题库是否存在且属于当前用户
+	var questionBank database.QuestionBank
+	if err := h.db.Where("id = ? AND created_by = ?", bankID, userID).First(&questionBank).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题库不存在或无权限操作"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题库失败"})
+		return
+	}
+
+	// 更新为共享状态
+	questionBank.IsShared = true
+	if err := h.db.Save(&questionBank).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "设置共享失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "题库已设为共享"})
+}
+
+// UnshareQuestionBank 取消共享题库
+func (h *Handler) UnshareQuestionBank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	// 检查题库是否存在且属于当前用户
+	var questionBank database.QuestionBank
+	if err := h.db.Where("id = ? AND created_by = ?", bankID, userID).First(&questionBank).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题库不存在或无权限操作"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题库失败"})
+		return
+	}
+
+	// 取消共享状态
+	questionBank.IsShared = false
+	if err := h.db.Save(&questionBank).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "取消共享失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "题库已取消共享"})
+}
+
+// StarQuestionBank Star题库
+func (h *Handler) StarQuestionBank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	// 检查题库是否存在且为共享状态
+	var questionBank database.QuestionBank
+	if err := h.db.Where("id = ? AND (is_official = ? OR is_shared = ?)", bankID, true, true).First(&questionBank).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题库不存在或未共享"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题库失败"})
+		return
+	}
+
+	// 检查是否已经Star
+	var existingStar database.QuestionBankStar
+	if err := h.db.Where("user_id = ? AND question_bank_id = ?", userID, bankID).First(&existingStar).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "已经Star过这个题库"})
+		return
+	}
+
+	// 开始事务
+	tx := h.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 创建Star记录
+	star := database.QuestionBankStar{
+		UserID:         userID,
+		QuestionBankID: uint(bankID),
+	}
+	if err := tx.Create(&star).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Star失败"})
+		return
+	}
+
+	// 更新题库的Star数量
+	if err := tx.Model(&questionBank).Update("star_count", gorm.Expr("star_count + ?", 1)).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新Star数量失败"})
+		return
+	}
+
+	tx.Commit()
+	c.JSON(http.StatusOK, gin.H{"message": "Star成功"})
+}
+
+// UnstarQuestionBank 取消Star题库
+func (h *Handler) UnstarQuestionBank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	// 检查是否已经Star
+	var star database.QuestionBankStar
+	if err := h.db.Where("user_id = ? AND question_bank_id = ?", userID, bankID).First(&star).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "尚未Star该题库"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询Star记录失败"})
+		return
+	}
+
+	// 开始事务
+	tx := h.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除Star记录
+	if err := tx.Delete(&star).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "取消Star失败"})
+		return
+	}
+
+	// 更新题库的Star数量
+	var questionBank database.QuestionBank
+	if err := tx.Where("id = ?", bankID).First(&questionBank).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题库失败"})
+		return
+	}
+
+	if err := tx.Model(&questionBank).Update("star_count", gorm.Expr("star_count - ?", 1)).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新Star数量失败"})
+		return
+	}
+
+	tx.Commit()
+	c.JSON(http.StatusOK, gin.H{"message": "取消Star成功"})
+}
+
+// ForkQuestionBank Fork题库
+func (h *Handler) ForkQuestionBank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	// 检查题库是否存在且为共享状态
+	var originalBank database.QuestionBank
+	if err := h.db.Where("id = ? AND (is_official = ? OR is_shared = ?)", bankID, true, true).First(&originalBank).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题库不存在或未共享"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题库失败"})
+		return
+	}
+
+	// 检查用户是否已经Fork过这个题库
+	var existingFork database.QuestionBank
+	if err := h.db.Where("created_by = ? AND forked_from = ?", userID, bankID).First(&existingFork).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "已经Fork过这个题库"})
+		return
+	}
+
+	// 开始事务
+	tx := h.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 创建Fork的题库
+	forkedBank := database.QuestionBank{
+		Name:        originalBank.Name + " (Fork)",
+		Description: originalBank.Description,
+		CreatedBy:   &userID,
+		ForkedFrom:  &originalBank.ID,
+		IsOfficial:  false,
+		IsShared:    false,
+	}
+
+	if err := tx.Create(&forkedBank).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建Fork题库失败"})
+		return
+	}
+
+	// 复制原题库的所有题目
+	var originalQuestions []database.Question
+	if err := tx.Where("question_bank_id = ?", bankID).Find(&originalQuestions).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取原题库题目失败"})
+		return
+	}
+
+	// 批量插入题目
+	for _, question := range originalQuestions {
+		newQuestion := database.Question{
+			Title:          question.Title,
+			LeetcodeURL:    question.LeetcodeURL,
+			Difficulty:     question.Difficulty,
+			QuestionBankID: forkedBank.ID,
+		}
+		if err := tx.Create(&newQuestion).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "复制题目失败"})
+			return
+		}
+	}
+
+	// 更新原题库的Fork数量
+	if err := tx.Model(&originalBank).Update("fork_count", gorm.Expr("fork_count + ?", 1)).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新Fork数量失败"})
+		return
+	}
+
+	tx.Commit()
+	c.JSON(http.StatusCreated, gin.H{
+		"message":     "Fork成功",
+		"forked_bank": forkedBank,
+	})
+}
+
+// GetUserStarredBanks 获取用户Star的题库列表
+func (h *Handler) GetUserStarredBanks(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var starredBanks []database.QuestionBank
+	if err := h.db.Table("question_banks").
+		Joins("JOIN question_bank_stars ON question_banks.id = question_bank_stars.question_bank_id").
+		Where("question_bank_stars.user_id = ?", userID).
+		Preload("Creator").
+		Find(&starredBanks).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取Star题库失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, starredBanks)
 }

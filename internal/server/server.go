@@ -93,6 +93,14 @@ func (s *Server) setupRoutes() {
 			api.PUT("/questions/:id", h.UpdateQuestion)
 			api.DELETE("/questions/:id", h.DeleteQuestion)
 
+			// 共享题库相关
+			api.POST("/questionbanks/:id/share", h.ShareQuestionBank)
+			api.DELETE("/questionbanks/:id/share", h.UnshareQuestionBank)
+			api.POST("/questionbanks/:id/star", h.StarQuestionBank)
+			api.DELETE("/questionbanks/:id/star", h.UnstarQuestionBank)
+			api.POST("/questionbanks/:id/fork", h.ForkQuestionBank)
+			api.GET("/starred-questionbanks", h.GetUserStarredBanks)
+
 			// 学习计划相关
 			api.POST("/study-plan", h.CreateStudyPlan)
 			api.GET("/study-plan/:id", h.GetStudyPlan)
