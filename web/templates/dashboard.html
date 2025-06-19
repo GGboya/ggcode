@@ -1,46 +1,100 @@
 {{template "base.html" .}}
 
 {{define "dashboard-content"}}
-<div class="row">
+<!-- Welcome Header -->
+<div class="row mb-4">
     <div class="col-12">
-        <h2 class="mb-4">
-            <i class="fas fa-tachometer-alt"></i> 学习仪表板
-            <small class="text-muted">欢迎回来，{{.username}}！</small>
-        </h2>
+        <div class="welcome-header" style="background: var(--primary-gradient); color: white; border-radius: 20px; padding: 2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; opacity: 0.5;"></div>
+            <div style="position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%; opacity: 0.3;"></div>
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h2 class="mb-2" style="font-weight: 600;">
+                        <i class="fas fa-sun me-2"></i>
+                        <span id="greeting">早上好</span>，{{.username}}！
+                    </h2>
+                    <p class="mb-0 lead" style="opacity: 0.9;">
+                        <span id="motivationalText">新的一天，新的开始！继续你的学习之旅吧 🚀</span>
+                    </p>
+                </div>
+                <div class="col-lg-4 text-end">
+                    <div class="welcome-stats">
+                        <div class="stat-item d-inline-block me-4">
+                            <div class="stat-number" id="todayProgress">0</div>
+                            <div class="stat-label">今日进度</div>
+                        </div>
+                        <div class="stat-item d-inline-block">
+                            <div class="stat-number" id="streak">0</div>
+                            <div class="stat-label">连续天数</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- 打卡区域 -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-primary">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-calendar-check"></i> 每日打卡
+        <div class="card checkin-card" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2);">
+            <div class="card-header" style="background: var(--success-gradient); color: white; border: none;">
+                <h5 class="mb-0 d-flex align-items-center">
+                    <i class="fas fa-calendar-check me-2"></i>
+                    每日打卡
+                    <span class="badge bg-light text-dark ms-auto" id="checkinBadge">等待打卡</span>
                 </h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div class="row align-items-center">
-                    <div class="col-md-8">
+                    <div class="col-lg-8">
                         <div class="row">
-                            <div class="col-md-4 text-center">
-                                <h3 id="totalCheckInDays" class="text-primary">-</h3>
-                                <small class="text-muted">累计打卡天数</small>
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="checkin-stat-card">
+                                    <div class="checkin-icon mb-2">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </div>
+                                    <h3 id="totalCheckInDays" class="stat-number">-</h3>
+                                    <small class="text-muted">累计打卡天数</small>
+                                </div>
                             </div>
-                            <div class="col-md-4 text-center">
-                                <h3 id="consecutiveDays" class="text-success">-</h3>
-                                <small class="text-muted">连续打卡天数</small>
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="checkin-stat-card">
+                                    <div class="checkin-icon mb-2">
+                                        <i class="fas fa-fire"></i>
+                                    </div>
+                                    <h3 id="consecutiveDays" class="stat-number">-</h3>
+                                    <small class="text-muted">连续打卡天数</small>
+                                </div>
                             </div>
-                            <div class="col-md-4 text-center">
-                                <h3 id="todayStatus" class="text-warning">-</h3>
-                                <small class="text-muted">今日状态</small>
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="checkin-stat-card">
+                                    <div class="checkin-icon mb-2">
+                                        <i class="fas fa-star"></i>
+                                    </div>
+                                    <h3 id="todayStatus" class="stat-number">-</h3>
+                                    <small class="text-muted">今日状态</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="checkin-stat-card">
+                                    <div class="checkin-icon mb-2">
+                                        <i class="fas fa-trophy"></i>
+                                    </div>
+                                    <h3 id="longestStreak" class="stat-number">-</h3>
+                                    <small class="text-muted">最长连续</small>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4 text-center">
-                        <div class="alert alert-info mb-0">
-                            <i class="fas fa-info-circle"></i>
-                            <small>完成算法学习后自动打卡</small>
+                    <div class="col-lg-4">
+                        <div class="checkin-visual text-center">
+                            <div class="checkin-progress-circle" id="checkinProgress">
+                                <div class="progress-text">
+                                    <div class="progress-number">0%</div>
+                                    <div class="progress-label">今日完成度</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -51,106 +105,209 @@
 
 <!-- 统计卡片 -->
 <div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <i class="fas fa-book fa-2x text-primary mb-2"></i>
-                <h5 class="card-title" id="totalStudied">-</h5>
-                <p class="card-text text-muted">总学习题数</p>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card gradient-card-1">
+            <div class="card-body text-center">
+                <div class="stats-icon mb-3">
+                    <i class="fas fa-book-open fa-2x"></i>
+                </div>
+                <h4 class="stats-number" id="totalStudied">-</h4>
+                <p class="stats-label">总学习题数</p>
+                <div class="stats-trend">
+                    <i class="fas fa-arrow-up text-success"></i>
+                    <span class="trend-text">持续增长</span>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                <h5 class="card-title" id="completed">-</h5>
-                <p class="card-text text-muted">已掌握题数</p>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card gradient-card-2">
+            <div class="card-body text-center">
+                <div class="stats-icon mb-3">
+                    <i class="fas fa-check-circle fa-2x"></i>
+                </div>
+                <h4 class="stats-number" id="completed">-</h4>
+                <p class="stats-label">已掌握题数</p>
+                <div class="stats-trend">
+                    <i class="fas fa-chart-line text-info"></i>
+                    <span class="trend-text">稳步提升</span>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-                <h5 class="card-title" id="todayReview">-</h5>
-                <p class="card-text text-muted">今日待复习</p>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card gradient-card-3">
+            <div class="card-body text-center">
+                <div class="stats-icon mb-3">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+                <h4 class="stats-number" id="todayReview">-</h4>
+                <p class="stats-label">今日待复习</p>
+                <div class="stats-trend">
+                    <i class="fas fa-bell text-warning"></i>
+                    <span class="trend-text">待完成</span>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <i class="fas fa-percent fa-2x text-info mb-2"></i>
-                <h5 class="card-title" id="completionRate">-</h5>
-                <p class="card-text text-muted">掌握率</p>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card gradient-card-4">
+            <div class="card-body text-center">
+                <div class="stats-icon mb-3">
+                    <i class="fas fa-percentage fa-2x"></i>
+                </div>
+                <h4 class="stats-number" id="completionRate">-</h4>
+                <p class="stats-label">掌握率</p>
+                <div class="stats-trend">
+                    <i class="fas fa-target text-success"></i>
+                    <span class="trend-text">目标达成</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 今日学习和快速操作 -->
+<!-- 主要内容区域 -->
 <div class="row">
-    <div class="col-lg-8">
-        <div class="card">
+    <!-- 今日学习任务 -->
+    <div class="col-lg-8 mb-4">
+        <div class="card modern-card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-brain"></i> 今日学习任务
+                <h5 class="mb-0 d-flex align-items-center">
+                    <i class="fas fa-brain me-2"></i>
+                    今日学习任务
+                    <span class="badge bg-primary ms-2" id="taskCount">0</span>
                 </h5>
-                <a href="/algorithm" class="btn btn-sm btn-primary">
-                    <i class="fas fa-play"></i> 开始学习
-                </a>
+                <div class="header-actions">
+                    <button class="btn btn-sm btn-outline-primary me-2" onclick="refreshTasks()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <a href="/algorithm" class="btn btn-sm btn-primary">
+                        <i class="fas fa-play me-1"></i>开始学习
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 <div id="dailyQuestions">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status">
+                    <div class="loading-state text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
                             <span class="visually-hidden">加载中...</span>
                         </div>
-                        <p class="mt-2 text-muted">正在加载今日学习任务...</p>
+                        <p class="text-muted">正在加载今日学习任务...</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
+    <!-- 右侧面板 -->
     <div class="col-lg-4">
-        <div class="card">
+        <!-- 学习计划 -->
+        <div class="card modern-card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-clipboard-list"></i> 我的学习计划
-                </h5>
+                <h6 class="mb-0 d-flex align-items-center">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    我的学习计划
+                </h6>
             </div>
             <div class="card-body">
                 <div id="studyPlansList">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                    <div class="loading-state text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                         <p class="mt-2 text-muted small">加载中...</p>
                     </div>
                 </div>
                 
                 <div class="mt-3">
-                    <h6>快速操作</h6>
                     <div class="d-grid gap-2">
                         <a href="/study-plans" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-clipboard-list"></i> 管理学习计划
+                            <i class="fas fa-cog me-1"></i>管理学习计划
                         </a>
                         <a href="/questionbanks" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-book"></i> 题库管理
+                            <i class="fas fa-database me-1"></i>题库管理
                         </a>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- 学习激励 -->
-        <div class="card mt-3 bg-light">
+        <!-- 学习激励与提示 -->
+        <div class="card modern-card">
             <div class="card-body text-center">
-                <i class="fas fa-quote-left fa-2x text-muted mb-2"></i>
-                <p class="card-text small font-italic">
-                    "每天进步一点点，坚持就是胜利！"
-                </p>
-                <small class="text-muted">— 学习格言</small>
+                <div class="motivation-icon mb-3">
+                    <i class="fas fa-quote-left fa-2x" style="color: var(--primary-gradient);"></i>
+                </div>
+                <blockquote class="blockquote mb-3">
+                    <p class="mb-0" id="dailyQuote">加载中...</p>
+                </blockquote>
+                <footer class="blockquote-footer">
+                    <cite title="Source Title">每日励志</cite>
+                </footer>
+                
+                <div class="study-tips mt-4 pt-4" style="border-top: 1px solid rgba(0,0,0,0.1);">
+                    <h6 class="mb-3">
+                        <i class="fas fa-lightbulb me-2 text-warning"></i>
+                        学习小贴士
+                    </h6>
+                    <div class="tip-card p-3" style="background: var(--light-bg); border-radius: 12px;">
+                        <p class="small mb-2" id="studyTip">加载中...</p>
+                        <small class="text-muted">💡 点击刷新获取新的建议</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速统计概览 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card modern-card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    学习进度概览
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-4 mb-3">
+                        <div class="progress-section">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">总体进度</span>
+                                <span class="fw-bold" id="overallProgress">0%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar" role="progressbar" style="width: 0%" id="overallProgressBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 mb-3">
+                        <div class="progress-section">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">本周目标</span>
+                                <span class="fw-bold" id="weeklyProgress">0%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="weeklyProgressBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 mb-3">
+                        <div class="progress-section">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">月度目标</span>
+                                <span class="fw-bold" id="monthlyProgress">0%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="monthlyProgressBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -161,17 +318,93 @@
 <script>
 let dailyQuestions = [];
 let checkInStats = {};
-let selectedStudyPlan = null; // 当前选中的学习计划
+let selectedStudyPlan = null;
+
+// 励志名言和学习贴士
+const quotes = [
+    "每天进步一点点，坚持就是胜利！",
+    "算法是思维的体操，坚持练习必有收获。",
+    "不积跬步，无以至千里；不积小流，无以成江海。",
+    "成功不是终点，失败不是末日，勇气才是永恒。",
+    "学而时习之，不亦说乎？",
+    "今天的努力，是明天成功的基石。"
+];
+
+const studyTips = [
+    "建议每次学习1-2小时，保持专注度。",
+    "复习时要主动思考解题思路，而不是死记硬背。",
+    "遇到困难题目时，可以先看解析，再自己实现一遍。",
+    "定期回顾之前学过的题目，巩固记忆。",
+    "可以尝试用不同的方法解决同一个问题。",
+    "保持良好的学习节奏，避免过度疲劳。"
+];
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
+    initializePage();
     loadStats();
     loadStudyPlans();
     loadCheckInStats().then(() => {
-        // 在打卡统计加载完成后再加载今日题目
         loadDailyQuestions();
     });
+    
+    // 设置定时刷新
+    setInterval(updateTimeBasedContent, 60000); // 每分钟更新一次
 });
+
+// 初始化页面
+function initializePage() {
+    setGreeting();
+    setMotivationalContent();
+    
+    // 页面加载动画
+    animateCards();
+}
+
+// 设置问候语
+function setGreeting() {
+    const hour = new Date().getHours();
+    const greetingElement = document.getElementById('greeting');
+    const greetingIcon = document.querySelector('.fa-sun');
+    
+    if (hour < 6) {
+        greetingElement.textContent = '凌晨好';
+        greetingIcon.className = 'fas fa-moon me-2';
+    } else if (hour < 12) {
+        greetingElement.textContent = '早上好';
+        greetingIcon.className = 'fas fa-sun me-2';
+    } else if (hour < 18) {
+        greetingElement.textContent = '下午好';
+        greetingIcon.className = 'fas fa-sun me-2';
+    } else {
+        greetingElement.textContent = '晚上好';
+        greetingIcon.className = 'fas fa-moon me-2';
+    }
+}
+
+// 设置励志内容
+function setMotivationalContent() {
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    const randomTip = studyTips[Math.floor(Math.random() * studyTips.length)];
+    
+    document.getElementById('dailyQuote').textContent = randomQuote;
+    document.getElementById('studyTip').textContent = randomTip;
+}
+
+// 卡片动画
+function animateCards() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease-out';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+}
 
 // 加载统计信息
 async function loadStats() {
@@ -179,17 +412,59 @@ async function loadStats() {
         const response = await axios.get('/api/study-stats');
         const stats = response.data;
         
-        document.getElementById('totalStudied').textContent = stats.total_studied;
-        document.getElementById('completed').textContent = stats.completed;
-        document.getElementById('todayReview').textContent = stats.today_review;
+        // 更新统计数字
+        animateNumber('totalStudied', stats.total_studied);
+        animateNumber('completed', stats.completed);
+        animateNumber('todayReview', stats.today_review);
         
         const completionRate = stats.total_studied > 0 ? 
             Math.round((stats.completed / stats.total_studied) * 100) : 0;
-        document.getElementById('completionRate').textContent = completionRate + '%';
+        animateNumber('completionRate', completionRate, '%');
+        
+        // 更新进度条
+        updateProgressBars(stats);
         
     } catch (error) {
         console.error('加载统计信息失败:', error);
+        showAlert('加载统计信息失败', 'warning');
     }
+}
+
+// 数字动画
+function animateNumber(elementId, targetValue, suffix = '') {
+    const element = document.getElementById(elementId);
+    const startValue = 0;
+    const duration = 1500;
+    const increment = (targetValue - startValue) / (duration / 16);
+    let currentValue = startValue;
+    
+    const timer = setInterval(() => {
+        currentValue += increment;
+        if (currentValue >= targetValue) {
+            currentValue = targetValue;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(currentValue) + suffix;
+    }, 16);
+}
+
+// 更新进度条
+function updateProgressBars(stats) {
+    const overallProgress = stats.total_studied > 0 ? 
+        Math.round((stats.completed / stats.total_studied) * 100) : 0;
+    
+    document.getElementById('overallProgress').textContent = overallProgress + '%';
+    document.getElementById('overallProgressBar').style.width = overallProgress + '%';
+    
+    // 模拟周度和月度进度
+    const weeklyProgress = Math.min(overallProgress + 10, 100);
+    const monthlyProgress = Math.min(overallProgress + 5, 100);
+    
+    document.getElementById('weeklyProgress').textContent = weeklyProgress + '%';
+    document.getElementById('weeklyProgressBar').style.width = weeklyProgress + '%';
+    
+    document.getElementById('monthlyProgress').textContent = monthlyProgress + '%';
+    document.getElementById('monthlyProgressBar').style.width = monthlyProgress + '%';
 }
 
 // 加载打卡统计
@@ -198,249 +473,496 @@ async function loadCheckInStats() {
         const response = await axios.get('/api/checkin-stats');
         checkInStats = response.data;
         
-        document.getElementById('totalCheckInDays').textContent = checkInStats.total_check_in_days;
-        document.getElementById('consecutiveDays').textContent = checkInStats.consecutive_days;
+        document.getElementById('totalCheckInDays').textContent = checkInStats.total_days || 0;
+        document.getElementById('consecutiveDays').textContent = checkInStats.consecutive_days || 0;
+        document.getElementById('longestStreak').textContent = checkInStats.longest_streak || 0;
         
-        const todayStatus = document.getElementById('todayStatus');
+        // 更新今日状态
+        const todayStatus = checkInStats.today_checked ? '已完成' : '待完成';
+        document.getElementById('todayStatus').textContent = todayStatus;
         
-        if (checkInStats.checked_in_today) {
-            todayStatus.textContent = '已打卡';
-            todayStatus.className = 'text-success';
+        // 更新徽章
+        const badge = document.getElementById('checkinBadge');
+        if (checkInStats.today_checked) {
+            badge.textContent = '今日已打卡';
+            badge.className = 'badge bg-success ms-auto';
         } else {
-            todayStatus.textContent = '未打卡';
-            todayStatus.className = 'text-warning';
+            badge.textContent = '等待打卡';
+            badge.className = 'badge bg-warning ms-auto';
         }
         
-        return checkInStats; // 返回数据以便链式调用
+        // 更新进度圆环
+        updateCheckinProgress();
         
     } catch (error) {
         console.error('加载打卡统计失败:', error);
-        checkInStats = { checked_in_today: false }; // 设置默认值
-        return checkInStats;
     }
 }
 
-// 自动打卡已在完成题目时自动触发，无需手动打卡函数
-
-// 加载学习计划列表
-async function loadStudyPlans() {
-    try {
-        const response = await axios.get('/api/study-plans');
-        const studyPlans = response.data;
-        
-        if (studyPlans.length === 0) {
-            document.getElementById('studyPlansList').innerHTML = `
-                <div class="text-center py-3">
-                    <i class="fas fa-plus-circle text-muted mb-2"></i>
-                    <p class="text-muted small mb-2">暂无学习计划</p>
-                    <a href="/study-plans" class="btn btn-sm btn-primary">创建学习计划</a>
-                </div>
-            `;
-            return;
-        }
-        
-        let html = '';
-        studyPlans.slice(0, 3).forEach(plan => { // 只显示前3个
-            html += `
-                <div class="border rounded p-2 mb-2 study-plan-item" data-plan-id="${plan.id}" data-plan-name="${plan.question_bank.name}" data-daily-count="${plan.daily_count}">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="flex-grow-1" style="cursor: pointer;">
-                            <small class="fw-bold">${plan.question_bank.name}</small>
-                            <div>
-                                <small class="text-muted">每日 ${plan.daily_count} 题</small>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <small class="text-muted d-block">点击选择</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        if (studyPlans.length > 3) {
-            html += `
-                <div class="text-center mt-2">
-                    <a href="/study-plans" class="btn btn-sm btn-outline-primary">
-                        查看全部 ${studyPlans.length} 个计划
-                    </a>
-                </div>
-            `;
-        }
-        
-        document.getElementById('studyPlansList').innerHTML = html;
-        
-        // 添加学习计划点击事件
-        document.querySelectorAll('.study-plan-item').forEach(item => {
-            item.addEventListener('click', function() {
-                selectStudyPlan(this);
-            });
-        });
-        
-    } catch (error) {
-        document.getElementById('studyPlansList').innerHTML = `
-            <div class="text-center py-3">
-                <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
-                <p class="text-muted small mb-2">加载学习计划失败</p>
-                <a href="/study-plans" class="btn btn-sm btn-primary">重试</a>
-            </div>
-        `;
+// 更新打卡进度圆环
+function updateCheckinProgress() {
+    const progressElement = document.getElementById('checkinProgress');
+    const progressNumber = progressElement.querySelector('.progress-number');
+    const progress = checkInStats.today_checked ? 100 : 0;
+    
+    progressNumber.textContent = progress + '%';
+    
+    // 添加CSS动画类
+    if (progress === 100) {
+        progressElement.classList.add('completed');
     }
 }
 
 // 加载今日题目
 async function loadDailyQuestions() {
     try {
-        // 先检查打卡状态，如果已打卡则不显示学习任务
-        if (checkInStats.checked_in_today) {
-            document.getElementById('dailyQuestions').innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <h5 class="text-success">今天已经打卡！</h5>
-                    <p class="text-muted">恭喜你完成了今日的学习任务，明天继续加油吧！</p>
-                    <div class="mt-3">
-                        <a href="/study-plans" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-plus"></i> 继续学习更多
-                        </a>
-                    </div>
-                </div>
-            `;
-            return;
-        }
+        const response = await axios.get('/api/daily-questions');
+        dailyQuestions = response.data;
         
-        // 使用新的显示逻辑
-        updateDailyTasksDisplay();
+        document.getElementById('taskCount').textContent = dailyQuestions.length;
+        renderDailyQuestions();
         
     } catch (error) {
+        console.error('加载今日题目失败:', error);
         document.getElementById('dailyQuestions').innerHTML = `
-            <div class="text-center py-4">
-                <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
-                <p class="text-muted">请先创建学习计划</p>
-                <a href="/study-plans" class="btn btn-primary">创建学习计划</a>
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                加载今日任务失败，请稍后重试
             </div>
         `;
     }
 }
 
-// 渲染今日题目（简化版，仅显示前3道）
+// 渲染今日题目
 function renderDailyQuestions() {
     const container = document.getElementById('dailyQuestions');
-    const displayQuestions = dailyQuestions.slice(0, 3); // 只显示前3道
     
-    let html = '';
-    
-    displayQuestions.forEach((item, index) => {
-        const difficultyClass = getDifficultyClass(item.question.difficulty);
-        const badgeClass = item.is_review ? 'bg-warning text-dark' : 'bg-primary';
-        const badgeText = item.is_review ? '复习' : '新题';
-        
-        html += `
-            <div class="border rounded p-2 mb-2">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <small class="fw-bold">${index + 1}. ${item.question.title}</small>
-                        <div>
-                            <span class="badge ${badgeClass} me-1">${badgeText}</span>
-                            <span class="badge ${difficultyClass}">${item.question.difficulty}</span>
-                        </div>
-                    </div>
-                    <a href="${item.question.leetcode_url}" target="_blank" 
-                       class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-external-link-alt"></i>
-                    </a>
-                </div>
-            </div>
-        `;
-    });
-    
-    if (dailyQuestions.length > 3) {
-        html += `
-            <div class="text-center mt-3">
-                <a href="/algorithm" class="btn btn-primary">
-                    查看全部 ${dailyQuestions.length} 道题目
+    if (dailyQuestions.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state text-center py-5">
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h5 class="text-success mb-3">今日任务已完成！</h5>
+                <p class="text-muted mb-4">恭喜你完成了今天的学习任务，明天继续加油！</p>
+                <a href="/study-plans" class="btn btn-outline-primary">
+                    <i class="fas fa-cog me-1"></i>管理学习计划
                 </a>
-            </div>
-        `;
-    }
-    
-    container.innerHTML = html;
-}
-
-// 获取难度样式类
-function getDifficultyClass(difficulty) {
-    switch(difficulty.toLowerCase()) {
-        case 'easy': return 'bg-success';
-        case 'medium': return 'bg-warning';
-        case 'hard': return 'bg-danger';
-        default: return 'bg-secondary';
-    }
-}
-
-// 选择学习计划
-function selectStudyPlan(element) {
-    // 清除之前的选中状态
-    document.querySelectorAll('.study-plan-item').forEach(item => {
-        item.classList.remove('border-primary', 'bg-light');
-    });
-    
-    // 设置当前选中状态
-    element.classList.add('border-primary', 'bg-light');
-    
-    // 保存选中的学习计划信息
-    selectedStudyPlan = {
-        id: element.dataset.planId,
-        name: element.dataset.planName,
-        dailyCount: element.dataset.dailyCount
-    };
-    
-    // 更新今日学习任务显示
-    updateDailyTasksDisplay();
-}
-
-// 更新今日学习任务显示
-function updateDailyTasksDisplay() {
-    if (!selectedStudyPlan) {
-        document.getElementById('dailyQuestions').innerHTML = `
-            <div class="text-center py-4">
-                <i class="fas fa-clipboard-list fa-3x text-primary mb-3"></i>
-                <h5>选择学习计划开始学习</h5>
-                <p class="text-muted">从右侧选择一个学习计划，或创建新的学习计划</p>
-                <div class="mt-3">
-                    <a href="/study-plans" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> 管理学习计划
-                    </a>
-                </div>
             </div>
         `;
         return;
     }
     
-    // 显示选中的学习计划信息和开始学习按钮
-    document.getElementById('dailyQuestions').innerHTML = `
-        <div class="text-center py-4">
-            <i class="fas fa-play-circle fa-3x text-success mb-3"></i>
-            <h5>已选择学习计划</h5>
-            <p class="text-primary fw-bold mb-2">${selectedStudyPlan.name}</p>
-            <p class="text-muted mb-4">每日学习 ${selectedStudyPlan.dailyCount} 题</p>
-            <div class="d-grid gap-2 col-6 mx-auto">
-                <a href="/study?plan=${selectedStudyPlan.id}" class="btn btn-success btn-lg">
-                    <i class="fas fa-play"></i> 开始学习
-                </a>
-                <button class="btn btn-outline-secondary" onclick="clearSelection()">
-                    <i class="fas fa-times"></i> 重新选择
-                </button>
+    let html = '<div class="questions-list">';
+    
+    dailyQuestions.forEach((question, index) => {
+        const difficultyClass = getDifficultyClass(question.difficulty);
+        const statusIcon = getStatusIcon(question.status);
+        
+        html += `
+            <div class="question-item mb-3" data-question-id="${question.id}">
+                <div class="d-flex align-items-center justify-content-between p-3 rounded-3" style="background: var(--light-bg);">
+                    <div class="question-info flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="question-number me-2">${index + 1}</span>
+                            <h6 class="mb-0 me-2">${question.title}</h6>
+                            <span class="badge ${difficultyClass}">${question.difficulty}</span>
+                        </div>
+                        <div class="question-meta">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                ${question.status === 'new' ? '首次学习' : '复习时间到'}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="question-actions">
+                        <button class="btn btn-sm btn-primary" onclick="startQuestion(${question.id})">
+                            ${statusIcon} 开始
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
 }
 
-// 清除选择
-function clearSelection() {
-    selectedStudyPlan = null;
-    document.querySelectorAll('.study-plan-item').forEach(item => {
-        item.classList.remove('border-primary', 'bg-light');
+// 获取难度样式类
+function getDifficultyClass(difficulty) {
+    switch(difficulty) {
+        case 'Easy': return 'difficulty-easy';
+        case 'Medium': return 'difficulty-medium';
+        case 'Hard': return 'difficulty-hard';
+        default: return 'badge-secondary';
+    }
+}
+
+// 获取状态图标
+function getStatusIcon(status) {
+    switch(status) {
+        case 'new': return '<i class="fas fa-play"></i>';
+        case 'review': return '<i class="fas fa-redo"></i>';
+        default: return '<i class="fas fa-book"></i>';
+    }
+}
+
+// 开始答题
+function startQuestion(questionId) {
+    const question = dailyQuestions.find(q => q.id === questionId);
+    if (question && question.url) {
+        window.open(question.url, '_blank');
+    }
+}
+
+// 加载学习计划
+async function loadStudyPlans() {
+    try {
+        const response = await axios.get('/api/study-plans');
+        const studyPlans = response.data;
+        
+        renderStudyPlans(studyPlans);
+        
+    } catch (error) {
+        console.error('加载学习计划失败:', error);
+        document.getElementById('studyPlansList').innerHTML = `
+            <div class="alert alert-warning alert-sm">
+                <small>加载学习计划失败</small>
+            </div>
+        `;
+    }
+}
+
+// 渲染学习计划
+function renderStudyPlans(studyPlans) {
+    const container = document.getElementById('studyPlansList');
+    
+    if (studyPlans.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-clipboard-list fa-2x text-muted mb-2"></i>
+                <p class="text-muted small mb-0">暂无学习计划</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    studyPlans.slice(0, 3).forEach(plan => {
+        const progress = plan.total_questions > 0 ? 
+            Math.round((plan.completed_questions / plan.total_questions) * 100) : 0;
+        
+        html += `
+            <div class="study-plan-item mb-3 p-3 rounded-3" style="background: var(--light-bg);">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="mb-0">${plan.question_bank.name}</h6>
+                    <small class="text-muted">${progress}%</small>
+                </div>
+                <div class="progress mb-2" style="height: 4px;">
+                    <div class="progress-bar" style="width: ${progress}%"></div>
+                </div>
+                <small class="text-muted">
+                    每日 ${plan.daily_count} 题 · 
+                    ${plan.completed_questions}/${plan.total_questions} 完成
+                </small>
+            </div>
+        `;
     });
-    updateDailyTasksDisplay();
+    
+    container.innerHTML = html;
+}
+
+// 刷新任务
+function refreshTasks() {
+    const button = event.target.closest('button');
+    const icon = button.querySelector('i');
+    
+    icon.classList.add('fa-spin');
+    
+    loadDailyQuestions().finally(() => {
+        setTimeout(() => {
+            icon.classList.remove('fa-spin');
+        }, 500);
+    });
+}
+
+// 更新基于时间的内容
+function updateTimeBasedContent() {
+    setGreeting();
 }
 </script>
+
+<style>
+/* Dashboard 专用样式 */
+.welcome-header {
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-stats .stat-item {
+    text-align: center;
+}
+
+.welcome-stats .stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: block;
+}
+
+.welcome-stats .stat-label {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.checkin-card {
+    transition: all 0.3s ease;
+}
+
+.checkin-stat-card {
+    padding: 1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+}
+
+.checkin-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.checkin-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.checkin-progress-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary-gradient) 0deg, #e9ecef 0deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    position: relative;
+}
+
+.checkin-progress-circle::before {
+    content: '';
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: white;
+}
+
+.progress-text {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.progress-number {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.progress-label {
+    font-size: 0.75rem;
+    color: #718096;
+}
+
+.stats-card {
+    border: none;
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary-gradient);
+}
+
+.gradient-card-1 {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.gradient-card-2 {
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
+}
+
+.gradient-card-3 {
+    background: linear-gradient(135deg, rgba(67, 233, 123, 0.1) 0%, rgba(56, 249, 215, 0.1) 100%);
+}
+
+.gradient-card-4 {
+    background: linear-gradient(135deg, rgba(250, 112, 154, 0.1) 0%, rgba(254, 225, 64, 0.1) 100%);
+}
+
+.stats-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.stats-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: #667eea;
+}
+
+.stats-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0.5rem 0;
+}
+
+.stats-label {
+    color: #718096;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.stats-trend {
+    font-size: 0.875rem;
+}
+
+.trend-text {
+    color: #718096;
+}
+
+.modern-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.modern-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.question-item {
+    transition: all 0.3s ease;
+}
+
+.question-item:hover {
+    transform: translateX(5px);
+}
+
+.question-number {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.study-plan-item {
+    transition: all 0.3s ease;
+}
+
+.study-plan-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.loading-state, .empty-state {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.tip-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tip-card:hover {
+    background: var(--primary-gradient) !important;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.progress-section {
+    padding: 1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+}
+
+.progress-section:hover {
+    background: rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .welcome-header {
+        text-align: center;
+        padding: 1.5rem !important;
+    }
+    
+    .welcome-stats {
+        margin-top: 1rem;
+    }
+    
+    .stats-number {
+        font-size: 1.5rem;
+    }
+    
+    .checkin-progress-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .checkin-progress-circle::before {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .progress-number {
+        font-size: 1rem;
+    }
+}
+
+/* 动画效果 */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.checkin-progress-circle.completed {
+    animation: pulse 2s ease-in-out;
+    background: conic-gradient(var(--success-gradient) 360deg, #e9ecef 360deg);
+}
+</style>
 {{end}} 
