@@ -162,9 +162,9 @@
 </div>
 
 <!-- 编辑题目模态框 -->
-<div class="modal fade" id="editQuestionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="editQuestionModal" tabindex="-1" data-bs-backdrop="false" style="z-index: 1065;">
+    <div class="modal-dialog" style="z-index: 1066; margin-top: 20px;">
+        <div class="modal-content" style="background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="fas fa-edit"></i> 编辑题目
@@ -285,6 +285,23 @@ document.addEventListener('DOMContentLoaded', function() {
         loadQuestionBanksProgress();
     }, 200);
 });
+
+// 关闭编辑题目模态框的函数
+function closeEditQuestionModal() {
+    const editModalElement = document.getElementById('editQuestionModal');
+    const questionsModal = document.getElementById('questionsModal');
+    const editModalInstance = bootstrap.Modal.getInstance(editModalElement);
+    
+    if (editModalInstance) {
+        editModalInstance.hide();
+    }
+    
+    // 重置模态框样式
+    setTimeout(() => {
+        editModalElement.classList.remove('on-top-layer');
+        console.log('编辑模态框已关闭并重置样式');
+    }, 150);
+}
 
 // 加载题库学习进度
 async function loadQuestionBanksProgress() {
@@ -896,9 +913,31 @@ async function fetchQuestionDetails(questionId) {
         // 保存当前编辑的题目ID
         window.currentQuestionId = questionId;
         
-        // 显示模态框
-        const modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+        // 显示编辑模态框，设置为无backdrop以避免与题目列表模态框冲突
+        const modalElement = document.getElementById('editQuestionModal');
+        
+        // 清理可能存在的backdrop
+        const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+        existingBackdrops.forEach(backdrop => backdrop.remove());
+        
+        // 创建模态框实例并显示
+        const modal = new bootstrap.Modal(modalElement, {
+            backdrop: false,
+            keyboard: true,
+            focus: true
+        });
+        
         modal.show();
+        
+        // 将编辑模态框置于最顶层
+        setTimeout(() => {
+            const questionsModal = document.getElementById('questionsModal');
+            if (questionsModal && questionsModal.classList.contains('show')) {
+                // 添加最顶层样式
+                modalElement.classList.add('on-top-layer');
+                console.log('编辑模态框已置于最顶层');
+            }
+        }, 100);
         
     } catch (error) {
         console.error('获取题目详情失败:', error);
@@ -923,8 +962,18 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
         
         showAlert('题目更新成功！', 'success');
         
-        // 关闭模态框
-        bootstrap.Modal.getInstance(document.getElementById('editQuestionModal')).hide();
+        // 关闭编辑模态框
+        const editModalElement = document.getElementById('editQuestionModal');
+        const editModalInstance = bootstrap.Modal.getInstance(editModalElement);
+        if (editModalInstance) {
+            editModalInstance.hide();
+        }
+        
+        // 重置模态框样式
+        setTimeout(() => {
+            editModalElement.classList.remove('on-top-layer');
+            console.log('编辑模态框样式已重置');
+        }, 150);
         
         // 无感更新：直接更新题目列表中的对应项
         updateQuestionInModal(response.data || {

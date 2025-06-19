@@ -366,6 +366,33 @@
             display: none !important;
         }
 
+        /* Position edit modal on top layer (highest z-index) without backdrop */
+        #editQuestionModal.on-top-layer {
+            z-index: 9999 !important;
+            position: fixed !important;
+            top: 20px !important;
+            right: 20px !important;
+            left: auto !important;
+            transform: none !important;
+            width: 400px !important;
+            margin: 0 !important;
+        }
+
+        #editQuestionModal.on-top-layer .modal-dialog {
+            margin: 0 !important;
+            max-width: none !important;
+            width: 100% !important;
+        }
+
+        #editQuestionModal.on-top-layer .modal-content {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
+            border: 2px solid #667eea !important;
+            border-radius: 8px !important;
+            background: white !important;
+            position: relative !important;
+            z-index: 10000 !important;
+        }
+
         /* Center modal dialog */
         @media (min-width: 576px) {
             .modal-dialog {
