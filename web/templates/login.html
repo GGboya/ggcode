@@ -198,6 +198,11 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
+        // 清除任何现有的认证检查定时器
+        if (window.authCheckTimer) {
+            clearTimeout(window.authCheckTimer);
+        }
+        
         // 成功提示
         showAlert('登录成功！正在跳转...', 'success');
         btnText.textContent = '登录成功';
@@ -207,11 +212,15 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         // 页面跳转动画
         setTimeout(() => {
             const loginCard = document.querySelector('.login-card');
-            loginCard.style.transform = 'translateY(-20px)';
-            loginCard.style.opacity = '0';
+            if (loginCard) {
+                loginCard.style.transform = 'translateY(-20px)';
+                loginCard.style.opacity = '0';
+            }
             
             setTimeout(() => {
-                window.location.href = '/dashboard';
+                console.log('登录成功，正在跳转到dashboard...');
+                // 强制跳转到dashboard
+                window.location.replace('/dashboard');
             }, 300);
         }, 1000);
         

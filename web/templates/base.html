@@ -616,12 +616,60 @@
         // 检查认证状态
         function checkAuthStatus() {
             const token = localStorage.getItem('token');
-            const authRequiredElements = document.querySelectorAll('.auth-required');
+            const currentPath = window.location.pathname;
             
+            // 如果在登录或注册页面，不需要检查认证
+            if (currentPath === '/login' || currentPath === '/register') {
+                return;
+            }
+            
+            // 如果有token，验证其有效性
             if (token) {
+                // 验证token有效性
+                validateTokenAndShowContent(token);
+            } else {
+                // 没有token且在需要认证的页面，重定向到登录
+                const authRequiredPages = ['/dashboard', '/questionbanks', '/study-plans', '/study'];
+                if (authRequiredPages.includes(currentPath)) {
+                    showAlert('请先登录', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1500);
+                }
+            }
+        }
+        
+        // 验证token有效性并显示内容
+        async function validateTokenAndShowContent(token) {
+            try {
+                // 设置axios header
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                
+                // 通过调用简单的API验证token（可能需要根据你的后端调整）
+                // 先尝试直接显示内容，如果后续API调用失败再处理
+                const authRequiredElements = document.querySelectorAll('.auth-required');
                 authRequiredElements.forEach(element => {
                     element.classList.add('authenticated');
                 });
+                
+                // 异步验证token（不阻塞页面显示）
+                setTimeout(async () => {
+                    try {
+                        await axios.get('/api/study-stats');
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            localStorage.removeItem('token');
+                            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                            showAlert('登录已过期，请重新登录', 'warning');
+                            setTimeout(() => {
+                                window.location.href = '/login';
+                            }, 1500);
+                        }
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Token validation error:', error);
             }
         }
     </script>
