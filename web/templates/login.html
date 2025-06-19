@@ -179,22 +179,29 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     spinner.classList.remove('d-none');
     
     try {
+        console.log('尝试登录:', { username, password: '***' });
+        
         const response = await axios.post('/api/login', {
             username: username,
             password: password
         });
         
+        console.log('登录响应:', response.data);
+        
+        // 检查响应中是否有token
+        if (!response.data.token) {
+            throw new Error('服务器响应中没有token');
+        }
+        
         // 保存token
         const token = response.data.token;
+        console.log('保存token:', token);
         localStorage.setItem('token', token);
         
-        // 如果选择了记住我，也保存到cookie
-        if (document.getElementById('rememberMe').checked) {
-            // 设置7天过期的cookie
-            const expires = new Date();
-            expires.setTime(expires.getTime() + (7 * 24 * 60 * 60 * 1000));
-            document.cookie = `token=${token}; expires=${expires.toUTCString()}; path=/`;
-        }
+        // 设置cookie（后端已经设置了，但为了确保前端也能访问，再设置一次）
+        const expires = new Date();
+        expires.setTime(expires.getTime() + (7 * 24 * 60 * 60 * 1000));
+        document.cookie = `token=${token}; expires=${expires.toUTCString()}; path=/`;
         
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
@@ -210,7 +217,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         loginBtn.classList.add('btn-success');
         
         // 页面跳转动画
+        console.log('开始跳转流程...');
         setTimeout(() => {
+            console.log('执行卡片动画...');
             const loginCard = document.querySelector('.login-card');
             if (loginCard) {
                 loginCard.style.transform = 'translateY(-20px)';
@@ -219,13 +228,22 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             
             setTimeout(() => {
                 console.log('登录成功，正在跳转到dashboard...');
-                // 强制跳转到dashboard
-                window.location.replace('/dashboard');
-            }, 300);
-        }, 1000);
+                console.log('当前页面:', window.location.href);
+                console.log('Cookie设置情况:', document.cookie);
+                
+                // 使用 window.location.href 跳转，让cookie生效
+                window.location.href = '/dashboard';
+            }, 500);
+        }, 1500);
         
     } catch (error) {
         console.error('Login error:', error);
+        console.error('Error details:', {
+            response: error.response,
+            status: error.response?.status,
+            data: error.response?.data
+        });
+        
         const message = error.response?.data?.error || '登录失败，请检查用户名和密码';
         showAlert(message, 'danger');
         

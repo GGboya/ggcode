@@ -531,6 +531,11 @@
         
         // 设置axios默认配置（添加错误处理）
         try {
+            // 配置axios支持cookies
+            if (typeof axios !== 'undefined') {
+                axios.defaults.withCredentials = true;
+            }
+            
             let token = localStorage.getItem('token');
             
             // 如果localStorage中没有token，尝试从cookie获取
