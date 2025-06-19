@@ -565,8 +565,15 @@ function renderQuestionBanks() {
 // 初始化收藏按钮状态
 async function initializeStarButtons() {
     try {
-        const response = await axios.get('/api/starred-questionbanks');
-        const starredBanks = response.data;
+        const response = await axios.get('/api/starred-questionbanks?limit=1000');
+        // 处理分页格式的响应
+        let starredBanks;
+        if (response.data.data) {
+            starredBanks = response.data.data;
+        } else {
+            // 兼容旧版本返回格式
+            starredBanks = response.data;
+        }
         const starredBankIds = starredBanks.map(bank => bank.id);
         
         // 更新所有收藏按钮的状态
@@ -1084,23 +1091,9 @@ function editQuestion(questionId) {
 // 获取题目详情
 async function fetchQuestionDetails(questionId) {
     try {
-        // 这里我们需要先找到题目所属的题库，然后获取题目列表
-        let question = null;
-        for (const bank of questionBanks) {
-            try {
-                const response = await axios.get(`/api/questionbanks/${bank.id}/questions`);
-                const questions = response.data;
-                question = questions.find(q => q.id === questionId);
-                if (question) break;
-            } catch (error) {
-                continue;
-            }
-        }
-        
-        if (!question) {
-            showAlert('题目不存在', 'danger');
-            return;
-        }
+        // 直接通过题目ID获取题目详情
+        const response = await axios.get(`/api/questions/${questionId}`);
+        const question = response.data;
         
         // 填充编辑表单
         document.getElementById('editQuestionTitle').value = question.title;
@@ -1366,8 +1359,15 @@ async function unshareQuestionBank(bankId) {
 async function toggleStarQuestionBank(bankId) {
     try {
         // 先检查当前是否已收藏
-        const response = await axios.get('/api/starred-questionbanks');
-        const starredBanks = response.data;
+        const response = await axios.get('/api/starred-questionbanks?limit=1000');
+        // 处理分页格式的响应
+        let starredBanks;
+        if (response.data.data) {
+            starredBanks = response.data.data;
+        } else {
+            // 兼容旧版本返回格式
+            starredBanks = response.data;
+        }
         const isStarred = starredBanks.some(bank => bank.id === bankId);
         
         if (isStarred) {
@@ -1396,10 +1396,20 @@ async function starQuestionBank(bankId) {
             starBtn.classList.add('btn-warning');
         }
         
-        loadQuestionBanks();
+        refreshCurrentPage();
     } catch (error) {
         const message = error.response?.data?.error || '收藏失败';
         showAlert(message, 'danger');
+    }
+}
+
+// 智能刷新当前页面
+function refreshCurrentPage() {
+    const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
+    if (bankType === 'starred') {
+        loadStarredBanks();
+    } else {
+        loadQuestionBanks();
     }
 }
 
@@ -1418,7 +1428,7 @@ async function unstarQuestionBank(bankId) {
             starBtn.classList.add('btn-outline-warning');
         }
         
-        loadQuestionBanks();
+        refreshCurrentPage();
     } catch (error) {
         const message = error.response?.data?.error || '取消收藏失败';
         showAlert(message, 'danger');
@@ -1437,7 +1447,7 @@ async function forkQuestionBank(bankId) {
     try {
         const response = await axios.post(`/api/questionbanks/${bankId}/fork`);
         showAlert('Fork成功！已创建题库副本。', 'success');
-        loadQuestionBanks();
+        refreshCurrentPage();
     } catch (error) {
         const message = error.response?.data?.error || 'Fork失败';
         showAlert(message, 'danger');

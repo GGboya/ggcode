@@ -832,6 +832,27 @@ func (h *Handler) DeleteQuestionBank(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "题库删除成功"})
 }
 
+// GetQuestion 获取单个题目
+func (h *Handler) GetQuestion(c *gin.Context) {
+	questionID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题目ID"})
+		return
+	}
+
+	var question database.Question
+	if err := h.db.Where("id = ?", questionID).First(&question).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "题目不存在"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询题目失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, question)
+}
+
 // UpdateQuestion 更新题目信息
 func (h *Handler) UpdateQuestion(c *gin.Context) {
 	userID := c.GetUint("user_id")
