@@ -1,0 +1,32 @@
+[Unit]
+Description=GGCode - 算法学习平台
+Documentation=https://github.com/GGboya/ggcode
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/projects/ggcode
+ExecStart=/root/projects/ggcode/ggcode
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ggcode
+
+# 环境变量
+Environment=DB_HOST=localhost
+Environment=DB_PORT=3306
+Environment=DB_USER=root
+Environment=DB_PASSWORD=your_secure_password
+Environment=DB_NAME=ggcode
+Environment=GIN_MODE=release
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target 
