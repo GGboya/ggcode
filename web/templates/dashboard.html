@@ -185,7 +185,7 @@
                     <button class="btn btn-sm btn-outline-primary me-2" onclick="refreshTasks()">
                         <i class="fas fa-sync-alt"></i>
                     </button>
-                    <a href="/algorithm" class="btn btn-sm btn-primary">
+                    <a href="/study-plans" class="btn btn-sm btn-primary" id="startStudyBtn">
                         <i class="fas fa-play me-1"></i>开始学习
                     </a>
                 </div>
@@ -487,17 +487,17 @@ async function loadCheckInStats() {
         console.log('打卡统计响应:', response.data);
         checkInStats = response.data;
         
-        document.getElementById('totalCheckInDays').textContent = checkInStats.total_days || 0;
+        document.getElementById('totalCheckInDays').textContent = checkInStats.total_check_in_days || 0;
         document.getElementById('consecutiveDays').textContent = checkInStats.consecutive_days || 0;
-        document.getElementById('longestStreak').textContent = checkInStats.longest_streak || 0;
+        document.getElementById('longestStreak').textContent = checkInStats.consecutive_days || 0; // 使用 consecutive_days 作为最长连续
         
         // 更新今日状态
-        const todayStatus = checkInStats.today_checked ? '已完成' : '待完成';
+        const todayStatus = checkInStats.checked_in_today ? '已完成' : '待完成';
         document.getElementById('todayStatus').textContent = todayStatus;
         
         // 更新徽章
         const badge = document.getElementById('checkinBadge');
-        if (checkInStats.today_checked) {
+        if (checkInStats.checked_in_today) {
             badge.textContent = '今日已打卡';
             badge.className = 'badge bg-success ms-auto';
         } else {
@@ -508,6 +508,9 @@ async function loadCheckInStats() {
         // 更新进度圆环
         updateCheckinProgress();
         
+        // 更新欢迎区域的连续天数
+        document.getElementById('streak').textContent = checkInStats.consecutive_days || 0;
+        
     } catch (error) {
         console.error('加载打卡统计失败:', error);
     }
@@ -517,7 +520,7 @@ async function loadCheckInStats() {
 function updateCheckinProgress() {
     const progressElement = document.getElementById('checkinProgress');
     const progressNumber = progressElement.querySelector('.progress-number');
-    const progress = checkInStats.today_checked ? 100 : 0;
+    const progress = checkInStats.checked_in_today ? 100 : 0;
     
     progressNumber.textContent = progress + '%';
     
@@ -532,10 +535,56 @@ async function loadDailyQuestions() {
     console.log('开始加载今日题目');
     
     try {
-        console.log('发送请求到 /api/daily-questions');
-        const response = await axios.get('/api/daily-questions');
-        console.log('今日题目响应:', response.data);
-        dailyQuestions = response.data;
+        // 首先获取用户的学习计划
+        console.log('发送请求获取学习计划');
+        const plansResponse = await axios.get('/api/study-plans');
+        console.log('学习计划响应:', plansResponse.data);
+        
+        const studyPlans = plansResponse.data;
+        
+        if (studyPlans.length === 0) {
+            // 没有学习计划，显示引导用户创建
+            document.getElementById('taskCount').textContent = '0';
+            document.getElementById('dailyQuestions').innerHTML = `
+                <div class="empty-state text-center py-5">
+                    <i class="fas fa-clipboard-list fa-4x text-primary mb-3"></i>
+                    <h5 class="text-primary mb-3">还没有学习计划</h5>
+                    <p class="text-muted mb-4">创建你的第一个学习计划，开始高效学习之旅！</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="/study-plans" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>创建学习计划
+                        </a>
+                        <a href="/questionbanks" class="btn btn-outline-primary">
+                            <i class="fas fa-book me-1"></i>浏览题库
+                        </a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // 合并所有学习计划的今日任务
+        let allDailyQuestions = [];
+        
+        for (const plan of studyPlans) {
+            try {
+                console.log(`获取学习计划 ${plan.id} 的今日任务`);
+                const questionsResponse = await axios.get(`/api/study-plan/${plan.id}/daily-questions`);
+                const questions = questionsResponse.data || [];
+                
+                // 为每个题目添加学习计划信息
+                questions.forEach(item => {
+                    item.study_plan = plan;
+                });
+                
+                allDailyQuestions = allDailyQuestions.concat(questions);
+            } catch (error) {
+                console.warn(`获取学习计划 ${plan.id} 的任务失败:`, error);
+            }
+        }
+        
+        console.log('合并后的今日题目:', allDailyQuestions);
+        dailyQuestions = allDailyQuestions;
         
         document.getElementById('taskCount').textContent = dailyQuestions.length;
         renderDailyQuestions();
@@ -546,6 +595,8 @@ async function loadDailyQuestions() {
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 加载今日任务失败，请稍后重试
+                <br>
+                <small class="text-muted">错误信息: ${error.response?.data?.error || error.message}</small>
             </div>
         `;
     }
@@ -571,9 +622,13 @@ function renderDailyQuestions() {
     
     let html = '<div class="questions-list">';
     
-    dailyQuestions.forEach((question, index) => {
+    dailyQuestions.forEach((item, index) => {
+        const question = item.question;
+        const isReview = item.is_review;
+        const studyPlan = item.study_plan;
+        
         const difficultyClass = getDifficultyClass(question.difficulty);
-        const statusIcon = getStatusIcon(question.status);
+        const statusIcon = isReview ? '<i class="fas fa-redo"></i>' : '<i class="fas fa-play"></i>';
         
         html += `
             <div class="question-item mb-3" data-question-id="${question.id}">
@@ -583,18 +638,29 @@ function renderDailyQuestions() {
                             <span class="question-number me-2">${index + 1}</span>
                             <h6 class="mb-0 me-2">${question.title}</h6>
                             <span class="badge ${difficultyClass}">${question.difficulty}</span>
+                            ${isReview ? '<span class="badge bg-warning text-dark ms-1">复习</span>' : '<span class="badge bg-primary ms-1">新题</span>'}
                         </div>
                         <div class="question-meta">
                             <small class="text-muted">
-                                <i class="fas fa-clock me-1"></i>
-                                ${question.status === 'new' ? '首次学习' : '复习时间到'}
+                                <i class="fas fa-book me-1"></i>
+                                ${studyPlan ? studyPlan.question_bank.name : '未知题库'}
+                                <i class="fas fa-clock ms-2 me-1"></i>
+                                ${isReview ? '复习时间到' : '首次学习'}
                             </small>
                         </div>
                     </div>
                     <div class="question-actions">
-                        <button class="btn btn-sm btn-primary" onclick="startQuestion(${question.id})">
-                            ${statusIcon} 开始
-                        </button>
+                        <a href="${question.leetcode_url}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        ${studyPlan && studyPlan.id ? 
+                            `<a href="/study?plan=${studyPlan.id}" class="btn btn-sm btn-primary">
+                                ${statusIcon} 开始
+                            </a>` :
+                            `<a href="/study-plans" class="btn btn-sm btn-warning">
+                                <i class="fas fa-exclamation-triangle"></i> 需要学习计划
+                            </a>`
+                        }
                     </div>
                 </div>
             </div>
@@ -607,28 +673,11 @@ function renderDailyQuestions() {
 
 // 获取难度样式类
 function getDifficultyClass(difficulty) {
-    switch(difficulty) {
-        case 'Easy': return 'difficulty-easy';
-        case 'Medium': return 'difficulty-medium';
-        case 'Hard': return 'difficulty-hard';
-        default: return 'badge-secondary';
-    }
-}
-
-// 获取状态图标
-function getStatusIcon(status) {
-    switch(status) {
-        case 'new': return '<i class="fas fa-play"></i>';
-        case 'review': return '<i class="fas fa-redo"></i>';
-        default: return '<i class="fas fa-book"></i>';
-    }
-}
-
-// 开始答题
-function startQuestion(questionId) {
-    const question = dailyQuestions.find(q => q.id === questionId);
-    if (question && question.url) {
-        window.open(question.url, '_blank');
+    switch(difficulty.toLowerCase()) {
+        case 'easy': return 'bg-success';
+        case 'medium': return 'bg-warning';
+        case 'hard': return 'bg-danger';
+        default: return 'bg-secondary';
     }
 }
 
@@ -658,7 +707,10 @@ function renderStudyPlans(studyPlans) {
         container.innerHTML = `
             <div class="text-center py-3">
                 <i class="fas fa-clipboard-list fa-2x text-muted mb-2"></i>
-                <p class="text-muted small mb-0">暂无学习计划</p>
+                <p class="text-muted small mb-2">暂无学习计划</p>
+                <a href="/study-plans" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>创建计划
+                </a>
             </div>
         `;
         return;
@@ -666,21 +718,26 @@ function renderStudyPlans(studyPlans) {
     
     let html = '';
     studyPlans.slice(0, 3).forEach(plan => {
-        const progress = plan.total_questions > 0 ? 
-            Math.round((plan.completed_questions / plan.total_questions) * 100) : 0;
+        // 如果没有题库名称，显示默认名称
+        const bankName = plan.question_bank ? plan.question_bank.name : '未知题库';
+        const dailyCount = plan.daily_count || 5;
         
         html += `
             <div class="study-plan-item mb-3 p-3 rounded-3" style="background: var(--light-bg);">
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h6 class="mb-0">${plan.question_bank.name}</h6>
-                    <small class="text-muted">${progress}%</small>
+                    <h6 class="mb-0">${bankName}</h6>
+                    <a href="/study?plan=${plan.id}" class="btn btn-xs btn-primary">
+                        <i class="fas fa-play"></i>
+                    </a>
                 </div>
-                <div class="progress mb-2" style="height: 4px;">
-                    <div class="progress-bar" style="width: ${progress}%"></div>
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar-day me-1"></i>每日 ${dailyCount} 题
+                    </small>
                 </div>
                 <small class="text-muted">
-                    每日 ${plan.daily_count} 题 · 
-                    ${plan.completed_questions}/${plan.total_questions} 完成
+                    <i class="fas fa-clock me-1"></i>
+                    创建于 ${new Date(plan.created_at).toLocaleDateString()}
                 </small>
             </div>
         `;
@@ -981,6 +1038,13 @@ function updateTimeBasedContent() {
 .checkin-progress-circle.completed {
     animation: pulse 2s ease-in-out;
     background: conic-gradient(var(--success-gradient) 360deg, #e9ecef 360deg);
+}
+
+.btn-xs {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    border-radius: 0.375rem;
 }
 </style>
 {{end}} 
