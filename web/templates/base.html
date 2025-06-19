@@ -313,6 +313,67 @@
             border: none;
         }
 
+        /* Complete modal reset to fix interaction issues */
+        .modal {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            z-index: 1055 !important;
+            width: 100% !important;
+            height: 100% !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            outline: 0 !important;
+            display: none !important;
+        }
+
+        .modal.show {
+            display: block !important;
+        }
+
+        .modal-dialog {
+            position: relative !important;
+            width: auto !important;
+            margin: 0.5rem !important;
+            pointer-events: none !important;
+        }
+
+        .modal.fade .modal-dialog {
+            transition: transform 0.3s ease-out !important;
+            transform: translate(0, -50px) !important;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none !important;
+        }
+
+        .modal-content {
+            position: relative !important;
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            pointer-events: auto !important;
+            background-color: #fff !important;
+            background-clip: padding-box !important;
+            border: 1px solid rgba(0, 0, 0, 0.2) !important;
+            border-radius: 0.3rem !important;
+            outline: 0 !important;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.5) !important;
+        }
+
+        /* Hide modal backdrop completely */
+        .modal-backdrop {
+            display: none !important;
+        }
+
+        /* Center modal dialog */
+        @media (min-width: 576px) {
+            .modal-dialog {
+                max-width: 500px !important;
+                margin: 1.75rem auto !important;
+            }
+        }
+
         /* Alert styling */
         .alert {
             border-radius: 12px;

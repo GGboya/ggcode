@@ -120,11 +120,11 @@
 </div>
 
 <!-- 添加题目模态框 -->
-<div class="modal fade" id="addQuestionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="addQuestionModal" tabindex="-1" aria-labelledby="addQuestionModalLabel" aria-hidden="true" data-bs-backdrop="false" style="z-index: 1055;">
+    <div class="modal-dialog" style="z-index: 1056;">
+        <div class="modal-content" style="background: white; border-radius: 8px;">
             <div class="modal-header">
-                <h5 class="modal-title">
+                <h5 class="modal-title" id="addQuestionModalLabel">
                     <i class="fas fa-plus"></i> 添加题目
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -212,6 +212,71 @@ let currentBankId = null;
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Questionbanks DOM加载完成');
+    
+    // 检查Bootstrap是否正确加载
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap 未正确加载');
+        showAlert('页面加载异常，请刷新页面', 'danger');
+        return;
+    } else {
+        console.log('Bootstrap 已正确加载');
+    }
+    
+    // 检查模态框元素是否存在
+    const addQuestionModal = document.getElementById('addQuestionModal');
+    if (!addQuestionModal) {
+        console.error('添加题目模态框元素不存在');
+    } else {
+        console.log('添加题目模态框元素存在');
+        
+        // 添加模态框事件监听器
+        addQuestionModal.addEventListener('shown.bs.modal', function() {
+            console.log('添加题目模态框已显示');
+            
+            // 聚焦到第一个输入框
+            const firstInput = this.querySelector('input[type="text"]');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 100);
+            }
+        });
+        
+        addQuestionModal.addEventListener('hidden.bs.modal', function() {
+            console.log('添加题目模态框已隐藏');
+        });
+        
+        addQuestionModal.addEventListener('show.bs.modal', function() {
+            console.log('添加题目模态框正在显示');
+        });
+        
+        addQuestionModal.addEventListener('hide.bs.modal', function() {
+            console.log('添加题目模态框正在隐藏');
+        });
+    }
+    
+    // 添加全局backdrop清理功能
+    const clearBackdrops = () => {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => {
+            console.log('移除backdrop:', backdrop);
+            backdrop.remove();
+        });
+        
+        // 移除body上的modal-open类
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    };
+    
+    // 定期清理backdrop
+    setInterval(clearBackdrops, 1000);
+    
+    // 页面点击时也清理
+    document.addEventListener('click', (e) => {
+        // 如果点击的不是模态框内容，清理backdrop
+        if (!e.target.closest('.modal-content')) {
+            setTimeout(clearBackdrops, 100);
+        }
+    });
     
     // 等待一小段时间让base.html的setupAxios完成，然后加载数据
     setTimeout(() => {
@@ -512,9 +577,60 @@ async function viewQuestions(bankId) {
 
 // 添加题目
 function addQuestion(bankId) {
+    console.log('开始添加题目，bankId:', bankId);
     currentBankId = bankId;
-    const modal = new bootstrap.Modal(document.getElementById('addQuestionModal'));
-    modal.show();
+    
+    // 确保表单是空的
+    document.getElementById('addQuestionForm').reset();
+    
+    // 使用简单的Bootstrap方式显示模态框
+    const modalElement = document.getElementById('addQuestionModal');
+    if (!modalElement) {
+        console.error('找不到添加题目的模态框元素');
+        showAlert('页面加载异常，请刷新页面重试', 'danger');
+        return;
+    }
+    
+    // 强制移除可能存在的show类，然后重新显示
+    modalElement.classList.remove('show');
+    modalElement.style.display = 'none';
+    
+    // 移除现有的backdrop
+    const existingBackdrop = document.querySelector('.modal-backdrop');
+    if (existingBackdrop) {
+        existingBackdrop.remove();
+    }
+    
+    // 使用setTimeout确保DOM更新完成
+    setTimeout(() => {
+        try {
+            // 完全禁用backdrop
+            const modal = new bootstrap.Modal(modalElement, {
+                backdrop: false,  // 禁用背景遮罩
+                keyboard: true,
+                focus: true
+            });
+            modal.show();
+            console.log('模态框显示完成');
+            
+            // 强制移除任何可能存在的backdrop
+            const allBackdrops = document.querySelectorAll('.modal-backdrop');
+            allBackdrops.forEach(backdrop => backdrop.remove());
+            
+            // 添加ESC键关闭功能
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    modal.hide();
+                    document.removeEventListener('keydown', handleEscape);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+            
+        } catch (error) {
+            console.error('模态框显示失败:', error);
+            showAlert('无法显示添加题目窗口', 'danger');
+        }
+    }, 50);
 }
 
 // 获取难度样式类
@@ -560,10 +676,19 @@ document.getElementById('createBankForm').addEventListener('submit', async funct
 // 添加题目表单提交
 document.getElementById('addQuestionForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    console.log('提交添加题目表单');
     
     const title = document.getElementById('questionTitle').value;
     const url = document.getElementById('questionURL').value;
     const difficulty = document.getElementById('questionDifficulty').value;
+    
+    console.log('表单数据:', { title, url, difficulty, currentBankId });
+    
+    if (!currentBankId) {
+        console.error('当前题库ID为空');
+        showAlert('题库ID异常，请重新操作', 'danger');
+        return;
+    }
     
     try {
         const response = await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
@@ -572,10 +697,15 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
             difficulty: difficulty
         });
         
+        console.log('题目添加成功:', response.data);
         showAlert('题目添加成功！', 'success');
         
-        // 关闭模态框
-        bootstrap.Modal.getInstance(document.getElementById('addQuestionModal')).hide();
+        // 获取模态框实例并安全关闭
+        const modalElement = document.getElementById('addQuestionModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
         
         // 清空表单
         this.reset();
@@ -587,6 +717,7 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
         }
         
     } catch (error) {
+        console.error('添加题目失败:', error);
         const message = error.response?.data?.error || '添加失败';
         showAlert(message, 'danger');
     }
