@@ -184,22 +184,25 @@ func (h *Handler) Register(c *gin.Context) {
 
 func (h *Handler) GetQuestionBanks(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	bankType := c.Query("type") // "shared", "personal", "all"
+	bankType := c.Query("type") // "official", "shared", "personal"
 	sortBy := c.Query("sort")   // "star_count", "fork_count", "created_at"
 
 	var questionBanks []database.QuestionBank
 	query := h.db.Model(&database.QuestionBank{})
 
 	switch bankType {
+	case "official":
+		// 获取官方题库
+		query = query.Where("is_official = ?", true)
 	case "shared":
-		// 获取共享题库，包括官方题库和其他用户分享的题库
-		query = query.Where("is_official = ? OR is_shared = ?", true, true)
+		// 获取共享题库（不包括官方题库）
+		query = query.Where("is_official = ? AND is_shared = ?", false, true)
 	case "personal":
 		// 获取个人题库（包括自己创建的和Fork的）
 		query = query.Where("created_by = ?", userID)
 	default:
-		// 默认获取所有可见题库：官方题库、共享题库、用户创建的题库
-		query = query.Where("is_official = ? OR is_shared = ? OR created_by = ?", true, true, userID)
+		// 默认获取官方题库
+		query = query.Where("is_official = ?", true)
 	}
 
 	// 排序

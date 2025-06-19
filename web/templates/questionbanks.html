@@ -19,14 +19,14 @@
         <div class="row mb-4">
             <div class="col-md-8">
                 <div class="btn-group" role="group" aria-label="题库类型筛选">
-                    <input type="radio" class="btn-check" name="bankType" id="allBanks" value="all" checked autocomplete="off">
-                    <label class="btn btn-outline-primary" for="allBanks">全部题库</label>
+                    <input type="radio" class="btn-check" name="bankType" id="officialBanks" value="official" checked autocomplete="off">
+                    <label class="btn btn-outline-primary" for="officialBanks">官方题库</label>
 
                     <input type="radio" class="btn-check" name="bankType" id="sharedBanks" value="shared" autocomplete="off">
                     <label class="btn btn-outline-primary" for="sharedBanks">共享题库</label>
 
                     <input type="radio" class="btn-check" name="bankType" id="personalBanks" value="personal" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="personalBanks">我的题库</label>
+                    <label class="btn btn-outline-primary" for="personalBanks">个人题库</label>
 
                     <input type="radio" class="btn-check" name="bankType" id="starredBanks" value="starred" autocomplete="off">
                     <label class="btn btn-outline-primary" for="starredBanks">
@@ -1273,11 +1273,11 @@ async function loadQuestionBanks() {
     console.log('当前axios headers:', axios.defaults.headers.common);
     
     try {
-        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'all';
+        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
         const sortBy = document.getElementById('sortBy').value;
         
         const params = new URLSearchParams();
-        if (bankType !== 'all') params.append('type', bankType);
+        params.append('type', bankType);
         if (sortBy) params.append('sort', sortBy);
         
         const url = `/api/questionbanks${params.toString() ? '?' + params.toString() : ''}`;

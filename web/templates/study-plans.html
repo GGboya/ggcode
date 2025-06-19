@@ -153,24 +153,50 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 200);
 });
 
-// 加载题库列表
+// 加载题库列表（仅获取官方题库和个人题库）
 async function loadQuestionBanks() {
     console.log('开始加载题库列表');
     console.log('当前axios headers:', axios.defaults.headers.common);
     
     try {
-        console.log('发送请求到 /api/questionbanks');
-        const response = await axios.get('/api/questionbanks');
-        console.log('题库列表响应:', response.data);
-        questionBanks = response.data;
+        // 并行获取官方题库和个人题库
+        const [officialResponse, personalResponse] = await Promise.all([
+            axios.get('/api/questionbanks?type=official'),
+            axios.get('/api/questionbanks?type=personal')
+        ]);
+        
+        const officialBanks = officialResponse.data;
+        const personalBanks = personalResponse.data;
+        
+        // 合并两类题库
+        questionBanks = [...officialBanks, ...personalBanks];
+        
+        console.log('题库列表响应:', questionBanks);
         
         const select = document.getElementById('questionBankSelect');
         select.innerHTML = '<option value="">请选择题库</option>';
         
-        questionBanks.forEach(bank => {
+        // 先添加官方题库
+        officialBanks.forEach(bank => {
             const option = document.createElement('option');
             option.value = bank.id;
-            option.textContent = bank.name + (bank.is_official ? ' (官方)' : '');
+            option.textContent = bank.name + ' (官方)';
+            select.appendChild(option);
+        });
+        
+        // 添加分隔线
+        if (officialBanks.length > 0 && personalBanks.length > 0) {
+            const separator = document.createElement('option');
+            separator.disabled = true;
+            separator.textContent = '──────────';
+            select.appendChild(separator);
+        }
+        
+        // 再添加个人题库
+        personalBanks.forEach(bank => {
+            const option = document.createElement('option');
+            option.value = bank.id;
+            option.textContent = bank.name;
             select.appendChild(option);
         });
         
