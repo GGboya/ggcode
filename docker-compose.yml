@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ggcode-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ggcode123
+      MYSQL_DATABASE: ggcode
+      MYSQL_USER: ggcode
+      MYSQL_PASSWORD: ggcode123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  ggcode:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GOPROXY: https://goproxy.cn,direct
+        GOSUMDB: sum.golang.google.cn
+    container_name: ggcode-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ggcode
+      DB_PASSWORD: ggcode123
+      DB_NAME: ggcode
+      JWT_SECRET: your-secret-key-change-this-in-production
+      SERVER_PORT: 8080
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./web:/root/web
+
+volumes:
+  mysql_data: 

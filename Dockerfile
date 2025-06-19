@@ -1,11 +1,19 @@
 # 使用官方Go镜像作为构建环境
 FROM golang:1.21-alpine AS builder
 
+# 构建参数，可以从 docker-compose.yml 传入
+ARG GOPROXY=https://goproxy.cn,direct
+ARG GOSUMDB=sum.golang.google.cn
+
 # 设置工作目录
 WORKDIR /app
 
 # 安装必要的包
 RUN apk add --no-cache git
+
+# 设置 Go 代理，提高下载速度
+ENV GOPROXY=${GOPROXY}
+ENV GOSUMDB=${GOSUMDB}
 
 # 复制go mod文件
 COPY go.mod go.sum ./
