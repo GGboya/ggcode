@@ -531,9 +531,10 @@
         
         // 设置axios默认配置（添加错误处理）
         try {
-            // 配置axios支持cookies
+            // 配置axios基本设置
             if (typeof axios !== 'undefined') {
-                axios.defaults.withCredentials = true;
+                // 移除withCredentials设置，让服务器通过Set-Cookie头来处理
+                // axios.defaults.withCredentials = true;
             }
             
             let token = localStorage.getItem('token');
