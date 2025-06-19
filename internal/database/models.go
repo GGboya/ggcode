@@ -91,9 +91,9 @@ type UserQuestionProgress struct {
 // UserCheckIn 用户打卡记录
 type UserCheckIn struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
-	UserID    uint      `json:"user_id"`
+	UserID    uint      `json:"user_id" gorm:"uniqueIndex:idx_user_date"` // 联合唯一索引的一部分
 	User      User      `json:"user" gorm:"foreignKey:UserID"`
-	CheckDate time.Time `json:"check_date" gorm:"uniqueIndex:idx_user_date"` // 打卡日期
+	CheckDate time.Time `json:"check_date" gorm:"uniqueIndex:idx_user_date"` // 联合唯一索引的一部分
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

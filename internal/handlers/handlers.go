@@ -187,7 +187,23 @@ func (h *Handler) GetQuestionBanks(c *gin.Context) {
 	bankType := c.Query("type") // "official", "shared", "personal"
 	sortBy := c.Query("sort")   // "star_count", "fork_count", "created_at"
 
+	// 分页参数
+	page := 1
+	limit := 10
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
 	var questionBanks []database.QuestionBank
+	var total int64
+
 	query := h.db.Model(&database.QuestionBank{})
 
 	switch bankType {
@@ -205,6 +221,9 @@ func (h *Handler) GetQuestionBanks(c *gin.Context) {
 		query = query.Where("is_official = ?", true)
 	}
 
+	// 获取总数
+	query.Count(&total)
+
 	// 排序
 	switch sortBy {
 	case "star_count":
@@ -215,7 +234,9 @@ func (h *Handler) GetQuestionBanks(c *gin.Context) {
 		query = query.Order("created_at DESC")
 	}
 
-	if err := query.Preload("Creator").Preload("OriginalBank").Find(&questionBanks).Error; err != nil {
+	// 分页
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).Preload("Creator").Preload("OriginalBank").Find(&questionBanks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取题库失败"})
 		return
 	}
@@ -240,7 +261,20 @@ func (h *Handler) GetQuestionBanks(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, questionBanks)
+	// 计算分页信息
+	totalPages := int((total + int64(limit) - 1) / int64(limit))
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": questionBanks,
+		"pagination": gin.H{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
+			"has_prev":    page > 1,
+			"has_next":    page < totalPages,
+		},
+	})
 }
 
 func (h *Handler) CreateQuestionBank(c *gin.Context) {
@@ -278,13 +312,49 @@ func (h *Handler) GetQuestions(c *gin.Context) {
 		return
 	}
 
+	// 分页参数
+	page := 1
+	limit := 20
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
 	var questions []database.Question
-	if err := h.db.Where("question_bank_id = ?", bankID).Find(&questions).Error; err != nil {
+	var total int64
+
+	query := h.db.Model(&database.Question{}).Where("question_bank_id = ?", bankID)
+
+	// 获取总数
+	query.Count(&total)
+
+	// 分页和排序
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).Order("created_at ASC").Find(&questions).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取题目失败"})
 		return
 	}
 
-	c.JSON(http.StatusOK, questions)
+	// 计算分页信息
+	totalPages := int((total + int64(limit) - 1) / int64(limit))
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": questions,
+		"pagination": gin.H{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
+			"has_prev":    page > 1,
+			"has_next":    page < totalPages,
+		},
+	})
 }
 
 func (h *Handler) CreateQuestion(c *gin.Context) {
@@ -555,8 +625,31 @@ func (h *Handler) DeleteStudyPlan(c *gin.Context) {
 func (h *Handler) GetAllStudyPlans(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
+	// 分页参数
+	page := 1
+	limit := 20
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
 	var studyPlans []database.UserStudyPlan
-	if err := h.db.Where("user_id = ?", userID).
+	var total int64
+
+	query := h.db.Model(&database.UserStudyPlan{}).Where("user_id = ?", userID)
+
+	// 获取总数
+	query.Count(&total)
+
+	// 分页查询
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).
 		Preload("QuestionBank").
 		Order("created_at DESC").
 		Find(&studyPlans).Error; err != nil {
@@ -564,7 +657,20 @@ func (h *Handler) GetAllStudyPlans(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, studyPlans)
+	// 计算分页信息
+	totalPages := int((total + int64(limit) - 1) / int64(limit))
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": studyPlans,
+		"pagination": gin.H{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
+			"has_prev":    page > 1,
+			"has_next":    page < totalPages,
+		},
+	})
 }
 
 // GetStudyPlanProgress 获取学习计划进度
@@ -1092,15 +1198,49 @@ func (h *Handler) ForkQuestionBank(c *gin.Context) {
 func (h *Handler) GetUserStarredBanks(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
+	// 分页参数
+	page := 1
+	limit := 10
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
 	var starredBanks []database.QuestionBank
-	if err := h.db.Table("question_banks").
+	var total int64
+
+	baseQuery := h.db.Table("question_banks").
 		Joins("JOIN question_bank_stars ON question_banks.id = question_bank_stars.question_bank_id").
-		Where("question_bank_stars.user_id = ?", userID).
-		Preload("Creator").
-		Find(&starredBanks).Error; err != nil {
+		Where("question_bank_stars.user_id = ?", userID)
+
+	// 获取总数
+	baseQuery.Count(&total)
+
+	// 分页查询
+	offset := (page - 1) * limit
+	if err := baseQuery.Offset(offset).Limit(limit).Preload("Creator").Find(&starredBanks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取Star题库失败"})
 		return
 	}
 
-	c.JSON(http.StatusOK, starredBanks)
+	// 计算分页信息
+	totalPages := int((total + int64(limit) - 1) / int64(limit))
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": starredBanks,
+		"pagination": gin.H{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
+			"has_prev":    page > 1,
+			"has_next":    page < totalPages,
+		},
+	})
 }

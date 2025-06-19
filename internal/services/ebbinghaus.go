@@ -218,7 +218,12 @@ func (s *EbbinghausService) CompleteQuestion(userID, questionID uint, resultType
 	}
 
 	// 完成学习后自动打卡
-	s.CheckInToday(userID)
+	if err := s.CheckInToday(userID); err != nil {
+		// 打卡失败不影响学习记录，但记录日志
+		// 常见情况：今日已打卡
+		// 这里可以添加日志记录
+		_ = err // 忽略打卡错误，不影响学习进度保存
+	}
 
 	return nil
 }
@@ -339,7 +344,8 @@ func (s *EbbinghausService) GetAllQuestionBanksProgress(userID uint) ([]Question
 
 // CheckInToday 今日打卡
 func (s *EbbinghausService) CheckInToday(userID uint) error {
-	today := time.Now().Truncate(24 * time.Hour)
+	// 明确使用UTC时间，避免时区问题
+	today := time.Now().UTC().Truncate(24 * time.Hour)
 
 	// 检查今日是否已打卡
 	var existingCheckIn database.UserCheckIn
@@ -360,7 +366,8 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 // GetCheckInStats 获取打卡统计
 func (s *EbbinghausService) GetCheckInStats(userID uint) (*CheckInStats, error) {
 	var stats CheckInStats
-	today := time.Now().Truncate(24 * time.Hour)
+	// 明确使用UTC时间，避免时区问题
+	today := time.Now().UTC().Truncate(24 * time.Hour)
 
 	// 检查今日是否已打卡
 	var todayCheckIn database.UserCheckIn

@@ -17,7 +17,7 @@
 
         <!-- 筛选和排序控件 -->
         <div class="row mb-4">
-            <div class="col-md-8">
+            <div class="col-md-6">
                 <div class="btn-group" role="group" aria-label="题库类型筛选">
                     <input type="radio" class="btn-check" name="bankType" id="officialBanks" value="official" checked autocomplete="off">
                     <label class="btn btn-outline-primary" for="officialBanks">官方题库</label>
@@ -34,11 +34,19 @@
                     </label>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <select class="form-select" id="sortBy">
                     <option value="created_at">按创建时间排序</option>
                     <option value="star_count">按收藏数排序</option>
                     <option value="fork_count">按Fork数排序</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="pageSizeSelect">
+                    <option value="10">每页10个</option>
+                    <option value="20">每页20个</option>
+                    <option value="50">每页50个</option>
+                    <option value="100">每页100个</option>
                 </select>
             </div>
         </div>
@@ -52,6 +60,20 @@
             <span class="visually-hidden">加载中...</span>
         </div>
         <p class="mt-2 text-muted">正在加载题库...</p>
+    </div>
+</div>
+
+<!-- 分页控件 -->
+<div class="row mt-4" id="paginationContainer" style="display: none;">
+    <div class="col-12">
+        <nav aria-label="题库分页">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- 分页按钮将通过JavaScript动态生成 -->
+            </ul>
+        </nav>
+        <div class="text-center text-muted">
+            <span id="paginationInfo">第 1 页，共 1 页，总计 0 个题库</span>
+        </div>
     </div>
 </div>
 
@@ -208,6 +230,14 @@
 let questionBanks = [];
 let questionBanksProgress = [];
 let currentBankId = null;
+let currentPage = 1;
+let currentPageSize = 10;
+let currentPagination = null;
+// 题目分页相关变量
+let currentQuestionPage = 1;
+let currentQuestionPageSize = 20;
+let currentQuestionPagination = null;
+let currentViewingBankId = null;
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
@@ -318,8 +348,11 @@ async function loadQuestionBanksProgress() {
 // 渲染题库列表
 function renderQuestionBanks() {
     const container = document.getElementById('questionBanksList');
+    const paginationContainer = document.getElementById('paginationContainer');
     
     if (questionBanks.length === 0) {
+        // 隐藏分页控件
+        paginationContainer.style.display = 'none';
         const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
         let emptyStateHTML = '';
         
@@ -376,6 +409,10 @@ function renderQuestionBanks() {
         container.innerHTML = emptyStateHTML;
         return;
     }
+    
+    // 显示分页控件
+    paginationContainer.style.display = 'block';
+    renderPagination();
     
     let html = '';
     questionBanks.forEach(bank => {
@@ -548,13 +585,30 @@ async function initializeStarButtons() {
 }
 
 // 查看题目
-async function viewQuestions(bankId) {
+async function viewQuestions(bankId, page = 1) {
     try {
         // 记录当前查看的题库ID，用于删除题目后刷新
         window.currentViewingBankId = bankId;
+        currentViewingBankId = bankId;
+        currentQuestionPage = page;
         
-        const response = await axios.get(`/api/questionbanks/${bankId}/questions`);
-        const questions = response.data;
+        const params = new URLSearchParams();
+        params.append('page', page);
+        params.append('limit', currentQuestionPageSize);
+        
+        const response = await axios.get(`/api/questionbanks/${bankId}/questions?${params.toString()}`);
+        let questions, pagination;
+        
+        if (response.data.data) {
+            questions = response.data.data;
+            pagination = response.data.pagination;
+            currentQuestionPagination = pagination;
+        } else {
+            // 兼容旧版本返回格式
+            questions = response.data;
+            pagination = null;
+            currentQuestionPagination = null;
+        }
         
         const bank = questionBanks.find(b => b.id === bankId);
         
@@ -567,7 +621,15 @@ async function viewQuestions(bankId) {
                             <h5 class="modal-title">
                                 <i class="fas fa-list"></i> ${bank.name} - 题目列表
                             </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm" id="questionPageSize" style="width: auto;">
+                                    <option value="10" ${currentQuestionPageSize === 10 ? 'selected' : ''}>10/页</option>
+                                    <option value="20" ${currentQuestionPageSize === 20 ? 'selected' : ''}>20/页</option>
+                                    <option value="50" ${currentQuestionPageSize === 50 ? 'selected' : ''}>50/页</option>
+                                    <option value="100" ${currentQuestionPageSize === 100 ? 'selected' : ''}>100/页</option>
+                                </select>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
                         </div>
                         <div class="modal-body">
                             ${questions.length === 0 ? `
@@ -577,31 +639,19 @@ async function viewQuestions(bankId) {
                                     <p class="text-muted">该题库还没有题目</p>
                                 </div>
                             ` : `
-                                <div class="list-group">
-                                    ${questions.map((q, index) => `
-                                        <div class="list-group-item">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1">${index + 1}. ${q.title}</h6>
-                                                    <span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
-                                                </div>
-                                                <div class="btn-group btn-group-sm">
-                                                    <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary">
-                                                        <i class="fas fa-external-link-alt"></i> 做题
-                                                    </a>
-                                                    ${canEditBank(bank) ? `
-                                                        <button class="btn btn-outline-warning" onclick="editQuestion(${q.id})">
-                                                            <i class="fas fa-edit"></i> 编辑
-                                                        </button>
-                                                        <button class="btn btn-outline-danger" onclick="deleteQuestion(${q.id})">
-                                                            <i class="fas fa-trash"></i> 删除
-                                                        </button>
-                                                    ` : ''}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `).join('')}
+                                <div class="list-group" id="questionsList">
+                                    ${renderQuestionsList(questions, bank, pagination)}
                                 </div>
+                                ${pagination ? `
+                                    <nav aria-label="题目分页" class="mt-3">
+                                        <ul class="pagination justify-content-center" id="questionPagination">
+                                            ${renderQuestionPagination(pagination)}
+                                        </ul>
+                                        <div class="text-center text-muted">
+                                            <small>第 ${pagination.page} 页，共 ${pagination.total_pages} 页，总计 ${pagination.total} 个题目</small>
+                                        </div>
+                                    </nav>
+                                ` : ''}
                             `}
                         </div>
                         <div class="modal-footer">
@@ -620,6 +670,16 @@ async function viewQuestions(bankId) {
         
         // 添加新模态框
         document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // 添加分页大小选择事件监听
+        const pageSizeSelect = document.getElementById('questionPageSize');
+        if (pageSizeSelect) {
+            pageSizeSelect.addEventListener('change', function() {
+                currentQuestionPageSize = parseInt(this.value);
+                currentQuestionPage = 1;
+                viewQuestions(currentViewingBankId, 1);
+            });
+        }
         
         // 显示模态框
         const modal = new bootstrap.Modal(document.getElementById('questionsModal'));
@@ -692,6 +752,99 @@ function addQuestion(bankId) {
             showAlert('无法显示添加题目窗口', 'danger');
         }
     }, 50);
+}
+
+// 渲染题目列表
+function renderQuestionsList(questions, bank, pagination) {
+    return questions.map((q, index) => {
+        const globalIndex = pagination ? 
+            (pagination.page - 1) * pagination.limit + index + 1 : 
+            index + 1;
+        return `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${globalIndex}. ${q.title}</h6>
+                        <span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary">
+                            <i class="fas fa-external-link-alt"></i> 做题
+                        </a>
+                        ${canEditBank(bank) ? `
+                            <button class="btn btn-outline-warning" onclick="editQuestion(${q.id})">
+                                <i class="fas fa-edit"></i> 编辑
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteQuestion(${q.id})">
+                                <i class="fas fa-trash"></i> 删除
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 渲染题目分页
+function renderQuestionPagination(pagination) {
+    let html = '';
+    
+    // 上一页按钮
+    html += `<li class="page-item ${!pagination.has_prev ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="goToQuestionPage(${pagination.page - 1})">上一页</a>
+    </li>`;
+    
+    // 页码按钮
+    const totalPages = pagination.total_pages;
+    const currentPageNum = pagination.page;
+    
+    let startPage = Math.max(1, currentPageNum - 2);
+    let endPage = Math.min(totalPages, currentPageNum + 2);
+    
+    if (totalPages <= 5) {
+        startPage = 1;
+        endPage = totalPages;
+    }
+    
+    // 第一页
+    if (startPage > 1) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="goToQuestionPage(1)">1</a></li>`;
+        if (startPage > 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    // 中间页码
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<li class="page-item ${i === currentPageNum ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="goToQuestionPage(${i})">${i}</a>
+        </li>`;
+    }
+    
+    // 最后一页
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="goToQuestionPage(${totalPages})">${totalPages}</a></li>`;
+    }
+    
+    // 下一页按钮
+    html += `<li class="page-item ${!pagination.has_next ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="goToQuestionPage(${pagination.page + 1})">下一页</a>
+    </li>`;
+    
+    return html;
+}
+
+// 跳转到指定题目页
+function goToQuestionPage(page) {
+    if (page < 1 || (currentQuestionPagination && page > currentQuestionPagination.total_pages)) {
+        return;
+    }
+    
+    viewQuestions(currentViewingBankId, page);
 }
 
 // 获取难度样式类
@@ -1291,11 +1444,105 @@ async function forkQuestionBank(bankId) {
     }
 }
 
+// 渲染分页控件
+function renderPagination() {
+    if (!currentPagination) return;
+    
+    const pagination = document.getElementById('pagination');
+    const paginationInfo = document.getElementById('paginationInfo');
+    
+    // 更新分页信息
+    paginationInfo.textContent = `第 ${currentPagination.page} 页，共 ${currentPagination.total_pages} 页，总计 ${currentPagination.total} 个题库`;
+    
+    // 清空现有分页按钮
+    pagination.innerHTML = '';
+    
+    // 上一页按钮
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${!currentPagination.has_prev ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${currentPage - 1})">上一页</a>`;
+    pagination.appendChild(prevLi);
+    
+    // 页码按钮
+    const totalPages = currentPagination.total_pages;
+    const currentPageNum = currentPagination.page;
+    
+    // 计算显示的页码范围
+    let startPage = Math.max(1, currentPageNum - 2);
+    let endPage = Math.min(totalPages, currentPageNum + 2);
+    
+    // 如果总页数少于5页，显示所有页码
+    if (totalPages <= 5) {
+        startPage = 1;
+        endPage = totalPages;
+    }
+    
+    // 第一页
+    if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        firstLi.className = 'page-item';
+        firstLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(1)">1</a>`;
+        pagination.appendChild(firstLi);
+        
+        if (startPage > 2) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            pagination.appendChild(ellipsisLi);
+        }
+    }
+    
+    // 中间页码
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentPageNum ? 'active' : ''}`;
+        pageLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>`;
+        pagination.appendChild(pageLi);
+    }
+    
+    // 最后一页
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            pagination.appendChild(ellipsisLi);
+        }
+        
+        const lastLi = document.createElement('li');
+        lastLi.className = 'page-item';
+        lastLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${totalPages})">${totalPages}</a>`;
+        pagination.appendChild(lastLi);
+    }
+    
+    // 下一页按钮
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${!currentPagination.has_next ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${currentPage + 1})">下一页</a>`;
+    pagination.appendChild(nextLi);
+}
+
+// 跳转到指定页
+function goToPage(page) {
+    if (page < 1 || (currentPagination && page > currentPagination.total_pages)) {
+        return;
+    }
+    
+    currentPage = page;
+    const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
+    if (bankType === 'starred') {
+        loadStarredBanks();
+    } else {
+        loadQuestionBanks();
+    }
+}
+
 // 筛选和排序事件监听
 document.addEventListener('DOMContentLoaded', function() {
     // 题库类型筛选
     document.querySelectorAll('input[name="bankType"]').forEach(radio => {
         radio.addEventListener('change', function() {
+            currentPage = 1; // 重置到第一页
             const type = this.value;
             if (type === 'starred') {
                 loadStarredBanks();
@@ -1307,7 +1554,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 排序选择
     document.getElementById('sortBy').addEventListener('change', function() {
+        currentPage = 1; // 重置到第一页
         loadQuestionBanks();
+    });
+    
+    // 分页大小选择
+    document.getElementById('pageSizeSelect').addEventListener('change', function() {
+        currentPageSize = parseInt(this.value);
+        currentPage = 1; // 重置到第一页
+        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
+        if (bankType === 'starred') {
+            loadStarredBanks();
+        } else {
+            loadQuestionBanks();
+        }
     });
 });
 
@@ -1323,12 +1583,23 @@ async function loadQuestionBanks() {
         const params = new URLSearchParams();
         params.append('type', bankType);
         if (sortBy) params.append('sort', sortBy);
+        params.append('page', currentPage);
+        params.append('limit', currentPageSize);
         
         const url = `/api/questionbanks${params.toString() ? '?' + params.toString() : ''}`;
         console.log('发送请求到:', url);
         const response = await axios.get(url);
         console.log('题库列表响应:', response.data);
-        questionBanks = response.data;
+        
+        if (response.data.data) {
+            questionBanks = response.data.data;
+            currentPagination = response.data.pagination;
+        } else {
+            // 兼容旧版本返回格式
+            questionBanks = response.data;
+            currentPagination = null;
+        }
+        
         renderQuestionBanks();
     } catch (error) {
         console.error('加载题库失败:', error);
@@ -1340,14 +1611,28 @@ async function loadQuestionBanks() {
                 <button class="btn btn-primary" onclick="loadQuestionBanks()">重试</button>
             </div>
         `;
+        document.getElementById('paginationContainer').style.display = 'none';
     }
 }
 
 // 加载已收藏的题库
 async function loadStarredBanks() {
     try {
-        const response = await axios.get('/api/starred-questionbanks');
-        questionBanks = response.data;
+        const params = new URLSearchParams();
+        params.append('page', currentPage);
+        params.append('limit', currentPageSize);
+        
+        const response = await axios.get(`/api/starred-questionbanks?${params.toString()}`);
+        
+        if (response.data.data) {
+            questionBanks = response.data.data;
+            currentPagination = response.data.pagination;
+        } else {
+            // 兼容旧版本返回格式
+            questionBanks = response.data;
+            currentPagination = null;
+        }
+        
         renderQuestionBanks();
     } catch (error) {
         console.error('加载收藏题库失败:', error);

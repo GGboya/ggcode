@@ -95,6 +95,15 @@
                                     <div class="progress-label">今日完成度</div>
                                 </div>
                             </div>
+                            <!-- 打卡按钮 -->
+                            <div class="mt-3">
+                                <button class="btn btn-primary" id="checkinBtn" onclick="performCheckIn()" style="display: none;">
+                                    <i class="fas fa-check me-1"></i>立即打卡
+                                </button>
+                                <div id="checkinSuccess" style="display: none;" class="text-success">
+                                    <i class="fas fa-check-circle me-1"></i>今日已打卡
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -377,6 +386,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 设置定时刷新
     setInterval(updateTimeBasedContent, 60000); // 每分钟更新一次
+
+    // 页面获得焦点时刷新打卡统计（解决从学习页面返回后打卡天数不更新的问题）
+    window.addEventListener('focus', function() {
+        console.log('页面获得焦点，刷新打卡统计');
+        loadCheckInStats();
+    });
+
+    // 页面可见性变化时也刷新（处理标签页切换）
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('页面变为可见，刷新打卡统计');
+            loadCheckInStats();
+        }
+    });
 });
 
 // 初始化页面
@@ -558,10 +581,18 @@ async function loadMainStudyPlans() {
     
     try {
         console.log('发送请求获取学习计划');
-        const plansResponse = await axios.get('/api/study-plans');
+        const plansResponse = await axios.get('/api/study-plans?limit=20');
         console.log('学习计划响应:', plansResponse.data);
         
-        const studyPlans = plansResponse.data;
+        // 处理分页格式的响应
+        let studyPlans;
+        if (plansResponse.data.data) {
+            studyPlans = plansResponse.data.data;
+        } else {
+            // 兼容旧版本返回格式
+            studyPlans = plansResponse.data;
+        }
+        
         document.getElementById('planCount').textContent = studyPlans.length;
         
         if (studyPlans.length === 0) {
