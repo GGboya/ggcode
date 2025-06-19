@@ -99,9 +99,8 @@
         </div>
     </div>
 </div>
-{{end}}
 
-{{define "study-scripts"}}
+<!-- 学习页面脚本 -->
 <script>
 let studyPlanId = null;
 let studyPlan = null;
@@ -109,6 +108,8 @@ let dailyQuestions = [];
 
 // 页面加载时获取学习计划ID
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Study DOM加载完成');
+    
     const urlParams = new URLSearchParams(window.location.search);
     studyPlanId = urlParams.get('plan');
     
@@ -120,18 +121,30 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    loadStudyData();
+    // 等待一小段时间让base.html的setupAxios完成，然后加载数据
+    setTimeout(() => {
+        console.log('开始加载Study数据，学习计划ID:', studyPlanId);
+        loadStudyData();
+    }, 200);
 });
 
 // 加载学习数据
 async function loadStudyData() {
+    console.log('开始加载学习数据');
+    console.log('当前axios headers:', axios.defaults.headers.common);
+    
     try {
         // 并行加载学习计划信息、进度和今日任务
+        console.log('发送并行请求加载学习数据...');
         const [planResponse, progressResponse, questionsResponse] = await Promise.all([
             axios.get(`/api/study-plan/${studyPlanId}`),
             axios.get(`/api/study-plan/${studyPlanId}/progress`),
             axios.get(`/api/study-plan/${studyPlanId}/daily-questions`)
         ]);
+        
+        console.log('学习计划响应:', planResponse.data);
+        console.log('进度响应:', progressResponse.data);
+        console.log('今日题目响应:', questionsResponse.data);
         
         studyPlan = planResponse.data;
         const progress = progressResponse.data;

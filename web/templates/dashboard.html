@@ -313,8 +313,6 @@
     </div>
 </div>
 {{end}}
-
-{{define "dashboard-scripts"}}
 <script>
 let dailyQuestions = [];
 let checkInStats = {};
@@ -344,23 +342,19 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Dashboard DOM加载完成');
     initializePage();
     
-    // 等待base.html的认证流程完成后再加载数据
-    // 这里我们不直接调用API，而是等待base.html的triggerPageDataLoad调用
-    console.log('Dashboard初始化完成，等待认证流程触发数据加载');
+    // 等待一小段时间让base.html的setupAxios完成，然后加载数据
+    setTimeout(() => {
+        console.log('开始加载Dashboard数据');
+        loadStats();
+        loadStudyPlans();
+        loadCheckInStats().then(() => {
+            loadDailyQuestions();
+        });
+    }, 200);
     
     // 设置定时刷新
     setInterval(updateTimeBasedContent, 60000); // 每分钟更新一次
 });
-
-// 提供给base.html调用的数据加载函数
-function loadDashboardData() {
-    console.log('开始加载Dashboard数据');
-    loadStats();
-    loadStudyPlans();
-    loadCheckInStats().then(() => {
-        loadDailyQuestions();
-    });
-}
 
 // 初始化页面
 function initializePage() {

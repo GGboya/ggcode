@@ -626,8 +626,7 @@
             console.log('DOM加载完成，当前页面:', window.location.pathname);
             
             // 设置axios配置
-            const axiosReady = setupAxios();
-            console.log('Axios配置结果:', axiosReady);
+            setupAxios();
             
             // 为所有卡片添加淡入动画
             const cards = document.querySelectorAll('.card');
@@ -636,16 +635,16 @@
                 card.classList.add('fade-in');
             });
             
-            // 检查认证状态
-            checkAuthStatus();
+            // 简化认证检查
+            simpleAuthCheck();
         });
 
-        // 检查认证状态
-        function checkAuthStatus() {
+        // 简化的认证检查
+        function simpleAuthCheck() {
             const token = localStorage.getItem('token');
             const currentPath = window.location.pathname;
             
-            console.log('检查认证状态 - 页面:', currentPath, 'Token:', token ? '存在' : '不存在');
+            console.log('简化认证检查 - 页面:', currentPath, 'Token:', token ? '存在' : '不存在');
             
             // 如果在登录或注册页面，不需要检查认证
             if (currentPath === '/login' || currentPath === '/register') {
@@ -653,102 +652,28 @@
                 return;
             }
             
-            // 如果有token，验证其有效性
-            if (token) {
-                console.log('有token，验证有效性');
-                validateTokenAndShowContent(token);
-            } else {
-                // 没有token且在需要认证的页面，重定向到登录
-                const authRequiredPages = ['/dashboard', '/questionbanks', '/study-plans', '/study'];
-                if (authRequiredPages.includes(currentPath)) {
+            // 需要认证的页面
+            const authRequiredPages = ['/dashboard', '/questionbanks', '/study-plans', '/study'];
+            
+            if (authRequiredPages.includes(currentPath)) {
+                if (token) {
+                    console.log('有token，显示认证内容');
+                    // 显示认证内容
+                    const authRequiredElements = document.querySelectorAll('.auth-required');
+                    authRequiredElements.forEach(element => {
+                        element.classList.add('authenticated');
+                    });
+                    console.log('认证检查完成，页面应该可以正常加载API了');
+                } else {
                     console.log('需要认证的页面但没有token，重定向到登录');
                     showAlert('请先登录', 'warning');
                     setTimeout(() => {
                         window.location.href = '/login';
                     }, 1500);
-                } else {
-                    console.log('不需要认证的页面');
                 }
             }
         }
-        
-        // 验证token有效性并显示内容
-        async function validateTokenAndShowContent(token) {
-            console.log('开始验证token有效性');
-            
-            try {
-                // 确保axios header设置
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                console.log('已设置Authorization header');
-                
-                // 显示认证内容
-                const authRequiredElements = document.querySelectorAll('.auth-required');
-                console.log('找到需要认证的元素:', authRequiredElements.length);
-                authRequiredElements.forEach(element => {
-                    element.classList.add('authenticated');
-                });
-                
-                // 立即触发页面特定的数据加载
-                triggerPageDataLoad();
-                
-            } catch (error) {
-                console.error('Token验证出错:', error);
-            }
-        }
-        
-        // 触发页面特定的数据加载
-        function triggerPageDataLoad() {
-            const currentPath = window.location.pathname;
-            console.log('触发页面数据加载:', currentPath);
-            
-            // 等待一小段时间确保页面初始化完成
-            setTimeout(() => {
-                try {
-                    switch(currentPath) {
-                        case '/dashboard':
-                            if (typeof loadDashboardData === 'function') {
-                                console.log('调用dashboard的loadDashboardData');
-                                loadDashboardData();
-                            } else {
-                                console.log('loadDashboardData函数不存在，尝试单独调用');
-                                if (typeof loadStats === 'function') {
-                                    console.log('调用dashboard的loadStats');
-                                    loadStats();
-                                }
-                                if (typeof loadCheckInStats === 'function') {
-                                    console.log('调用dashboard的loadCheckInStats');
-                                    loadCheckInStats();
-                                }
-                                if (typeof loadDailyQuestions === 'function') {
-                                    console.log('调用dashboard的loadDailyQuestions');
-                                    loadDailyQuestions();
-                                }
-                            }
-                            break;
-                        case '/questionbanks':
-                            if (typeof loadQuestionBanks === 'function') {
-                                console.log('调用questionbanks的loadQuestionBanks');
-                                loadQuestionBanks();
-                            }
-                            break;
-                        case '/study-plans':
-                            if (typeof loadStudyPlans === 'function') {
-                                console.log('调用study-plans的loadStudyPlans');
-                                loadStudyPlans();
-                            }
-                            if (typeof loadQuestionBanksForPlan === 'function') {
-                                console.log('调用study-plans的loadQuestionBanksForPlan');
-                                loadQuestionBanksForPlan();
-                            }
-                            break;
-                        default:
-                            console.log('未知页面，不触发特定数据加载');
-                    }
-                } catch (error) {
-                    console.error('触发页面数据加载时出错:', error);
-                }
-            }, 100);
-        }
+
     </script>
 </body>
 </html> 

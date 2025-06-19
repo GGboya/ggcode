@@ -202,9 +202,8 @@
         </div>
     </div>
 </div>
-{{end}}
 
-{{define "scripts"}}
+<!-- 题库管理页面脚本 -->
 <script>
 let questionBanks = [];
 let questionBanksProgress = [];
@@ -212,8 +211,14 @@ let currentBankId = null;
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
-    loadQuestionBanks();
-    loadQuestionBanksProgress();
+    console.log('Questionbanks DOM加载完成');
+    
+    // 等待一小段时间让base.html的setupAxios完成，然后加载数据
+    setTimeout(() => {
+        console.log('开始加载Questionbanks数据');
+        loadQuestionBanks();
+        loadQuestionBanksProgress();
+    }, 200);
 });
 
 // 加载题库学习进度
@@ -1084,6 +1089,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 加载题库列表(更新版本，支持筛选和排序)
 async function loadQuestionBanks() {
+    console.log('开始加载题库列表');
+    console.log('当前axios headers:', axios.defaults.headers.common);
+    
     try {
         const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'all';
         const sortBy = document.getElementById('sortBy').value;
@@ -1093,7 +1101,9 @@ async function loadQuestionBanks() {
         if (sortBy) params.append('sort', sortBy);
         
         const url = `/api/questionbanks${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('发送请求到:', url);
         const response = await axios.get(url);
+        console.log('题库列表响应:', response.data);
         questionBanks = response.data;
         renderQuestionBanks();
     } catch (error) {
