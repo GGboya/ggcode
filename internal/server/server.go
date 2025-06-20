@@ -90,6 +90,7 @@ func (s *Server) setupRoutes() {
 			api.DELETE("/questionbanks/:id", h.DeleteQuestionBank)
 			api.GET("/questionbanks/:id/questions", h.GetQuestions)
 			api.POST("/questionbanks/:id/questions", h.CreateQuestion)
+			api.GET("/questions/:id", h.GetQuestion)
 			api.PUT("/questions/:id", h.UpdateQuestion)
 			api.DELETE("/questions/:id", h.DeleteQuestion)
 

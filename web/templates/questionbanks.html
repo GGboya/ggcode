@@ -17,16 +17,16 @@
 
         <!-- 筛选和排序控件 -->
         <div class="row mb-4">
-            <div class="col-md-8">
+            <div class="col-md-6">
                 <div class="btn-group" role="group" aria-label="题库类型筛选">
-                    <input type="radio" class="btn-check" name="bankType" id="allBanks" value="all" checked autocomplete="off">
-                    <label class="btn btn-outline-primary" for="allBanks">全部题库</label>
+                    <input type="radio" class="btn-check" name="bankType" id="officialBanks" value="official" checked autocomplete="off">
+                    <label class="btn btn-outline-primary" for="officialBanks">官方题库</label>
 
                     <input type="radio" class="btn-check" name="bankType" id="sharedBanks" value="shared" autocomplete="off">
                     <label class="btn btn-outline-primary" for="sharedBanks">共享题库</label>
 
                     <input type="radio" class="btn-check" name="bankType" id="personalBanks" value="personal" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="personalBanks">我的题库</label>
+                    <label class="btn btn-outline-primary" for="personalBanks">个人题库</label>
 
                     <input type="radio" class="btn-check" name="bankType" id="starredBanks" value="starred" autocomplete="off">
                     <label class="btn btn-outline-primary" for="starredBanks">
@@ -34,11 +34,19 @@
                     </label>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <select class="form-select" id="sortBy">
                     <option value="created_at">按创建时间排序</option>
                     <option value="star_count">按收藏数排序</option>
                     <option value="fork_count">按Fork数排序</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="pageSizeSelect">
+                    <option value="10">每页10个</option>
+                    <option value="20">每页20个</option>
+                    <option value="50">每页50个</option>
+                    <option value="100">每页100个</option>
                 </select>
             </div>
         </div>
@@ -52,6 +60,20 @@
             <span class="visually-hidden">加载中...</span>
         </div>
         <p class="mt-2 text-muted">正在加载题库...</p>
+    </div>
+</div>
+
+<!-- 分页控件 -->
+<div class="row mt-4" id="paginationContainer" style="display: none;">
+    <div class="col-12">
+        <nav aria-label="题库分页">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- 分页按钮将通过JavaScript动态生成 -->
+            </ul>
+        </nav>
+        <div class="text-center text-muted">
+            <span id="paginationInfo">第 1 页，共 1 页，总计 0 个题库</span>
+        </div>
     </div>
 </div>
 
@@ -120,11 +142,11 @@
 </div>
 
 <!-- 添加题目模态框 -->
-<div class="modal fade" id="addQuestionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="addQuestionModal" tabindex="-1" aria-labelledby="addQuestionModalLabel" aria-hidden="true" data-bs-backdrop="false" style="z-index: 1055;">
+    <div class="modal-dialog" style="z-index: 1056;">
+        <div class="modal-content" style="background: white; border-radius: 8px;">
             <div class="modal-header">
-                <h5 class="modal-title">
+                <h5 class="modal-title" id="addQuestionModalLabel">
                     <i class="fas fa-plus"></i> 添加题目
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -162,9 +184,9 @@
 </div>
 
 <!-- 编辑题目模态框 -->
-<div class="modal fade" id="editQuestionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="editQuestionModal" tabindex="-1" data-bs-backdrop="false" style="z-index: 1065;">
+    <div class="modal-dialog" style="z-index: 1066; margin-top: 20px;">
+        <div class="modal-content" style="background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="fas fa-edit"></i> 编辑题目
@@ -208,10 +230,83 @@
 let questionBanks = [];
 let questionBanksProgress = [];
 let currentBankId = null;
+let currentPage = 1;
+let currentPageSize = 10;
+let currentPagination = null;
+// 题目分页相关变量
+let currentQuestionPage = 1;
+let currentQuestionPageSize = 20;
+let currentQuestionPagination = null;
+let currentViewingBankId = null;
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Questionbanks DOM加载完成');
+    
+    // 检查Bootstrap是否正确加载
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap 未正确加载');
+        showAlert('页面加载异常，请刷新页面', 'danger');
+        return;
+    } else {
+        console.log('Bootstrap 已正确加载');
+    }
+    
+    // 检查模态框元素是否存在
+    const addQuestionModal = document.getElementById('addQuestionModal');
+    if (!addQuestionModal) {
+        console.error('添加题目模态框元素不存在');
+    } else {
+        console.log('添加题目模态框元素存在');
+        
+        // 添加模态框事件监听器
+        addQuestionModal.addEventListener('shown.bs.modal', function() {
+            console.log('添加题目模态框已显示');
+            
+            // 聚焦到第一个输入框
+            const firstInput = this.querySelector('input[type="text"]');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 100);
+            }
+        });
+        
+        addQuestionModal.addEventListener('hidden.bs.modal', function() {
+            console.log('添加题目模态框已隐藏');
+        });
+        
+        addQuestionModal.addEventListener('show.bs.modal', function() {
+            console.log('添加题目模态框正在显示');
+        });
+        
+        addQuestionModal.addEventListener('hide.bs.modal', function() {
+            console.log('添加题目模态框正在隐藏');
+        });
+    }
+    
+    // 添加全局backdrop清理功能
+    const clearBackdrops = () => {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => {
+            console.log('移除backdrop:', backdrop);
+            backdrop.remove();
+        });
+        
+        // 移除body上的modal-open类
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    };
+    
+    // 定期清理backdrop
+    setInterval(clearBackdrops, 1000);
+    
+    // 页面点击时也清理
+    document.addEventListener('click', (e) => {
+        // 如果点击的不是模态框内容，清理backdrop
+        if (!e.target.closest('.modal-content')) {
+            setTimeout(clearBackdrops, 100);
+        }
+    });
     
     // 等待一小段时间让base.html的setupAxios完成，然后加载数据
     setTimeout(() => {
@@ -220,6 +315,23 @@ document.addEventListener('DOMContentLoaded', function() {
         loadQuestionBanksProgress();
     }, 200);
 });
+
+// 关闭编辑题目模态框的函数
+function closeEditQuestionModal() {
+    const editModalElement = document.getElementById('editQuestionModal');
+    const questionsModal = document.getElementById('questionsModal');
+    const editModalInstance = bootstrap.Modal.getInstance(editModalElement);
+    
+    if (editModalInstance) {
+        editModalInstance.hide();
+    }
+    
+    // 重置模态框样式
+    setTimeout(() => {
+        editModalElement.classList.remove('on-top-layer');
+        console.log('编辑模态框已关闭并重置样式');
+    }, 150);
+}
 
 // 加载题库学习进度
 async function loadQuestionBanksProgress() {
@@ -236,20 +348,71 @@ async function loadQuestionBanksProgress() {
 // 渲染题库列表
 function renderQuestionBanks() {
     const container = document.getElementById('questionBanksList');
+    const paginationContainer = document.getElementById('paginationContainer');
     
     if (questionBanks.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="fas fa-book fa-3x text-muted mb-3"></i>
-                <h5>暂无题库</h5>
-                <p class="text-muted">创建你的第一个题库开始学习</p>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBankModal">
-                    <i class="fas fa-plus"></i> 创建题库
-                </button>
-            </div>
-        `;
+        // 隐藏分页控件
+        paginationContainer.style.display = 'none';
+        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
+        let emptyStateHTML = '';
+        
+        switch (bankType) {
+            case 'official':
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-award fa-3x text-muted mb-3"></i>
+                        <h5>暂无官方题库</h5>
+                        <p class="text-muted">官方题库正在准备中，敬请期待</p>
+                    </div>
+                `;
+                break;
+            case 'shared':
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-share-alt fa-3x text-muted mb-3"></i>
+                        <h5>暂无共享题库</h5>
+                        <p class="text-muted">还没有用户分享题库，您可以成为第一个</p>
+                    </div>
+                `;
+                break;
+            case 'personal':
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <h5>暂无个人题库</h5>
+                        <p class="text-muted">创建你的第一个题库开始学习</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBankModal">
+                            <i class="fas fa-plus"></i> 创建题库
+                        </button>
+                    </div>
+                `;
+                break;
+            case 'starred':
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                        <h5>暂无收藏</h5>
+                        <p class="text-muted">您还没有收藏任何题库，去发现一些有趣的题库吧</p>
+                    </div>
+                `;
+                break;
+            default:
+                emptyStateHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <h5>暂无题库</h5>
+                        <p class="text-muted">暂时没有题库</p>
+                    </div>
+                `;
+        }
+        
+        container.innerHTML = emptyStateHTML;
         return;
     }
+    
+    // 显示分页控件
+    paginationContainer.style.display = 'block';
+    renderPagination();
     
     let html = '';
     questionBanks.forEach(bank => {
@@ -402,8 +565,15 @@ function renderQuestionBanks() {
 // 初始化收藏按钮状态
 async function initializeStarButtons() {
     try {
-        const response = await axios.get('/api/starred-questionbanks');
-        const starredBanks = response.data;
+        const response = await axios.get('/api/starred-questionbanks?limit=1000');
+        // 处理分页格式的响应
+        let starredBanks;
+        if (response.data.data) {
+            starredBanks = response.data.data;
+        } else {
+            // 兼容旧版本返回格式
+            starredBanks = response.data;
+        }
         const starredBankIds = starredBanks.map(bank => bank.id);
         
         // 更新所有收藏按钮的状态
@@ -422,13 +592,30 @@ async function initializeStarButtons() {
 }
 
 // 查看题目
-async function viewQuestions(bankId) {
+async function viewQuestions(bankId, page = 1) {
     try {
         // 记录当前查看的题库ID，用于删除题目后刷新
         window.currentViewingBankId = bankId;
+        currentViewingBankId = bankId;
+        currentQuestionPage = page;
         
-        const response = await axios.get(`/api/questionbanks/${bankId}/questions`);
-        const questions = response.data;
+        const params = new URLSearchParams();
+        params.append('page', page);
+        params.append('limit', currentQuestionPageSize);
+        
+        const response = await axios.get(`/api/questionbanks/${bankId}/questions?${params.toString()}`);
+        let questions, pagination;
+        
+        if (response.data.data) {
+            questions = response.data.data;
+            pagination = response.data.pagination;
+            currentQuestionPagination = pagination;
+        } else {
+            // 兼容旧版本返回格式
+            questions = response.data;
+            pagination = null;
+            currentQuestionPagination = null;
+        }
         
         const bank = questionBanks.find(b => b.id === bankId);
         
@@ -441,7 +628,15 @@ async function viewQuestions(bankId) {
                             <h5 class="modal-title">
                                 <i class="fas fa-list"></i> ${bank.name} - 题目列表
                             </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm" id="questionPageSize" style="width: auto;">
+                                    <option value="10" ${currentQuestionPageSize === 10 ? 'selected' : ''}>10/页</option>
+                                    <option value="20" ${currentQuestionPageSize === 20 ? 'selected' : ''}>20/页</option>
+                                    <option value="50" ${currentQuestionPageSize === 50 ? 'selected' : ''}>50/页</option>
+                                    <option value="100" ${currentQuestionPageSize === 100 ? 'selected' : ''}>100/页</option>
+                                </select>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
                         </div>
                         <div class="modal-body">
                             ${questions.length === 0 ? `
@@ -451,31 +646,19 @@ async function viewQuestions(bankId) {
                                     <p class="text-muted">该题库还没有题目</p>
                                 </div>
                             ` : `
-                                <div class="list-group">
-                                    ${questions.map((q, index) => `
-                                        <div class="list-group-item">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1">${index + 1}. ${q.title}</h6>
-                                                    <span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
-                                                </div>
-                                                <div class="btn-group btn-group-sm">
-                                                    <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary">
-                                                        <i class="fas fa-external-link-alt"></i> 做题
-                                                    </a>
-                                                    ${canEditBank(bank) ? `
-                                                        <button class="btn btn-outline-warning" onclick="editQuestion(${q.id})">
-                                                            <i class="fas fa-edit"></i> 编辑
-                                                        </button>
-                                                        <button class="btn btn-outline-danger" onclick="deleteQuestion(${q.id})">
-                                                            <i class="fas fa-trash"></i> 删除
-                                                        </button>
-                                                    ` : ''}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `).join('')}
+                                <div class="list-group" id="questionsList">
+                                    ${renderQuestionsList(questions, bank, pagination)}
                                 </div>
+                                ${pagination ? `
+                                    <nav aria-label="题目分页" class="mt-3">
+                                        <ul class="pagination justify-content-center" id="questionPagination">
+                                            ${renderQuestionPagination(pagination)}
+                                        </ul>
+                                        <div class="text-center text-muted">
+                                            <small>第 ${pagination.page} 页，共 ${pagination.total_pages} 页，总计 ${pagination.total} 个题目</small>
+                                        </div>
+                                    </nav>
+                                ` : ''}
                             `}
                         </div>
                         <div class="modal-footer">
@@ -495,6 +678,16 @@ async function viewQuestions(bankId) {
         // 添加新模态框
         document.body.insertAdjacentHTML('beforeend', modalHtml);
         
+        // 添加分页大小选择事件监听
+        const pageSizeSelect = document.getElementById('questionPageSize');
+        if (pageSizeSelect) {
+            pageSizeSelect.addEventListener('change', function() {
+                currentQuestionPageSize = parseInt(this.value);
+                currentQuestionPage = 1;
+                viewQuestions(currentViewingBankId, 1);
+            });
+        }
+        
         // 显示模态框
         const modal = new bootstrap.Modal(document.getElementById('questionsModal'));
         modal.show();
@@ -512,9 +705,153 @@ async function viewQuestions(bankId) {
 
 // 添加题目
 function addQuestion(bankId) {
+    console.log('开始添加题目，bankId:', bankId);
     currentBankId = bankId;
-    const modal = new bootstrap.Modal(document.getElementById('addQuestionModal'));
-    modal.show();
+    
+    // 确保表单是空的
+    document.getElementById('addQuestionForm').reset();
+    
+    // 使用简单的Bootstrap方式显示模态框
+    const modalElement = document.getElementById('addQuestionModal');
+    if (!modalElement) {
+        console.error('找不到添加题目的模态框元素');
+        showAlert('页面加载异常，请刷新页面重试', 'danger');
+        return;
+    }
+    
+    // 强制移除可能存在的show类，然后重新显示
+    modalElement.classList.remove('show');
+    modalElement.style.display = 'none';
+    
+    // 移除现有的backdrop
+    const existingBackdrop = document.querySelector('.modal-backdrop');
+    if (existingBackdrop) {
+        existingBackdrop.remove();
+    }
+    
+    // 使用setTimeout确保DOM更新完成
+    setTimeout(() => {
+        try {
+            // 完全禁用backdrop
+            const modal = new bootstrap.Modal(modalElement, {
+                backdrop: false,  // 禁用背景遮罩
+                keyboard: true,
+                focus: true
+            });
+            modal.show();
+            console.log('模态框显示完成');
+            
+            // 强制移除任何可能存在的backdrop
+            const allBackdrops = document.querySelectorAll('.modal-backdrop');
+            allBackdrops.forEach(backdrop => backdrop.remove());
+            
+            // 添加ESC键关闭功能
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    modal.hide();
+                    document.removeEventListener('keydown', handleEscape);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+            
+        } catch (error) {
+            console.error('模态框显示失败:', error);
+            showAlert('无法显示添加题目窗口', 'danger');
+        }
+    }, 50);
+}
+
+// 渲染题目列表
+function renderQuestionsList(questions, bank, pagination) {
+    return questions.map((q, index) => {
+        const globalIndex = pagination ? 
+            (pagination.page - 1) * pagination.limit + index + 1 : 
+            index + 1;
+        return `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${globalIndex}. ${q.title}</h6>
+                        <span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary">
+                            <i class="fas fa-external-link-alt"></i> 做题
+                        </a>
+                        ${canEditBank(bank) ? `
+                            <button class="btn btn-outline-warning" onclick="editQuestion(${q.id})">
+                                <i class="fas fa-edit"></i> 编辑
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteQuestion(${q.id})">
+                                <i class="fas fa-trash"></i> 删除
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 渲染题目分页
+function renderQuestionPagination(pagination) {
+    let html = '';
+    
+    // 上一页按钮
+    html += `<li class="page-item ${!pagination.has_prev ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="goToQuestionPage(${pagination.page - 1})">上一页</a>
+    </li>`;
+    
+    // 页码按钮
+    const totalPages = pagination.total_pages;
+    const currentPageNum = pagination.page;
+    
+    let startPage = Math.max(1, currentPageNum - 2);
+    let endPage = Math.min(totalPages, currentPageNum + 2);
+    
+    if (totalPages <= 5) {
+        startPage = 1;
+        endPage = totalPages;
+    }
+    
+    // 第一页
+    if (startPage > 1) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="goToQuestionPage(1)">1</a></li>`;
+        if (startPage > 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    // 中间页码
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<li class="page-item ${i === currentPageNum ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="goToQuestionPage(${i})">${i}</a>
+        </li>`;
+    }
+    
+    // 最后一页
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="goToQuestionPage(${totalPages})">${totalPages}</a></li>`;
+    }
+    
+    // 下一页按钮
+    html += `<li class="page-item ${!pagination.has_next ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="goToQuestionPage(${pagination.page + 1})">下一页</a>
+    </li>`;
+    
+    return html;
+}
+
+// 跳转到指定题目页
+function goToQuestionPage(page) {
+    if (page < 1 || (currentQuestionPagination && page > currentQuestionPagination.total_pages)) {
+        return;
+    }
+    
+    viewQuestions(currentViewingBankId, page);
 }
 
 // 获取难度样式类
@@ -560,10 +897,19 @@ document.getElementById('createBankForm').addEventListener('submit', async funct
 // 添加题目表单提交
 document.getElementById('addQuestionForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    console.log('提交添加题目表单');
     
     const title = document.getElementById('questionTitle').value;
     const url = document.getElementById('questionURL').value;
     const difficulty = document.getElementById('questionDifficulty').value;
+    
+    console.log('表单数据:', { title, url, difficulty, currentBankId });
+    
+    if (!currentBankId) {
+        console.error('当前题库ID为空');
+        showAlert('题库ID异常，请重新操作', 'danger');
+        return;
+    }
     
     try {
         const response = await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
@@ -572,10 +918,15 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
             difficulty: difficulty
         });
         
+        console.log('题目添加成功:', response.data);
         showAlert('题目添加成功！', 'success');
         
-        // 关闭模态框
-        bootstrap.Modal.getInstance(document.getElementById('addQuestionModal')).hide();
+        // 获取模态框实例并安全关闭
+        const modalElement = document.getElementById('addQuestionModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
         
         // 清空表单
         this.reset();
@@ -587,6 +938,7 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
         }
         
     } catch (error) {
+        console.error('添加题目失败:', error);
         const message = error.response?.data?.error || '添加失败';
         showAlert(message, 'danger');
     }
@@ -739,23 +1091,9 @@ function editQuestion(questionId) {
 // 获取题目详情
 async function fetchQuestionDetails(questionId) {
     try {
-        // 这里我们需要先找到题目所属的题库，然后获取题目列表
-        let question = null;
-        for (const bank of questionBanks) {
-            try {
-                const response = await axios.get(`/api/questionbanks/${bank.id}/questions`);
-                const questions = response.data;
-                question = questions.find(q => q.id === questionId);
-                if (question) break;
-            } catch (error) {
-                continue;
-            }
-        }
-        
-        if (!question) {
-            showAlert('题目不存在', 'danger');
-            return;
-        }
+        // 直接通过题目ID获取题目详情
+        const response = await axios.get(`/api/questions/${questionId}`);
+        const question = response.data;
         
         // 填充编辑表单
         document.getElementById('editQuestionTitle').value = question.title;
@@ -765,9 +1103,31 @@ async function fetchQuestionDetails(questionId) {
         // 保存当前编辑的题目ID
         window.currentQuestionId = questionId;
         
-        // 显示模态框
-        const modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+        // 显示编辑模态框，设置为无backdrop以避免与题目列表模态框冲突
+        const modalElement = document.getElementById('editQuestionModal');
+        
+        // 清理可能存在的backdrop
+        const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+        existingBackdrops.forEach(backdrop => backdrop.remove());
+        
+        // 创建模态框实例并显示
+        const modal = new bootstrap.Modal(modalElement, {
+            backdrop: false,
+            keyboard: true,
+            focus: true
+        });
+        
         modal.show();
+        
+        // 将编辑模态框置于最顶层
+        setTimeout(() => {
+            const questionsModal = document.getElementById('questionsModal');
+            if (questionsModal && questionsModal.classList.contains('show')) {
+                // 添加最顶层样式
+                modalElement.classList.add('on-top-layer');
+                console.log('编辑模态框已置于最顶层');
+            }
+        }, 100);
         
     } catch (error) {
         console.error('获取题目详情失败:', error);
@@ -792,8 +1152,18 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
         
         showAlert('题目更新成功！', 'success');
         
-        // 关闭模态框
-        bootstrap.Modal.getInstance(document.getElementById('editQuestionModal')).hide();
+        // 关闭编辑模态框
+        const editModalElement = document.getElementById('editQuestionModal');
+        const editModalInstance = bootstrap.Modal.getInstance(editModalElement);
+        if (editModalInstance) {
+            editModalInstance.hide();
+        }
+        
+        // 重置模态框样式
+        setTimeout(() => {
+            editModalElement.classList.remove('on-top-layer');
+            console.log('编辑模态框样式已重置');
+        }, 150);
         
         // 无感更新：直接更新题目列表中的对应项
         updateQuestionInModal(response.data || {
@@ -989,8 +1359,15 @@ async function unshareQuestionBank(bankId) {
 async function toggleStarQuestionBank(bankId) {
     try {
         // 先检查当前是否已收藏
-        const response = await axios.get('/api/starred-questionbanks');
-        const starredBanks = response.data;
+        const response = await axios.get('/api/starred-questionbanks?limit=1000');
+        // 处理分页格式的响应
+        let starredBanks;
+        if (response.data.data) {
+            starredBanks = response.data.data;
+        } else {
+            // 兼容旧版本返回格式
+            starredBanks = response.data;
+        }
         const isStarred = starredBanks.some(bank => bank.id === bankId);
         
         if (isStarred) {
@@ -1019,10 +1396,20 @@ async function starQuestionBank(bankId) {
             starBtn.classList.add('btn-warning');
         }
         
-        loadQuestionBanks();
+        refreshCurrentPage();
     } catch (error) {
         const message = error.response?.data?.error || '收藏失败';
         showAlert(message, 'danger');
+    }
+}
+
+// 智能刷新当前页面
+function refreshCurrentPage() {
+    const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
+    if (bankType === 'starred') {
+        loadStarredBanks();
+    } else {
+        loadQuestionBanks();
     }
 }
 
@@ -1041,7 +1428,7 @@ async function unstarQuestionBank(bankId) {
             starBtn.classList.add('btn-outline-warning');
         }
         
-        loadQuestionBanks();
+        refreshCurrentPage();
     } catch (error) {
         const message = error.response?.data?.error || '取消收藏失败';
         showAlert(message, 'danger');
@@ -1060,10 +1447,103 @@ async function forkQuestionBank(bankId) {
     try {
         const response = await axios.post(`/api/questionbanks/${bankId}/fork`);
         showAlert('Fork成功！已创建题库副本。', 'success');
-        loadQuestionBanks();
+        refreshCurrentPage();
     } catch (error) {
         const message = error.response?.data?.error || 'Fork失败';
         showAlert(message, 'danger');
+    }
+}
+
+// 渲染分页控件
+function renderPagination() {
+    if (!currentPagination) return;
+    
+    const pagination = document.getElementById('pagination');
+    const paginationInfo = document.getElementById('paginationInfo');
+    
+    // 更新分页信息
+    paginationInfo.textContent = `第 ${currentPagination.page} 页，共 ${currentPagination.total_pages} 页，总计 ${currentPagination.total} 个题库`;
+    
+    // 清空现有分页按钮
+    pagination.innerHTML = '';
+    
+    // 上一页按钮
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${!currentPagination.has_prev ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${currentPage - 1})">上一页</a>`;
+    pagination.appendChild(prevLi);
+    
+    // 页码按钮
+    const totalPages = currentPagination.total_pages;
+    const currentPageNum = currentPagination.page;
+    
+    // 计算显示的页码范围
+    let startPage = Math.max(1, currentPageNum - 2);
+    let endPage = Math.min(totalPages, currentPageNum + 2);
+    
+    // 如果总页数少于5页，显示所有页码
+    if (totalPages <= 5) {
+        startPage = 1;
+        endPage = totalPages;
+    }
+    
+    // 第一页
+    if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        firstLi.className = 'page-item';
+        firstLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(1)">1</a>`;
+        pagination.appendChild(firstLi);
+        
+        if (startPage > 2) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            pagination.appendChild(ellipsisLi);
+        }
+    }
+    
+    // 中间页码
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentPageNum ? 'active' : ''}`;
+        pageLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>`;
+        pagination.appendChild(pageLi);
+    }
+    
+    // 最后一页
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            pagination.appendChild(ellipsisLi);
+        }
+        
+        const lastLi = document.createElement('li');
+        lastLi.className = 'page-item';
+        lastLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${totalPages})">${totalPages}</a>`;
+        pagination.appendChild(lastLi);
+    }
+    
+    // 下一页按钮
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${!currentPagination.has_next ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${currentPage + 1})">下一页</a>`;
+    pagination.appendChild(nextLi);
+}
+
+// 跳转到指定页
+function goToPage(page) {
+    if (page < 1 || (currentPagination && page > currentPagination.total_pages)) {
+        return;
+    }
+    
+    currentPage = page;
+    const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
+    if (bankType === 'starred') {
+        loadStarredBanks();
+    } else {
+        loadQuestionBanks();
     }
 }
 
@@ -1072,6 +1552,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 题库类型筛选
     document.querySelectorAll('input[name="bankType"]').forEach(radio => {
         radio.addEventListener('change', function() {
+            currentPage = 1; // 重置到第一页
             const type = this.value;
             if (type === 'starred') {
                 loadStarredBanks();
@@ -1083,7 +1564,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 排序选择
     document.getElementById('sortBy').addEventListener('change', function() {
+        currentPage = 1; // 重置到第一页
         loadQuestionBanks();
+    });
+    
+    // 分页大小选择
+    document.getElementById('pageSizeSelect').addEventListener('change', function() {
+        currentPageSize = parseInt(this.value);
+        currentPage = 1; // 重置到第一页
+        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
+        if (bankType === 'starred') {
+            loadStarredBanks();
+        } else {
+            loadQuestionBanks();
+        }
     });
 });
 
@@ -1093,18 +1587,29 @@ async function loadQuestionBanks() {
     console.log('当前axios headers:', axios.defaults.headers.common);
     
     try {
-        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'all';
+        const bankType = document.querySelector('input[name="bankType"]:checked')?.value || 'official';
         const sortBy = document.getElementById('sortBy').value;
         
         const params = new URLSearchParams();
-        if (bankType !== 'all') params.append('type', bankType);
+        params.append('type', bankType);
         if (sortBy) params.append('sort', sortBy);
+        params.append('page', currentPage);
+        params.append('limit', currentPageSize);
         
         const url = `/api/questionbanks${params.toString() ? '?' + params.toString() : ''}`;
         console.log('发送请求到:', url);
         const response = await axios.get(url);
         console.log('题库列表响应:', response.data);
-        questionBanks = response.data;
+        
+        if (response.data.data) {
+            questionBanks = response.data.data;
+            currentPagination = response.data.pagination;
+        } else {
+            // 兼容旧版本返回格式
+            questionBanks = response.data;
+            currentPagination = null;
+        }
+        
         renderQuestionBanks();
     } catch (error) {
         console.error('加载题库失败:', error);
@@ -1116,24 +1621,33 @@ async function loadQuestionBanks() {
                 <button class="btn btn-primary" onclick="loadQuestionBanks()">重试</button>
             </div>
         `;
+        document.getElementById('paginationContainer').style.display = 'none';
     }
 }
 
 // 加载已收藏的题库
 async function loadStarredBanks() {
     try {
-        const response = await axios.get('/api/starred-questionbanks');
-        questionBanks = response.data;
+        const params = new URLSearchParams();
+        params.append('page', currentPage);
+        params.append('limit', currentPageSize);
+        
+        const response = await axios.get(`/api/starred-questionbanks?${params.toString()}`);
+        
+        if (response.data.data) {
+            questionBanks = response.data.data;
+            currentPagination = response.data.pagination;
+        } else {
+            // 兼容旧版本返回格式
+            questionBanks = response.data;
+            currentPagination = null;
+        }
+        
         renderQuestionBanks();
     } catch (error) {
         console.error('加载收藏题库失败:', error);
-        document.getElementById('questionBanksList').innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="fas fa-star fa-3x text-warning mb-3"></i>
-                <h5>暂无收藏</h5>
-                <p class="text-muted">您还没有收藏任何题库</p>
-            </div>
-        `;
+        questionBanks = []; // 设置为空数组，让renderQuestionBanks处理空状态
+        renderQuestionBanks();
     }
 }
 

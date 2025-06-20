@@ -74,10 +74,15 @@
 <div class="row">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-list"></i> 我的学习计划
                 </h5>
+                <select class="form-select form-select-sm" id="planPageSize" style="width: auto;">
+                    <option value="10">每页10个</option>
+                    <option value="20" selected>每页20个</option>
+                    <option value="50">每页50个</option>
+                </select>
             </div>
             <div class="card-body">
                 <div id="studyPlansList">
@@ -86,6 +91,18 @@
                             <span class="visually-hidden">加载中...</span>
                         </div>
                         <p class="mt-2 text-muted">正在加载学习计划...</p>
+                    </div>
+                </div>
+                
+                <!-- 分页控件 -->
+                <div id="planPaginationContainer" style="display: none;">
+                    <nav aria-label="学习计划分页" class="mt-3">
+                        <ul class="pagination justify-content-center" id="planPagination">
+                            <!-- 分页按钮将通过JavaScript动态生成 -->
+                        </ul>
+                    </nav>
+                    <div class="text-center text-muted">
+                        <span id="planPaginationInfo">第 1 页，共 1 页，总计 0 个学习计划</span>
                     </div>
                 </div>
             </div>
@@ -131,6 +148,10 @@
 <script>
 let questionBanks = [];
 let studyPlans = [];
+// 学习计划分页相关变量
+let currentPlanPage = 1;
+let currentPlanPageSize = 20;
+let currentPlanPagination = null;
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
@@ -145,6 +166,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('editDailyCountDisplay').textContent = this.value + '题';
     });
     
+    // 分页大小选择事件
+    document.getElementById('planPageSize').addEventListener('change', function() {
+        currentPlanPageSize = parseInt(this.value);
+        currentPlanPage = 1; // 重置到第一页
+        loadStudyPlans();
+    });
+
     // 等待一小段时间让base.html的setupAxios完成，然后加载数据
     setTimeout(() => {
         console.log('开始加载Study-plans数据');
@@ -153,24 +181,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 200);
 });
 
-// 加载题库列表
+// 加载题库列表（仅获取官方题库和个人题库）
 async function loadQuestionBanks() {
     console.log('开始加载题库列表');
     console.log('当前axios headers:', axios.defaults.headers.common);
     
     try {
-        console.log('发送请求到 /api/questionbanks');
-        const response = await axios.get('/api/questionbanks');
-        console.log('题库列表响应:', response.data);
-        questionBanks = response.data;
+        // 并行获取官方题库和个人题库
+        const [officialResponse, personalResponse] = await Promise.all([
+            axios.get('/api/questionbanks?type=official&limit=100'),
+            axios.get('/api/questionbanks?type=personal&limit=100')
+        ]);
+        
+        // 处理分页格式的响应
+        const officialBanks = officialResponse.data.data || officialResponse.data;
+        const personalBanks = personalResponse.data.data || personalResponse.data;
+        
+        // 合并两类题库
+        questionBanks = [...officialBanks, ...personalBanks];
+        
+        console.log('题库列表响应:', questionBanks);
         
         const select = document.getElementById('questionBankSelect');
         select.innerHTML = '<option value="">请选择题库</option>';
         
-        questionBanks.forEach(bank => {
+        // 先添加官方题库
+        officialBanks.forEach(bank => {
             const option = document.createElement('option');
             option.value = bank.id;
-            option.textContent = bank.name + (bank.is_official ? ' (官方)' : '');
+            option.textContent = bank.name + ' (官方)';
+            select.appendChild(option);
+        });
+        
+        // 添加分隔线
+        if (officialBanks.length > 0 && personalBanks.length > 0) {
+            const separator = document.createElement('option');
+            separator.disabled = true;
+            separator.textContent = '──────────';
+            select.appendChild(separator);
+        }
+        
+        // 再添加个人题库
+        personalBanks.forEach(bank => {
+            const option = document.createElement('option');
+            option.value = bank.id;
+            option.textContent = bank.name;
             select.appendChild(option);
         });
         
@@ -186,10 +241,24 @@ async function loadStudyPlans() {
     console.log('当前axios headers:', axios.defaults.headers.common);
     
     try {
-        console.log('发送请求到 /api/study-plans');
-        const response = await axios.get('/api/study-plans');
+        const params = new URLSearchParams();
+        params.append('page', currentPlanPage);
+        params.append('limit', currentPlanPageSize);
+        
+        const url = `/api/study-plans?${params.toString()}`;
+        console.log('发送请求到:', url);
+        const response = await axios.get(url);
         console.log('学习计划响应:', response.data);
-        studyPlans = response.data;
+        
+        if (response.data.data) {
+            studyPlans = response.data.data;
+            currentPlanPagination = response.data.pagination;
+        } else {
+            // 兼容旧版本返回格式
+            studyPlans = response.data;
+            currentPlanPagination = null;
+        }
+        
         console.log('学习计划数据:', studyPlans);
         
         if (studyPlans.length === 0) {
@@ -200,6 +269,7 @@ async function loadStudyPlans() {
                     <p class="text-muted">创建第一个学习计划开始你的学习之旅</p>
                 </div>
             `;
+            document.getElementById('planPaginationContainer').style.display = 'none';
             return;
         }
         
@@ -217,6 +287,7 @@ async function loadStudyPlans() {
         });
         
         renderStudyPlans(progressMap);
+        renderPlanPagination();
         
     } catch (error) {
         console.error('加载学习计划失败:', error);
@@ -227,6 +298,7 @@ async function loadStudyPlans() {
                 <p class="text-muted small">请检查浏览器控制台获取详细错误信息</p>
             </div>
         `;
+        document.getElementById('planPaginationContainer').style.display = 'none';
     }
 }
 
@@ -291,6 +363,98 @@ function renderStudyPlans(progressMap) {
     });
     
     document.getElementById('studyPlansList').innerHTML = html;
+}
+
+// 渲染学习计划分页控件
+function renderPlanPagination() {
+    if (!currentPlanPagination) return;
+    
+    const paginationContainer = document.getElementById('planPaginationContainer');
+    const pagination = document.getElementById('planPagination');
+    const paginationInfo = document.getElementById('planPaginationInfo');
+    
+    // 显示分页控件
+    paginationContainer.style.display = 'block';
+    
+    // 更新分页信息
+    paginationInfo.textContent = `第 ${currentPlanPagination.page} 页，共 ${currentPlanPagination.total_pages} 页，总计 ${currentPlanPagination.total} 个学习计划`;
+    
+    // 清空现有分页按钮
+    pagination.innerHTML = '';
+    
+    // 上一页按钮
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${!currentPlanPagination.has_prev ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" onclick="goToPlanPage(${currentPlanPage - 1})">上一页</a>`;
+    pagination.appendChild(prevLi);
+    
+    // 页码按钮
+    const totalPages = currentPlanPagination.total_pages;
+    const currentPageNum = currentPlanPagination.page;
+    
+    // 计算显示的页码范围
+    let startPage = Math.max(1, currentPageNum - 2);
+    let endPage = Math.min(totalPages, currentPageNum + 2);
+    
+    // 如果总页数少于5页，显示所有页码
+    if (totalPages <= 5) {
+        startPage = 1;
+        endPage = totalPages;
+    }
+    
+    // 第一页
+    if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        firstLi.className = 'page-item';
+        firstLi.innerHTML = `<a class="page-link" href="#" onclick="goToPlanPage(1)">1</a>`;
+        pagination.appendChild(firstLi);
+        
+        if (startPage > 2) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            pagination.appendChild(ellipsisLi);
+        }
+    }
+    
+    // 中间页码
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentPageNum ? 'active' : ''}`;
+        pageLi.innerHTML = `<a class="page-link" href="#" onclick="goToPlanPage(${i})">${i}</a>`;
+        pagination.appendChild(pageLi);
+    }
+    
+    // 最后一页
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            pagination.appendChild(ellipsisLi);
+        }
+        
+        const lastLi = document.createElement('li');
+        lastLi.className = 'page-item';
+        lastLi.innerHTML = `<a class="page-link" href="#" onclick="goToPlanPage(${totalPages})">${totalPages}</a>`;
+        pagination.appendChild(lastLi);
+    }
+    
+    // 下一页按钮
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${!currentPlanPagination.has_next ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" onclick="goToPlanPage(${currentPlanPage + 1})">下一页</a>`;
+    pagination.appendChild(nextLi);
+}
+
+// 跳转到指定学习计划页
+function goToPlanPage(page) {
+    if (page < 1 || (currentPlanPagination && page > currentPlanPagination.total_pages)) {
+        return;
+    }
+    
+    currentPlanPage = page;
+    loadStudyPlans();
 }
 
 // 创建学习计划
