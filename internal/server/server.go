@@ -1,16 +1,20 @@
 package server
 
 import (
+	"ggcode/internal/controllers"
 	"ggcode/internal/handlers"
 	"ggcode/internal/middleware"
+	"ggcode/internal/repositories"
+	"ggcode/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 type Server struct {
-	router *gin.Engine
-	db     *gorm.DB
+	router      *gin.Engine
+	db          *gorm.DB
+	controllers *controllers.Controllers
 }
 
 func New(db *gorm.DB) (*Server, error) {
@@ -40,10 +44,15 @@ func New(db *gorm.DB) (*Server, error) {
 		}
 		c.Next()
 	})
+	// 初始化新架构
+	repos := repositories.NewRepositories(db)
+	serviceLayer := services.NewServices(repos)
+	controllers := controllers.NewControllers(serviceLayer)
 
 	server := &Server{
-		router: router,
-		db:     db,
+		router:      router,
+		db:          db,
+		controllers: controllers,
 	}
 
 	server.setupRoutes()
@@ -53,7 +62,7 @@ func New(db *gorm.DB) (*Server, error) {
 func (s *Server) setupRoutes() {
 	// 创建处理器
 	h := handlers.New(s.db)
-
+	ctrl := s.controllers
 	// 公开路由
 	public := s.router.Group("/")
 	{
@@ -65,8 +74,8 @@ func (s *Server) setupRoutes() {
 		// API 路由
 		api := public.Group("/api")
 		{
-			api.POST("/login", h.Login)
-			api.POST("/register", h.Register)
+			api.POST("/login", ctrl.User.Login)
+			api.POST("/register", ctrl.User.Register)
 		}
 	}
 
