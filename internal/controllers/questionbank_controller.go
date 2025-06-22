@@ -49,6 +49,8 @@ func (ctrl *QuestionBankController) GetQuestionBanks(c *gin.Context) {
 
 // CreateQuestionBank 创建题库
 func (ctrl *QuestionBankController) CreateQuestionBank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
 	var req struct {
 		Name        string `json:"name" binding:"required"`
 		Description string `json:"description"`
@@ -59,13 +61,13 @@ func (ctrl *QuestionBankController) CreateQuestionBank(c *gin.Context) {
 		return
 	}
 
-	err := ctrl.questionBankService.CreateQuestionBank(req.Name, req.Description)
+	questionBank, err := ctrl.questionBankService.CreateQuestionBank(req.Name, req.Description, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建题库失败"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "题库创建成功"})
+	c.JSON(http.StatusCreated, questionBank)
 }
 
 // UpdateQuestionBank 更新题库

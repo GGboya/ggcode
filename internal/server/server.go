@@ -2,7 +2,6 @@ package server
 
 import (
 	"ggcode/internal/controllers"
-	"ggcode/internal/handlers"
 	"ggcode/internal/middleware"
 	"ggcode/internal/repositories"
 	"ggcode/internal/services"
@@ -46,7 +45,7 @@ func New(db *gorm.DB) (*Server, error) {
 	})
 	// 初始化新架构
 	repos := repositories.NewRepositories(db)
-	serviceLayer := services.NewServices(repos)
+	serviceLayer := services.NewServices(repos, db)
 	controllers := controllers.NewControllers(serviceLayer)
 
 	server := &Server{
@@ -61,15 +60,14 @@ func New(db *gorm.DB) (*Server, error) {
 
 func (s *Server) setupRoutes() {
 	// 创建处理器
-	h := handlers.New(s.db)
 	ctrl := s.controllers
 	// 公开路由
 	public := s.router.Group("/")
 	{
 		// 静态页面
-		public.GET("/", h.HomePage)
-		public.GET("/login", h.LoginPage)
-		public.GET("/register", h.RegisterPage)
+		public.GET("/", ctrl.Page.HomePage)
+		public.GET("/login", ctrl.Page.LoginPage)
+		public.GET("/register", ctrl.Page.RegisterPage)
 
 		// API 路由
 		api := public.Group("/api")
@@ -84,10 +82,10 @@ func (s *Server) setupRoutes() {
 	auth.Use(middleware.AuthMiddleware())
 	{
 		// 页面路由
-		auth.GET("/dashboard", h.Dashboard)
-		auth.GET("/questionbanks", h.QuestionBanksPage)
-		auth.GET("/study-plans", h.StudyPlansPage)
-		auth.GET("/study", h.StudyPage)
+		auth.GET("/dashboard", ctrl.Page.Dashboard)
+		auth.GET("/questionbanks", ctrl.Page.QuestionBanksPage)
+		auth.GET("/study-plans", ctrl.Page.StudyPlansPage)
+		auth.GET("/study", ctrl.Page.StudyPage)
 
 		// API 路由
 		api := auth.Group("/api")
@@ -109,34 +107,34 @@ func (s *Server) setupRoutes() {
 			api.DELETE("/questions/:id", ctrl.Question.DeleteQuestion)
 
 			// 共享题库相关
-			api.POST("/questionbanks/:id/share", h.ShareQuestionBank)
-			api.DELETE("/questionbanks/:id/share", h.UnshareQuestionBank)
-			api.POST("/questionbanks/:id/star", h.StarQuestionBank)
-			api.DELETE("/questionbanks/:id/star", h.UnstarQuestionBank)
-			api.POST("/questionbanks/:id/fork", h.ForkQuestionBank)
-			api.GET("/starred-questionbanks", h.GetUserStarredBanks)
+			api.POST("/questionbanks/:id/share", ctrl.Share.ShareQuestionBank)
+			api.DELETE("/questionbanks/:id/share", ctrl.Share.UnshareQuestionBank)
+			api.POST("/questionbanks/:id/star", ctrl.Share.StarQuestionBank)
+			api.DELETE("/questionbanks/:id/star", ctrl.Share.UnstarQuestionBank)
+			api.POST("/questionbanks/:id/fork", ctrl.Share.ForkQuestionBank)
+			api.GET("/starred-questionbanks", ctrl.Share.GetUserStarredBanks)
 
 			// 学习计划相关
-			api.POST("/study-plan", h.CreateStudyPlan)
-			api.GET("/study-plan/:id", h.GetStudyPlan)
-			api.PUT("/study-plan/:id", h.UpdateStudyPlan)
-			api.DELETE("/study-plan/:id", h.DeleteStudyPlan)
-			api.GET("/study-plans", h.GetAllStudyPlans)
-			api.GET("/study-plan/:id/progress", h.GetStudyPlanProgress)
+			api.POST("/study-plan", ctrl.StudyPlan.CreateStudyPlan)
+			api.GET("/study-plan/:id", ctrl.StudyPlan.GetStudyPlan)
+			api.PUT("/study-plan/:id", ctrl.StudyPlan.UpdateStudyPlan)
+			api.DELETE("/study-plan/:id", ctrl.StudyPlan.DeleteStudyPlan)
+			api.GET("/study-plans", ctrl.StudyPlan.GetAllStudyPlans)
+			api.GET("/study-plan/:id/progress", ctrl.StudyPlan.GetStudyPlanProgress)
 
 			// 艾宾浩斯算法相关
-			api.GET("/study-plan/:id/daily-questions", h.GetDailyQuestions)
-			api.GET("/study-plan/:id/random-mastered-questions", h.GetRandomMasteredQuestions)
-			api.POST("/complete-question", h.CompleteQuestion)
-			api.GET("/study-stats", h.GetStudyStats)
+			api.GET("/study-plan/:id/daily-questions", ctrl.StudyPlan.GetDailyQuestions)
+			api.GET("/study-plan/:id/random-mastered-questions", ctrl.StudyPlan.GetRandomMasteredQuestions)
+			api.POST("/complete-question", ctrl.StudyPlan.CompleteQuestion)
+			api.GET("/study-stats", ctrl.StudyPlan.GetStudyStats)
 
 			// 学习进度相关
-			api.GET("/questionbanks/:id/progress", h.GetQuestionBankProgress)
-			api.GET("/questionbanks-progress", h.GetAllQuestionBanksProgress)
+			api.GET("/questionbanks/:id/progress", ctrl.Progress.GetQuestionBankProgress)
+			api.GET("/questionbanks-progress", ctrl.Progress.GetAllQuestionBanksProgress)
 
 			// 打卡相关
-			api.POST("/checkin", h.CheckInToday)
-			api.GET("/checkin-stats", h.GetCheckInStats)
+			api.POST("/checkin", ctrl.Progress.CheckInToday)
+			api.GET("/checkin-stats", ctrl.Progress.GetCheckInStats)
 		}
 	}
 }

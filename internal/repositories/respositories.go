@@ -7,7 +7,8 @@ type Repositories struct {
 	User         UserRepository
 	QuestionBank QuestionBankRepository
 	Question     QuestionRepository
-	// StudyPlan    StudyPlanRepository
+	StudyPlan    StudyPlanRepository
+	Share        ShareRepository
 	// Progress     ProgressRepository
 	// CheckIn      CheckInRepository
 	// Star         StarRepository
@@ -19,7 +20,8 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		User:         NewUserRepository(db),
 		QuestionBank: NewQuestionBankRepository(db),
 		Question:     NewQuestionRepository(db),
-		// StudyPlan:    NewStudyPlanRepository(db),
+		StudyPlan:    NewStudyPlanRepository(db),
+		Share:        NewShareRepository(db),
 		// Progress:     NewProgressRepository(db),
 		// CheckIn:      NewCheckInRepository(db),
 		// Star:         NewStarRepository(db),

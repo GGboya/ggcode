@@ -31,7 +31,7 @@ type QuestionBankUpdateData struct {
 type QuestionBankRepository interface {
 	GetQuestionBanks(options QuestionBankQueryOptions) (*QuestionBankListResult, error)
 	GetStarredBankIDs(userID uint, bankIDs []uint) ([]uint, error)
-	CreateQuestionBank(name, description string) error
+	CreateQuestionBank(name, description string, userID uint) (*models.QuestionBank, error)
 	UpdateQuestionBank(bankID, userID uint, updateData QuestionBankUpdateData) error
 	DeleteQuestionBank(bankID, userID uint) error
 }
@@ -110,11 +110,20 @@ func (r *questionBankRepository) GetStarredBankIDs(userID uint, bankIDs []uint) 
 	return starredBankIDs, err
 }
 
-func (r *questionBankRepository) CreateQuestionBank(name, description string) error {
-	return r.db.Create(&models.QuestionBank{
+func (r *questionBankRepository) CreateQuestionBank(name, description string, userID uint) (*models.QuestionBank, error) {
+	questionBank := &models.QuestionBank{
 		Name:        name,
 		Description: description,
-	}).Error
+		CreatedBy:   &userID,
+		IsOfficial:  false,
+	}
+
+	err := r.db.Create(questionBank).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return questionBank, nil
 }
 
 func (r *questionBankRepository) UpdateQuestionBank(bankID, userID uint, updateData QuestionBankUpdateData) error {

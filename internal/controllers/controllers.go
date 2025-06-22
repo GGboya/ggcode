@@ -7,9 +7,11 @@ type Controllers struct {
 	User         *UserController
 	QuestionBank *QuestionBankController
 	Question     *QuestionController
-	// StudyPlan    *StudyPlanController
+	StudyPlan    *StudyPlanController
+	Progress     *ProgressController
+	Share        *ShareController
+	Page         *PageController
 	// Study        *StudyController
-	// Progress     *ProgressController
 	// CheckIn      *CheckInController
 }
 
@@ -19,9 +21,11 @@ func NewControllers(services *services.Services) *Controllers {
 		User:         NewUserController(services),
 		QuestionBank: NewQuestionBankController(services),
 		Question:     NewQuestionController(services),
-		// StudyPlan:    NewStudyPlanController(services),
+		StudyPlan:    NewStudyPlanController(services),
+		Progress:     NewProgressController(services),
+		Share:        NewShareController(services),
+		Page:         NewPageController(),
 		// Study:        NewStudyController(services),
-		// Progress:     NewProgressController(services),
 		// CheckIn:      NewCheckInController(services),
 	}
 }
