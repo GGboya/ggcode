@@ -8,7 +8,7 @@ import (
 type Services struct {
 	User         *UserService
 	QuestionBank *QuestionBankService
-	// Question     *QuestionService
+	Question     *QuestionService
 	// StudyPlan    *StudyPlanService
 	// Ebbinghaus   *EbbinghausService
 	// Progress     *ProgressService
@@ -20,7 +20,7 @@ func NewServices(repos *repositories.Repositories) *Services {
 	return &Services{
 		User:         NewUserService(repos),
 		QuestionBank: NewQuestionBankService(repos),
-		// Question:     NewQuestionService(repos),
+		Question:     NewQuestionService(repos),
 		// StudyPlan:    NewStudyPlanService(repos),
 		// Ebbinghaus:   NewEbbinghausService(repos),
 		// Progress:     NewProgressService(repos),

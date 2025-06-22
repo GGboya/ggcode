@@ -99,11 +99,11 @@ func (s *Server) setupRoutes() {
 			api.DELETE("/questionbanks/:id", ctrl.QuestionBank.DeleteQuestionBank)
 
 			// 题库题目相关
-			api.GET("/questionbanks/:id/questions", h.GetQuestions)
-			api.POST("/questionbanks/:id/questions", h.CreateQuestion)
-			api.GET("/questions/:id", h.GetQuestion)
-			api.PUT("/questions/:id", h.UpdateQuestion)
-			api.DELETE("/questions/:id", h.DeleteQuestion)
+			api.GET("/questionbanks/:id/questions", ctrl.Question.GetQuestions)
+			api.POST("/questionbanks/:id/questions", ctrl.Question.CreateQuestion)
+			api.GET("/questions/:id", ctrl.Question.GetQuestion)
+			api.PUT("/questions/:id", ctrl.Question.UpdateQuestion)
+			api.DELETE("/questions/:id", ctrl.Question.DeleteQuestion)
 
 			// 共享题库相关
 			api.POST("/questionbanks/:id/share", h.ShareQuestionBank)

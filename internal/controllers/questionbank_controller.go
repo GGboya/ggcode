@@ -97,7 +97,7 @@ func (ctrl *QuestionBankController) UpdateQuestionBank(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "更新题库功能待实现"})
+	c.JSON(http.StatusOK, gin.H{"message": "题库更新成功"})
 }
 
 // DeleteQuestionBank 删除题库

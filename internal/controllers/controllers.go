@@ -6,7 +6,7 @@ import "ggcode/internal/services"
 type Controllers struct {
 	User         *UserController
 	QuestionBank *QuestionBankController
-	// Question     *QuestionController
+	Question     *QuestionController
 	// StudyPlan    *StudyPlanController
 	// Study        *StudyController
 	// Progress     *ProgressController
@@ -18,7 +18,7 @@ func NewControllers(services *services.Services) *Controllers {
 	return &Controllers{
 		User:         NewUserController(services),
 		QuestionBank: NewQuestionBankController(services),
-		// Question:     NewQuestionController(services),
+		Question:     NewQuestionController(services),
 		// StudyPlan:    NewStudyPlanController(services),
 		// Study:        NewStudyController(services),
 		// Progress:     NewProgressController(services),

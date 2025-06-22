@@ -6,7 +6,7 @@ import "gorm.io/gorm"
 type Repositories struct {
 	User         UserRepository
 	QuestionBank QuestionBankRepository
-	// Question     QuestionRepository
+	Question     QuestionRepository
 	// StudyPlan    StudyPlanRepository
 	// Progress     ProgressRepository
 	// CheckIn      CheckInRepository
@@ -18,7 +18,7 @@ func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
 		User:         NewUserRepository(db),
 		QuestionBank: NewQuestionBankRepository(db),
-		// Question:     NewQuestionRepository(db),
+		Question:     NewQuestionRepository(db),
 		// StudyPlan:    NewStudyPlanRepository(db),
 		// Progress:     NewProgressRepository(db),
 		// CheckIn:      NewCheckInRepository(db),
