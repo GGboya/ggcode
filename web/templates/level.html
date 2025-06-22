@@ -1,0 +1,474 @@
+{{define "level-content"}}
+<!-- 关卡页面特有的CSS样式 -->
+<style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .level-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 0;
+        }
+
+        .timer-display {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 10px 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .timer-text {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .main-container {
+            height: calc(100vh - 120px);
+            padding: 0;
+        }
+
+        .problem-panel {
+            background: white;
+            border-right: 2px solid #dee2e6;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .code-panel {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .editor-container {
+            flex: 1;
+            position: relative;
+        }
+
+        .editor-actions {
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 15px 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+
+        /* CodeMirror编辑器样式优化 */
+        .CodeMirror {
+            height: 100%;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        /* 性能优化：硬件加速 */
+        #codeEditor {
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+    </style>
+    <!-- 关卡头部 -->
+    <div class="level-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <button class="btn btn-light btn-sm me-3" onclick="goBack()">
+                        <i class="fas fa-arrow-left me-2"></i>返回地图
+                    </button>
+                    <span class="fw-bold">关卡 {{.levelID}}</span>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="timer-display d-inline-block">
+                        <div class="timer-text" id="timer">00:00</div>
+                        <small>闯关时间</small>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="navbar-text me-3">
+                        <i class="fas fa-user me-1"></i>{{.username}}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container-fluid main-container">
+        <div class="row h-100">
+            <!-- 题目面板 -->
+            <div class="col-md-5 problem-panel">
+                <div id="problemContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">正在加载题目...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 代码面板 -->
+            <div class="col-md-7 code-panel">
+                <div class="editor-container">
+                    <div id="codeEditor" style="height: 100%;"></div>
+                </div>
+                
+                <div class="editor-actions">
+                    <div>
+                        <select id="languageSelector" class="form-select d-inline-block me-2" style="width: auto;">
+                            <option value="cpp">C++</option>
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                        </select>
+                        <button id="testBtn" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-play me-1"></i>测试代码
+                        </button>
+                        <button id="submitBtn" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-1"></i>提交代码
+                        </button>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-secondary" onclick="resetCode()">
+                            <i class="fas fa-undo me-1"></i>重置代码
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 等待base.html中的axios加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟加载轻量级编辑器，避免与axios冲突
+            setTimeout(function() {
+                loadLightEditor();
+            }, 100);
+        });
+
+        function loadLightEditor() {
+            // 使用轻量级的CodeMirror编辑器
+            const cssLink = document.createElement('link');
+            cssLink.rel = 'stylesheet';
+            cssLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css';
+            document.head.appendChild(cssLink);
+
+            const themeLink = document.createElement('link');
+            themeLink.rel = 'stylesheet';
+            themeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css';
+            document.head.appendChild(themeLink);
+
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js';
+            script.onload = function() {
+                loadLanguageModes();
+            };
+            document.head.appendChild(script);
+        }
+
+        function loadLanguageModes() {
+            const modes = [
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js'
+            ];
+            
+            let loadedCount = 0;
+            modes.forEach(src => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = function() {
+                    loadedCount++;
+                    if (loadedCount === modes.length) {
+                        initializePage();
+                    }
+                };
+                document.head.appendChild(script);
+            });
+        }
+    </script>
+    <script>
+        let editor;
+        let startTime = Date.now();
+        let timerInterval;
+        let currentLevelId = "{{.levelID}}";
+        
+        // 性能优化：防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async function initializePage() {
+            try {
+                // 确保axios可用
+                if (typeof axios === 'undefined') {
+                    console.error('axios未加载，等待重试...');
+                    setTimeout(initializePage, 500);
+                    return;
+                }
+                
+                await loadLevelData();
+                await initializeEditor();
+                startTimer();
+            } catch (error) {
+                console.error('初始化失败:', error);
+                alert('页面初始化失败，请刷新重试');
+            }
+        }
+
+        async function loadLevelData() {
+            try {
+                const response = await axios.get('/api/interview-island/level/' + currentLevelId);
+                const levelData = response.data.data;
+                renderProblemContent(levelData);
+            } catch (error) {
+                if (error.response && error.response.status === 403) {
+                    alert('关卡未解锁');
+                    goBack();
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        function renderProblemContent(levelData) {
+            const level = levelData.level;
+            const question = levelData.question;
+            const sampleCases = levelData.sample_cases;
+
+            let problemHtml = '<div class="problem-title">';
+            problemHtml += '<h4>' + level.name + '</h4>';
+            problemHtml += '<span class="badge bg-primary">' + level.difficulty + '</span>';
+            problemHtml += '</div>';
+            
+            problemHtml += '<div class="problem-description mt-3">';
+            problemHtml += '<h6>题目链接</h6>';
+            problemHtml += '<p><a href="' + question.leetcode_url + '" target="_blank" class="text-decoration-none">';
+            problemHtml += '<i class="fas fa-external-link-alt me-1"></i>';
+            problemHtml += question.title;
+            problemHtml += '</a></p>';
+            problemHtml += '</div>';
+
+            problemHtml += '<div class="sample-cases mt-4">';
+            problemHtml += '<h6>样例测试用例</h6>';
+            
+            for (let i = 0; i < sampleCases.length; i++) {
+                const testCase = sampleCases[i];
+                problemHtml += '<div class="card mt-2">';
+                problemHtml += '<div class="card-body">';
+                problemHtml += '<h6 class="card-title">样例 ' + (i + 1) + '</h6>';
+                problemHtml += '<div class="mb-2">';
+                problemHtml += '<strong>输入：</strong>';
+                problemHtml += '<pre class="bg-light p-2 rounded">' + testCase.input + '</pre>';
+                problemHtml += '</div>';
+                problemHtml += '<div>';
+                problemHtml += '<strong>输出：</strong>';
+                problemHtml += '<pre class="bg-light p-2 rounded">' + testCase.output + '</pre>';
+                problemHtml += '</div>';
+                problemHtml += '</div>';
+                problemHtml += '</div>';
+            }
+            
+            problemHtml += '</div>';
+
+            document.getElementById('problemContent').innerHTML = problemHtml;
+        }
+
+        async function initializeEditor() {
+            return new Promise(function(resolve) {
+                // 确保CodeMirror已加载
+                if (typeof CodeMirror === 'undefined') {
+                    console.error('CodeMirror未正确加载');
+                    resolve();
+                    return;
+                }
+                
+                // 创建CodeMirror编辑器
+                editor = CodeMirror(document.getElementById('codeEditor'), {
+                    value: getInitialCode('cpp'),
+                    mode: 'text/x-c++src',
+                    theme: 'monokai',
+                    lineNumbers: true,
+                    indentUnit: 4,
+                    smartIndent: true,
+                    tabSize: 4,
+                    indentWithTabs: false,
+                    electricChars: true,
+                    autoCloseBrackets: true,
+                    matchBrackets: true,
+                    showCursorWhenSelecting: true,
+                    // 性能优化配置
+                    viewportMargin: 10,  // 只渲染可见区域附近的行
+                    lineWrapping: false,
+                    foldGutter: false,
+                    gutters: ["CodeMirror-linenumbers"],
+                    // 禁用一些功能以提升性能
+                    highlightSelectionMatches: false,
+                    searchcursor: false,
+                    // 样式配置
+                    styleActiveLine: true,
+                    cursorBlinkRate: 530
+                });
+
+                // 禁用复制粘贴
+                editor.on('keydown', function(cm, event) {
+                    if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C')) {
+                        event.preventDefault();
+                        alert('禁止复制代码');
+                    }
+                    if ((event.ctrlKey || event.metaKey) && (event.key === 'v' || event.key === 'V')) {
+                        event.preventDefault();
+                        alert('禁止粘贴代码');
+                    }
+                });
+
+                // 禁用右键菜单
+                editor.on('contextmenu', function(cm, event) {
+                    event.preventDefault();
+                });
+
+                setupEventListeners();
+                resolve();
+            });
+        }
+
+        function getInitialCode(language) {
+            if (language === 'cpp') {
+                return '#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    // 在这里编写你的代码\n    \n    return 0;\n}';
+            } else if (language === 'python') {
+                return '# 在这里编写你的代码\n\ndef main():\n    pass\n\nif __name__ == "__main__":\n    main()';
+            } else if (language === 'java') {
+                return 'import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        // 在这里编写你的代码\n    }\n}';
+            }
+            return '';
+        }
+
+        function setupEventListeners() {
+            document.getElementById('languageSelector').addEventListener('change', function(e) {
+                const language = e.target.value;
+                
+                // 设置编辑器内容和语言模式
+                editor.setValue(getInitialCode(language));
+                
+                // 设置语言模式
+                let mode;
+                switch(language) {
+                    case 'cpp':
+                        mode = 'text/x-c++src';
+                        break;
+                    case 'java':
+                        mode = 'text/x-java';
+                        break;
+                    case 'python':
+                        mode = 'text/x-python';
+                        break;
+                    default:
+                        mode = 'text/plain';
+                }
+                editor.setOption('mode', mode);
+                
+                // 重新聚焦编辑器
+                editor.focus();
+            });
+
+            document.getElementById('testBtn').addEventListener('click', testCode);
+            document.getElementById('submitBtn').addEventListener('click', submitCode);
+        }
+
+        function startTimer() {
+            let lastDisplayedTime = '';
+            timerInterval = setInterval(function() {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                
+                const timeString = minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
+                
+                // 性能优化：只在时间实际改变时更新DOM
+                if (timeString !== lastDisplayedTime) {
+                    document.getElementById('timer').textContent = timeString;
+                    lastDisplayedTime = timeString;
+                }
+            }, 1000);
+        }
+
+        async function testCode() {
+            const code = editor.getValue().trim();
+            if (!code) {
+                alert('请先编写代码');
+                return;
+            }
+
+            const language = document.getElementById('languageSelector').value;
+            
+            try {
+                const response = await axios.post('/api/interview-island/level/' + currentLevelId + '/test', {
+                    code: code,
+                    language: language
+                });
+
+                alert('测试结果: ' + response.data.data.message);
+            } catch (error) {
+                const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
+                alert('测试失败: ' + errorMsg);
+            }
+        }
+
+        async function submitCode() {
+            const code = editor.getValue().trim();
+            if (!code) {
+                alert('请先编写代码');
+                return;
+            }
+
+            const language = document.getElementById('languageSelector').value;
+            const submitTime = Math.floor((Date.now() - startTime) / 1000);
+            
+            try {
+                const response = await axios.post('/api/interview-island/level/' + currentLevelId + '/submit', {
+                    code: code,
+                    language: language,
+                    submit_time: submitTime
+                });
+
+                const result = response.data.data;
+                alert('提交结果: ' + result.status + '\n获得星数: ' + result.stars + '\n' + result.message);
+                
+                if (result.status === 'AC') {
+                    clearInterval(timerInterval);
+                    if (result.next_unlocked) {
+                        if (confirm('恭喜通关！下一关已解锁，是否前往？')) {
+                            goBack();
+                        }
+                    }
+                }
+            } catch (error) {
+                const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
+                alert('提交失败: ' + errorMsg);
+            }
+        }
+
+        function resetCode() {
+            const language = document.getElementById('languageSelector').value;
+            editor.setValue(getInitialCode(language));
+        }
+
+        function goBack() {
+            window.location.href = '/interview-island';
+        }
+    </script>
+{{end}} 

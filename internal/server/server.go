@@ -86,6 +86,8 @@ func (s *Server) setupRoutes() {
 		auth.GET("/questionbanks", ctrl.Page.QuestionBanksPage)
 		auth.GET("/study-plans", ctrl.Page.StudyPlansPage)
 		auth.GET("/study", ctrl.Page.StudyPage)
+		auth.GET("/interview-island", ctrl.Page.InterviewIslandPage)
+		auth.GET("/level/:levelId", ctrl.Page.LevelPage)
 
 		// API 路由
 		api := auth.Group("/api")
@@ -138,6 +140,13 @@ func (s *Server) setupRoutes() {
 
 			// 学习热力图
 			api.GET("/study-heatmap", ctrl.Progress.GetStudyHeatmap)
+
+			// 面试岛相关
+			api.GET("/interview-island/map", ctrl.Interview.GetIslandMap)
+			api.GET("/interview-island/level/:levelId", ctrl.Interview.GetLevelDetail)
+			api.POST("/interview-island/level/:levelId/test", ctrl.Interview.TestCode)
+			api.POST("/interview-island/level/:levelId/submit", ctrl.Interview.SubmitCode)
+			api.GET("/interview-island/progress", ctrl.Interview.GetUserProgress)
 		}
 	}
 }

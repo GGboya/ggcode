@@ -11,6 +11,7 @@ type Controllers struct {
 	Progress     *ProgressController
 	Share        *ShareController
 	Page         *PageController
+	Interview    *InterviewController
 	// Study        *StudyController
 	// CheckIn      *CheckInController
 }
@@ -25,6 +26,7 @@ func NewControllers(services *services.Services) *Controllers {
 		Progress:     NewProgressController(services),
 		Share:        NewShareController(services),
 		Page:         NewPageController(),
+		Interview:    NewInterviewController(services.Interview),
 		// Study:        NewStudyController(services),
 		// CheckIn:      NewCheckInController(services),
 	}

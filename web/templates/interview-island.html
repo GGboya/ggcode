@@ -1,0 +1,455 @@
+{{template "base.html" .}}
+
+{{define "interview-island-content"}}
+<style>
+    .island-container {
+        position: relative;
+        width: 100%;
+        min-height: 80vh;
+        height: auto;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        overflow: visible;
+        margin-bottom: 2rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .island-map {
+        position: relative;
+        width: 100%;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 50px;
+    }
+
+    .island-info {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        min-width: 250px;
+        margin: 20px;
+        flex-shrink: 0;
+    }
+
+    .progress-summary {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        min-width: 250px;
+        margin: 20px;
+        flex-shrink: 0;
+    }
+
+    .level-path {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+        max-width: 1200px;
+        position: relative;
+        padding: 40px 20px;
+        min-height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        margin: 20px 0;
+    }
+
+    .level-node {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 4px solid;
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+        flex-shrink: 0;
+    }
+
+    .level-node.locked {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        border-color: #495057;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .level-node.unlocked {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border-color: #20c997;
+        animation: pulse 2s infinite;
+    }
+
+    .level-node.completed {
+        background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+        border-color: #6610f2;
+    }
+
+    .level-node:hover:not(.locked) {
+        transform: scale(1.1);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+    }
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(32, 201, 151, 0.7); }
+        70% { box-shadow: 0 0 0 20px rgba(32, 201, 151, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(32, 201, 151, 0); }
+    }
+
+    .level-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 5px;
+    }
+
+    .level-stars {
+        display: flex;
+        gap: 2px;
+    }
+
+    .star {
+        font-size: 16px;
+        color: #ffc107;
+    }
+
+    .star.empty {
+        color: #dee2e6;
+    }
+
+    .level-title {
+        position: absolute;
+        bottom: -35px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.9);
+        padding: 5px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: bold;
+        white-space: nowrap;
+        backdrop-filter: blur(10px);
+    }
+
+    .connecting-line {
+        position: absolute;
+        height: 4px;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        border-radius: 2px;
+        z-index: -1;
+    }
+
+    .difficulty-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: bold;
+        color: white;
+    }
+
+    .difficulty-easy { background: #28a745; }
+    .difficulty-medium { background: #ffc107; color: #000; }
+    .difficulty-hard { background: #dc3545; }
+
+    .island-selector {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 20px;
+        flex-shrink: 0;
+    }
+
+    .island-tab {
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+    .island-tab.active {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .island-tab:hover {
+        background: rgba(255, 255, 255, 1);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 300px;
+    }
+</style>
+
+<!-- 加载状态 -->
+<div id="loading" class="loading-spinner">
+    <div class="spinner-border text-primary mb-3" role="status">
+        <span class="visually-hidden">加载中...</span>
+    </div>
+    <p class="text-muted">正在加载面试岛数据...</p>
+</div>
+
+<!-- 面试岛容器 -->
+<div id="islandContainer" class="island-container" style="display: none;">
+    <!-- 信息面板区域 -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <!-- 岛屿信息面板 -->
+        <div class="island-info">
+            <h5 id="islandTitle">
+                <i class="fas fa-island-tropical me-2"></i>算法基础岛
+            </h5>
+            <p id="islandDescription" class="text-muted mb-3">掌握基础算法，为面试打下坚实基础</p>
+            <div class="progress mb-2" style="height: 8px;">
+                <div id="islandProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            <small id="islandProgressText" class="text-muted">0/0 关卡完成</small>
+        </div>
+
+        <!-- 进度总结面板 -->
+        <div class="progress-summary">
+            <h6 class="mb-3">
+                <i class="fas fa-chart-line me-2"></i>总体进度
+            </h6>
+            <div class="row text-center">
+                <div class="col-6">
+                    <div class="h4 mb-1" id="totalStars">0</div>
+                    <small class="text-muted">总星数</small>
+                </div>
+                <div class="col-6">
+                    <div class="h4 mb-1" id="completedLevels">0</div>
+                    <small class="text-muted">完成关卡</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 地图区域 -->
+    <div class="island-map flex-grow-1">
+        <div id="levelPath" class="level-path">
+            <!-- 关卡节点将由JavaScript动态生成 -->
+        </div>
+    </div>
+
+    <!-- 岛屿选择器 -->
+    <div class="island-selector">
+        <!-- 岛屿标签将由JavaScript动态生成 -->
+    </div>
+</div>
+
+<script>
+    let currentIslandIndex = 0;
+    let islandsData = [];
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadIslandMap();
+    });
+
+    // 加载面试岛地图数据
+    async function loadIslandMap() {
+        try {
+            console.log('开始加载面试岛数据...');
+            const response = await axios.get('/api/interview-island/map');
+            islandsData = response.data.data;
+            console.log('面试岛数据加载成功:', islandsData);
+            
+            if (islandsData && islandsData.length > 0) {
+                console.log('渲染面试岛界面...');
+                renderIslandSelector();
+                renderCurrentIsland();
+                updateProgressSummary();
+                console.log('面试岛界面渲染完成');
+            } else {
+                console.error('没有可用的面试岛数据');
+                alert('没有可用的面试岛数据');
+            }
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('islandContainer').style.display = 'block';
+        } catch (error) {
+            console.error('加载面试岛数据失败:', error);
+            document.getElementById('loading').innerHTML = `
+                <div class="alert alert-danger">
+                    <h5>加载失败</h5>
+                    <p>错误信息: ${error.message}</p>
+                    <button class="btn btn-primary" onclick="loadIslandMap()">重新加载</button>
+                </div>
+            `;
+        }
+    }
+
+    // 渲染岛屿选择器
+    function renderIslandSelector() {
+        const selector = document.querySelector('.island-selector');
+        selector.innerHTML = '';
+
+        islandsData.forEach((island, index) => {
+            const tab = document.createElement('button');
+            tab.className = `island-tab ${index === currentIslandIndex ? 'active' : ''}`;
+            tab.innerHTML = `
+                <i class="fas fa-island-tropical me-2"></i>
+                ${island.island.name}
+                <span class="badge bg-primary ms-2">${island.completed_count}/${island.total_count}</span>
+            `;
+            tab.onclick = () => switchIsland(index);
+            selector.appendChild(tab);
+        });
+    }
+
+    // 切换岛屿
+    function switchIsland(index) {
+        currentIslandIndex = index;
+        renderIslandSelector();
+        renderCurrentIsland();
+    }
+
+    // 渲染当前岛屿
+    function renderCurrentIsland() {
+        if (!islandsData[currentIslandIndex]) {
+            console.error('没有找到岛屿数据，索引:', currentIslandIndex);
+            return;
+        }
+
+        const islandInfo = islandsData[currentIslandIndex];
+        console.log('渲染岛屿:', islandInfo);
+        
+        const island = islandInfo.island;
+        const levels = islandInfo.levels || [];
+        const userProgress = islandInfo.user_progress || [];
+
+        console.log('岛屿信息:', island);
+        console.log('关卡列表:', levels);
+        console.log('用户进度:', userProgress);
+
+        // 更新岛屿信息
+        document.getElementById('islandTitle').innerHTML = `
+            <i class="fas fa-island-tropical me-2"></i>${island.name}
+        `;
+        document.getElementById('islandDescription').textContent = island.description || '';
+
+        // 更新进度条
+        const progressPercent = islandInfo.total_count > 0 ? 
+            (islandInfo.completed_count / islandInfo.total_count * 100) : 0;
+        document.getElementById('islandProgress').style.width = progressPercent + '%';
+        document.getElementById('islandProgressText').textContent = 
+            `${islandInfo.completed_count || 0}/${islandInfo.total_count || 0} 关卡完成`;
+
+        // 渲染关卡路径
+        renderLevelPath(levels, userProgress);
+    }
+
+    // 渲染关卡路径
+    function renderLevelPath(levels, userProgress) {
+        const pathContainer = document.getElementById('levelPath');
+        console.log('开始渲染关卡路径，容器:', pathContainer);
+        pathContainer.innerHTML = '';
+
+        // 将用户进度转换为映射，便于查找
+        const progressMap = {};
+        if (userProgress && Array.isArray(userProgress)) {
+            userProgress.forEach(progress => {
+                progressMap[progress.level_id] = progress;
+            });
+        }
+        console.log('进度映射:', progressMap);
+
+        levels.forEach((level, index) => {
+            const progress = progressMap[level.id] || { status: 'locked', stars: 0 };
+            console.log(`渲染关卡 ${level.level_num}:`, level, '进度:', progress);
+            
+            // 创建关卡节点
+            const node = document.createElement('div');
+            node.className = `level-node ${progress.status}`;
+            
+            // 添加难度标识
+            const difficultyClass = `difficulty-${level.difficulty.toLowerCase()}`;
+            
+            node.innerHTML = `
+                <div class="level-number">${level.level_num}</div>
+                <div class="level-stars">
+                    ${generateStars(progress.stars || 0)}
+                </div>
+                <div class="level-title">${level.name}</div>
+                <div class="difficulty-badge ${difficultyClass}">
+                    ${level.difficulty}
+                </div>
+            `;
+
+            // 添加点击事件
+            if (progress.status !== 'locked') {
+                node.style.cursor = 'pointer';
+                node.onclick = () => enterLevel(level.id);
+            }
+
+            console.log('添加关卡节点:', node);
+            pathContainer.appendChild(node);
+
+            // 添加连接线（除了最后一个节点）
+            if (index < levels.length - 1) {
+                const line = document.createElement('div');
+                line.className = 'connecting-line';
+                line.style.width = '80px';
+                line.style.height = '4px';
+                line.style.background = 'linear-gradient(90deg, #28a745, #20c997)';
+                line.style.borderRadius = '2px';
+                line.style.position = 'relative';
+                line.style.margin = '0 20px';
+                pathContainer.appendChild(line);
+            }
+        });
+        
+        console.log('关卡路径渲染完成，容器子元素数量:', pathContainer.children.length);
+    }
+
+    // 生成星级显示
+    function generateStars(starCount) {
+        let stars = '';
+        for (let i = 0; i < 3; i++) {
+            stars += `<i class="fas fa-star star ${i < starCount ? '' : 'empty'}"></i>`;
+        }
+        return stars;
+    }
+
+    // 更新总体进度
+    function updateProgressSummary() {
+        let totalStars = 0;
+        let completedLevels = 0;
+
+        islandsData.forEach(island => {
+            totalStars += island.total_stars;
+            completedLevels += island.completed_count;
+        });
+
+        document.getElementById('totalStars').textContent = totalStars;
+        document.getElementById('completedLevels').textContent = completedLevels;
+    }
+
+    // 进入关卡
+    function enterLevel(levelId) {
+        window.location.href = `/level/${levelId}`;
+    }
+</script>
+{{end}} 

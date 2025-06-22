@@ -604,6 +604,11 @@
                             <i class="fas fa-clipboard-list"></i> 学习计划
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/interview-island">
+                            <i class="fas fa-map"></i> 面试岛
+                        </a>
+                    </li>
                     {{end}}
                 </ul>
                 <ul class="navbar-nav">
@@ -649,6 +654,15 @@
             <div class="auth-required">
                 {{template "study-content" .}}
             </div>
+        {{else if eq .pageType "interview-island"}}
+            <div class="auth-required">
+                {{template "interview-island-content" .}}
+            </div>
+        {{else if eq .pageType "level"}}
+            <div class="auth-required">
+                {{template "level-content" .}}
+            </div>
+
         {{else}}
             <div class="auth-required">
                 {{template "content" .}}
@@ -865,9 +879,10 @@
             }
             
             // 需要认证的页面
-            const authRequiredPages = ['/dashboard', '/questionbanks', '/study-plans', '/study'];
+            const authRequiredPages = ['/dashboard', '/questionbanks', '/study-plans', '/study', '/interview-island'];
+            const isLevelPage = /^\/level\/\d+$/.test(currentPath);
             
-            if (authRequiredPages.includes(currentPath)) {
+            if (authRequiredPages.includes(currentPath) || isLevelPage) {
                 if (token) {
                     console.log('有token，显示认证内容');
                     // 显示认证内容

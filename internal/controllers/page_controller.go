@@ -132,3 +132,30 @@ func (ctrl *PageController) StudyPage(c *gin.Context) {
 		"pageType": "study",
 	})
 }
+
+// InterviewIslandPage 面试岛地图页面
+func (ctrl *PageController) InterviewIslandPage(c *gin.Context) {
+	username := c.GetString("username")
+	userID := c.GetUint("user_id")
+	c.HTML(http.StatusOK, "interview-island.html", gin.H{
+		"title":    "面试岛",
+		"username": username,
+		"userID":   userID,
+		"pageType": "interview-island",
+	})
+}
+
+// LevelPage 关卡详情页面
+func (ctrl *PageController) LevelPage(c *gin.Context) {
+	username := c.GetString("username")
+	userID := c.GetUint("user_id")
+	levelID := c.Param("levelId")
+
+	c.HTML(http.StatusOK, "base.html", gin.H{
+		"title":    "关卡挑战",
+		"username": username,
+		"userID":   userID,
+		"levelID":  levelID,
+		"pageType": "level",
+	})
+}

@@ -15,6 +15,7 @@ type Services struct {
 	Share        *ShareService
 	Progress     *ProgressService
 	Ebbinghaus   *EbbinghausService
+	Interview    InterviewService
 	// CheckIn      *CheckInService
 }
 
@@ -31,6 +32,7 @@ func NewServices(repos *repositories.Repositories, db *gorm.DB) *Services {
 		Share:        NewShareService(repos),
 		Progress:     NewProgressService(repos, ebbinghausService),
 		Ebbinghaus:   ebbinghausService,
+		Interview:    NewInterviewService(repos.Interview),
 		// CheckIn:      NewCheckInService(repos),
 	}
 }
