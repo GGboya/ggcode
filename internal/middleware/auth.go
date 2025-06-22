@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -83,11 +84,16 @@ func AuthMiddleware() gin.HandlerFunc {
 }
 
 func GenerateToken(userID uint, username string) (string, error) {
+	// 设置token过期时间为7天
+	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer: "ggcode",
+			Issuer:    "ggcode",
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 

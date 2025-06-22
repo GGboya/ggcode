@@ -526,7 +526,7 @@
     <!-- 导航栏 -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">
+            <a class="navbar-brand" href="#" onclick="goHome()">
                 <i class="fas fa-code"></i> GGCode
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -679,10 +679,59 @@
 
         // 通用函数
         function logout() {
-            localStorage.removeItem('token');
-            // 清除cookie
-            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-            window.location.href = '/login';
+            // 先调用服务端logout API
+            if (typeof axios !== 'undefined') {
+                axios.post('/api/logout')
+                    .then(response => {
+                        console.log('服务端退出登录成功:', response.data.message);
+                    })
+                    .catch(error => {
+                        console.warn('服务端退出登录失败:', error.response?.data?.error || error.message);
+                        // 即使服务端失败，也继续客户端清理
+                    })
+                    .finally(() => {
+                        // 清除客户端数据
+                        localStorage.removeItem('token');
+                        document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                        
+                        showAlert('已退出登录', 'success', 2000);
+                        setTimeout(() => {
+                            window.location.href = '/login';
+                        }, 1000);
+                    });
+            } else {
+                // 如果axios不可用，直接清除客户端数据
+                localStorage.removeItem('token');
+                document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                window.location.href = '/login';
+            }
+        }
+        
+        // 首页跳转函数
+        function goHome() {
+            // 检查用户是否已登录
+            let token = localStorage.getItem('token');
+            
+            // 如果localStorage中没有token，尝试从cookie获取
+            if (!token) {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'token' && value) {
+                        token = value;
+                        localStorage.setItem('token', token);
+                        break;
+                    }
+                }
+            }
+            
+            if (token) {
+                // 有token，跳转到仪表盘
+                window.location.href = '/dashboard';
+            } else {
+                // 没有token，跳转到登录页面
+                window.location.href = '/login';
+            }
         }
 
         // 显示提示信息

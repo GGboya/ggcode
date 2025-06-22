@@ -25,6 +25,48 @@
                     <i class="fas fa-sign-in-alt"></i> 登录账户
                 </a>
             </div>
+            
+            <!-- 认证检查和跳转逻辑 -->
+            <script>
+                // 检查认证状态并跳转
+                function checkAuthAndRedirect() {
+                    console.log('检查认证状态...');
+                    
+                    // 获取token
+                    let token = localStorage.getItem('token');
+                    
+                    // 如果localStorage中没有token，尝试从cookie获取
+                    if (!token) {
+                        const cookies = document.cookie.split(';');
+                        for (let cookie of cookies) {
+                            const [name, value] = cookie.trim().split('=');
+                            if (name === 'token' && value) {
+                                token = value;
+                                localStorage.setItem('token', token);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (token) {
+                        console.log('找到token，跳转到仪表盘');
+                        // 有token，跳转到仪表盘
+                        window.location.replace('/dashboard');
+                    } else {
+                        console.log('没有token，跳转到登录页面');
+                        // 没有token，跳转到登录页面
+                        window.location.replace('/login');
+                    }
+                }
+                
+                // 页面加载完成后立即检查
+                document.addEventListener('DOMContentLoaded', function() {
+                    checkAuthAndRedirect();
+                });
+                
+                // 如果JavaScript被禁用，至少显示页面内容
+                setTimeout(checkAuthAndRedirect, 100);
+            </script>
         </div>
     </div>
 </div>

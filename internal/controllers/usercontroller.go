@@ -69,3 +69,16 @@ func (ctrl *UserController) Register(c *gin.Context) {
 		"user":  user,
 	})
 }
+
+// Logout 用户退出登录
+func (ctrl *UserController) Logout(c *gin.Context) {
+	// 清除服务端cookie
+	c.SetCookie("token", "", -1, "/", "", false, true)
+
+	// 这里可以实现token黑名单机制（如果需要的话）
+	// 目前由于JWT是无状态的，主要依赖客户端清除token和token自然过期
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "退出登录成功",
+	})
+}

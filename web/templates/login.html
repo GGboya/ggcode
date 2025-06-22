@@ -276,6 +276,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 // 页面加载动画
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM内容已加载，开始初始化登录页面');
+    
+    // 先检查用户是否已经登录
+    checkAuthStatus();
     // 登录卡片淡入动画
     const loginCard = document.querySelector('.login-card');
     const welcomePanel = document.querySelector('.welcome-panel');
@@ -319,6 +322,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// 检查认证状态
+function checkAuthStatus() {
+    // 获取token
+    let token = localStorage.getItem('token');
+    
+    // 如果localStorage中没有token，尝试从cookie获取
+    if (!token) {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'token' && value) {
+                token = value;
+                localStorage.setItem('token', token);
+                break;
+            }
+        }
+    }
+    
+    if (token) {
+        console.log('用户已登录，跳转到仪表盘');
+        showAlert('检测到您已登录，跳转到仪表盘...', 'info');
+        setTimeout(() => {
+            window.location.replace('/dashboard');
+        }, 1000);
+    }
+}
 
 // 键盘快捷键支持
 document.addEventListener('keydown', function(e) {

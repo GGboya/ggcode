@@ -92,6 +92,9 @@ func (s *Server) setupRoutes() {
 		// API 路由
 		api := auth.Group("/api")
 		{
+			// 用户相关
+			api.POST("/logout", ctrl.User.Logout)
+
 			// 题库相关
 			api.GET("/questionbanks", ctrl.QuestionBank.GetQuestionBanks)
 			api.POST("/questionbanks", ctrl.QuestionBank.CreateQuestionBank)

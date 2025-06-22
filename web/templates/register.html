@@ -42,6 +42,37 @@
 
 <!-- 注册页面脚本 -->
 <script>
+// 检查用户是否已经登录
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuthStatus();
+});
+
+function checkAuthStatus() {
+    // 获取token
+    let token = localStorage.getItem('token');
+    
+    // 如果localStorage中没有token，尝试从cookie获取
+    if (!token) {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'token' && value) {
+                token = value;
+                localStorage.setItem('token', token);
+                break;
+            }
+        }
+    }
+    
+    if (token) {
+        console.log('用户已登录，跳转到仪表盘');
+        showAlert('检测到您已登录，跳转到仪表盘...', 'info');
+        setTimeout(() => {
+            window.location.replace('/dashboard');
+        }, 1000);
+    }
+}
+
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     

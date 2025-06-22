@@ -2,11 +2,15 @@ package handlers
 
 import (
 	"ggcode/internal/database"
+	"ggcode/internal/middleware"
 	"ggcode/internal/services"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
@@ -24,12 +28,33 @@ func New(db *gorm.DB) *Handler {
 
 // 页面处理器
 func (h *Handler) HomePage(c *gin.Context) {
-	// 首页不强制要求认证，但如果有token则获取用户信息
-	username := c.GetString("username")
-	c.HTML(http.StatusOK, "index.html", gin.H{
-		"title":    "GGCode - 算法学习平台",
-		"username": username,
-	})
+	// 检查用户是否已认证
+	// 先尝试从Authorization header获取token
+	authHeader := c.GetHeader("Authorization")
+	var tokenString string
+
+	if authHeader != "" {
+		tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+	} else {
+		// 如果没有Authorization header，尝试从cookie获取token
+		cookie, err := c.Cookie("token")
+		if err == nil {
+			tokenString = cookie
+		}
+	}
+
+	// 如果有token，验证其有效性
+	if tokenString != "" {
+		// 验证token有效性
+		if h.isValidToken(tokenString) {
+			// token有效，跳转到仪表盘
+			c.Redirect(http.StatusFound, "/dashboard")
+			return
+		}
+	}
+
+	// 没有有效token，跳转到登录页面
+	c.Redirect(http.StatusFound, "/login")
 }
 
 func (h *Handler) LoginPage(c *gin.Context) {
@@ -1172,4 +1197,23 @@ func (h *Handler) GetUserStarredBanks(c *gin.Context) {
 			"has_next":    page < totalPages,
 		},
 	})
+}
+
+// isValidToken 验证token的有效性
+func (h *Handler) isValidToken(tokenString string) bool {
+	// getJWTSecret 从环境变量获取JWT密钥，如果没有则使用默认值
+	getJWTSecret := func() []byte {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			secret = "your-secret-key" // 默认密钥，生产环境应该设置环境变量
+		}
+		return []byte(secret)
+	}
+
+	claims := &middleware.Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return getJWTSecret(), nil
+	})
+
+	return err == nil && token.Valid
 }
