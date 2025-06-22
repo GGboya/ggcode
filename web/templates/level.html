@@ -73,6 +73,54 @@
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
         }
+
+        /* 代码补全样式优化 */
+        .CodeMirror-hints {
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            background: #2d2d2d;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .CodeMirror-hint {
+            color: #f8f8f2;
+            padding: 6px 10px;
+            border-radius: 3px;
+            margin: 1px;
+        }
+
+        .CodeMirror-hint-active {
+            background: #49483e;
+            color: #fff;
+        }
+
+        .CodeMirror-hint-keyword {
+            color: #f92672 !important;  /* 关键字用红色 */
+            font-weight: bold;
+        }
+
+        .CodeMirror-hint-word {
+            color: #a6e22e !important;  /* 普通单词用绿色 */
+        }
+
+        /* 补全提示图标 */
+        .CodeMirror-hint:before {
+            content: "●";
+            margin-right: 6px;
+            font-size: 8px;
+        }
+
+        .CodeMirror-hint-keyword:before {
+            color: #f92672;
+        }
+
+        .CodeMirror-hint-word:before {
+            color: #a6e22e;
+        }
     </style>
     <!-- 关卡头部 -->
     <div class="level-header">
@@ -174,18 +222,29 @@
         }
 
         function loadLanguageModes() {
-            const modes = [
+            const resources = [
+                // 语言模式
                 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js'
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js',
+                // 代码补全相关
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/anyword-hint.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/javascript-hint.min.js'
             ];
             
+            // 加载补全样式
+            const hintCss = document.createElement('link');
+            hintCss.rel = 'stylesheet';
+            hintCss.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css';
+            document.head.appendChild(hintCss);
+            
             let loadedCount = 0;
-            modes.forEach(src => {
+            resources.forEach(src => {
                 const script = document.createElement('script');
                 script.src = src;
                 script.onload = function() {
                     loadedCount++;
-                    if (loadedCount === modes.length) {
+                    if (loadedCount === resources.length) {
                         initializePage();
                     }
                 };
@@ -209,6 +268,109 @@
                 };
                 clearTimeout(timeout);
                 timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 代码补全配置
+        const completionKeywords = {
+            cpp: [
+                // 关键字
+                'auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do',
+                'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if',
+                'inline', 'int', 'long', 'register', 'return', 'short', 'signed',
+                'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned',
+                'void', 'volatile', 'while', 'bool', 'true', 'false', 'namespace',
+                'using', 'class', 'public', 'private', 'protected', 'virtual',
+                'template', 'typename', 'try', 'catch', 'throw', 'new', 'delete',
+                // STL容器和算法
+                'vector', 'string', 'map', 'set', 'queue', 'stack', 'priority_queue',
+                'unordered_map', 'unordered_set', 'pair', 'make_pair',
+                'sort', 'find', 'lower_bound', 'upper_bound', 'binary_search',
+                'push_back', 'pop_back', 'size', 'empty', 'begin', 'end',
+                // 常用函数
+                'cout', 'cin', 'endl', 'printf', 'scanf', 'malloc', 'free'
+            ],
+            python: [
+                // 关键字
+                'and', 'as', 'assert', 'break', 'class', 'continue', 'def', 'del',
+                'elif', 'else', 'except', 'exec', 'finally', 'for', 'from', 'global',
+                'if', 'import', 'in', 'is', 'lambda', 'not', 'or', 'pass', 'print',
+                'raise', 'return', 'try', 'while', 'with', 'yield', 'True', 'False',
+                'None', 'self', '__init__', '__main__',
+                // 内置函数
+                'len', 'range', 'enumerate', 'zip', 'map', 'filter', 'sum', 'max',
+                'min', 'abs', 'round', 'sorted', 'reversed', 'list', 'dict', 'set',
+                'tuple', 'str', 'int', 'float', 'bool', 'type', 'isinstance',
+                'hasattr', 'getattr', 'setattr', 'open', 'input', 'split', 'join',
+                'append', 'extend', 'insert', 'remove', 'pop', 'index', 'count'
+            ],
+            java: [
+                // 关键字
+                'abstract', 'boolean', 'break', 'byte', 'case', 'catch', 'char',
+                'class', 'const', 'continue', 'default', 'do', 'double', 'else',
+                'extends', 'final', 'finally', 'float', 'for', 'goto', 'if',
+                'implements', 'import', 'instanceof', 'int', 'interface', 'long',
+                'native', 'new', 'package', 'private', 'protected', 'public',
+                'return', 'short', 'static', 'strictfp', 'super', 'switch',
+                'synchronized', 'this', 'throw', 'throws', 'transient', 'try',
+                'void', 'volatile', 'while', 'true', 'false', 'null',
+                // 常用类和方法
+                'String', 'Integer', 'Double', 'Boolean', 'ArrayList', 'HashMap',
+                'HashSet', 'LinkedList', 'TreeMap', 'TreeSet', 'Collections',
+                'Arrays', 'System', 'Scanner', 'StringBuilder', 'StringBuffer',
+                'Math', 'Object', 'Exception', 'RuntimeException',
+                'println', 'print', 'length', 'size', 'add', 'remove', 'get',
+                'put', 'contains', 'isEmpty', 'clear', 'toString', 'equals'
+            ]
+        };
+
+        // 自定义代码补全函数
+        function getCompletions(language) {
+            return function(cm, option) {
+                const cursor = cm.getCursor();
+                const line = cm.getLine(cursor.line);
+                let start = cursor.ch;
+                let end = cursor.ch;
+                
+                // 找到当前单词的开始位置
+                while (start && /\w/.test(line.charAt(start - 1))) start--;
+                // 找到当前单词的结束位置
+                while (end < line.length && /\w/.test(line.charAt(end))) end++;
+                
+                const word = line.slice(start, end).toLowerCase();
+                const keywords = completionKeywords[language] || [];
+                
+                // 过滤匹配的关键字
+                const completions = keywords.filter(keyword => 
+                    keyword.toLowerCase().startsWith(word)
+                ).map(keyword => ({
+                    text: keyword,
+                    displayText: keyword,
+                    className: 'CodeMirror-hint-keyword'
+                }));
+                
+                // 添加文档中已有的单词
+                const content = cm.getValue();
+                const words = content.match(/\b\w{3,}\b/g) || [];
+                const uniqueWords = [...new Set(words)];
+                
+                uniqueWords.forEach(w => {
+                    if (w.toLowerCase().startsWith(word) && 
+                        w.toLowerCase() !== word &&
+                        !keywords.includes(w.toLowerCase())) {
+                        completions.push({
+                            text: w,
+                            displayText: w,
+                            className: 'CodeMirror-hint-word'
+                        });
+                    }
+                });
+                
+                return {
+                    list: completions.slice(0, 10), // 限制显示数量
+                    from: CodeMirror.Pos(cursor.line, start),
+                    to: CodeMirror.Pos(cursor.line, end)
+                };
             };
         }
 
@@ -321,10 +483,29 @@
                     searchcursor: false,
                     // 样式配置
                     styleActiveLine: true,
-                    cursorBlinkRate: 530
+                    cursorBlinkRate: 530,
+                    // 代码补全配置
+                    hintOptions: {
+                        hint: getCompletions('cpp'),
+                        completeSingle: false,  // 不自动完成单个匹配
+                        closeOnUnfocus: true,   // 失去焦点时关闭
+                        alignWithWord: true,    // 与单词对齐
+                        closeCharacters: /[\s()\[\]{};:>,]/  // 这些字符会关闭补全
+                    },
+                    extraKeys: {
+                        "Ctrl-Space": "autocomplete",  // Ctrl+Space 触发补全
+                        "Tab": function(cm) {
+                            // Tab键处理：如果有补全则选择，否则插入缩进
+                            if (cm.state.completionActive) {
+                                return CodeMirror.Pass;
+                            }
+                            cm.replaceSelection("    ");  // 插入4个空格
+                        }
+                    }
                 });
 
-                // 禁用复制粘贴
+                // 暂时禁用复制粘贴限制，方便测试
+                /*
                 editor.on('keydown', function(cm, event) {
                     if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C')) {
                         event.preventDefault();
@@ -339,6 +520,26 @@
                 // 禁用右键菜单
                 editor.on('contextmenu', function(cm, event) {
                     event.preventDefault();
+                });
+                */
+
+                // 自动触发代码补全
+                let autoCompleteTimeout;
+                editor.on('inputRead', function(cm, change) {
+                    // 只在输入字母时触发
+                    if (change.text[0] && /[a-zA-Z]/.test(change.text[0])) {
+                        clearTimeout(autoCompleteTimeout);
+                        autoCompleteTimeout = setTimeout(function() {
+                            const cursor = cm.getCursor();
+                            const line = cm.getLine(cursor.line);
+                            const word = line.slice(0, cursor.ch).match(/\w+$/);
+                            
+                            // 如果当前单词长度>=2，自动触发补全
+                            if (word && word[0].length >= 2) {
+                                cm.showHint();
+                            }
+                        }, 300); // 300ms延迟，避免频繁触发
+                    }
                 });
 
                 setupEventListeners();
@@ -380,6 +581,15 @@
                         mode = 'text/plain';
                 }
                 editor.setOption('mode', mode);
+                
+                // 更新代码补全配置
+                editor.setOption('hintOptions', {
+                    hint: getCompletions(language),
+                    completeSingle: false,
+                    closeOnUnfocus: true,
+                    alignWithWord: true,
+                    closeCharacters: /[\s()\[\]{};:>,]/
+                });
                 
                 // 重新聚焦编辑器
                 editor.focus();
