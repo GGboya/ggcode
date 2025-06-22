@@ -77,3 +77,16 @@ func (ctrl *ProgressController) GetCheckInStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, stats)
 }
+
+// GetStudyHeatmap 获取学习活动热力图数据
+func (ctrl *ProgressController) GetStudyHeatmap(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	heatmapData, err := ctrl.progressService.GetStudyHeatmap(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, heatmapData)
+}

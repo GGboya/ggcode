@@ -135,6 +135,9 @@ func (s *Server) setupRoutes() {
 			// 打卡相关
 			api.POST("/checkin", ctrl.Progress.CheckInToday)
 			api.GET("/checkin-stats", ctrl.Progress.GetCheckInStats)
+
+			// 学习热力图
+			api.GET("/study-heatmap", ctrl.Progress.GetStudyHeatmap)
 		}
 	}
 }

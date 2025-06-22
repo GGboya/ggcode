@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"ggcode/internal/database"
 	"time"
 
@@ -551,4 +552,127 @@ func (s *EbbinghausService) DeleteStudyPlanWithProgress(userID, studyPlanID uint
 	}
 
 	return nil
+}
+
+// GetStudyHeatmap 获取学习活动热力图数据
+func (s *EbbinghausService) GetStudyHeatmap(userID uint) (*HeatmapResponse, error) {
+	// 获取过去一年的日期范围
+	endDate := time.Now()
+	startDate := endDate.AddDate(-1, 0, 0) // 一年前
+
+	// 查询用户在过去一年的学习记录（每天学习的不同题目数量）
+	var dailyStats []struct {
+		Date  time.Time `json:"date"`
+		Count int64     `json:"count"`
+	}
+
+	// 从学习记录表获取每天学习的不同题目数量（去重）
+	// 确保包含今天的所有数据，使用明天作为结束日期
+	tomorrowDate := endDate.AddDate(0, 0, 1).Format("2006-01-02")
+	err := s.db.Table("user_question_progresses").
+		Select("DATE(last_review_date) as date, COUNT(DISTINCT question_id) as count").
+		Where("user_id = ? AND DATE(last_review_date) >= DATE(?) AND DATE(last_review_date) < DATE(?) AND last_review_date IS NOT NULL", userID, startDate.Format("2006-01-02"), tomorrowDate).
+		Group("DATE(last_review_date)").
+		Order("date").
+		Scan(&dailyStats).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建热力图数据
+	heatmapData := make([]HeatmapData, 0)
+	currentDate := startDate
+
+	// 创建日期到学习次数的映射
+	statsMap := make(map[string]int64)
+	for _, stat := range dailyStats {
+		dateStr := stat.Date.Format("2006-01-02")
+		statsMap[dateStr] = stat.Count
+	}
+
+	fmt.Println("statsMap", statsMap, "startDate", startDate, "endDate", endDate)
+
+	// 填充过去一年的每一天，包括今天
+	tomorrow := time.Now().AddDate(0, 0, 1).Truncate(24 * time.Hour)
+	for currentDate.Before(tomorrow) {
+		dateStr := currentDate.Format("2006-01-02")
+		count := int(statsMap[dateStr])
+
+		// 根据学习次数确定活跃度级别 (0-4)
+		level := 0
+		if count > 0 {
+			if count >= 10 {
+				level = 4
+			} else if count >= 7 {
+				level = 3
+			} else if count >= 4 {
+				level = 2
+			} else {
+				level = 1
+			}
+		}
+
+		heatmapData = append(heatmapData, HeatmapData{
+			Date:  dateStr,
+			Count: count,
+			Level: level,
+		})
+
+		currentDate = currentDate.AddDate(0, 0, 1)
+	}
+
+	// 计算统计信息
+	totalStudyDays := 0     // 总学习天数
+	totalStudyCount := 0    // 总学习次数（题目数）
+	currentStreak := 0      // 当前连续学习天数
+	maxStreak := 0          // 最长连续学习天数
+	tempStreak := 0         // 临时连续天数
+	thisYearStudyCount := 0 // 今年学习次数
+
+	// 计算总学习天数和总学习次数
+	for _, data := range heatmapData {
+		if data.Count > 0 {
+			totalStudyDays++
+			totalStudyCount += data.Count
+		}
+	}
+
+	// 计算当前连续学习天数（从今天往前推）
+	for i := len(heatmapData) - 1; i >= 0; i-- {
+		if heatmapData[i].Count > 0 {
+			currentStreak++
+		} else {
+			break // 遇到没有学习的天数就停止
+		}
+	}
+
+	// 计算最长连续学习天数
+	for i := 0; i < len(heatmapData); i++ {
+		if heatmapData[i].Count > 0 {
+			tempStreak++
+			if tempStreak > maxStreak {
+				maxStreak = tempStreak
+			}
+		} else {
+			tempStreak = 0 // 重置临时连续天数
+		}
+	}
+
+	// 计算今年的学习次数
+	currentYear := time.Now().Year()
+	for _, data := range heatmapData {
+		date, _ := time.Parse("2006-01-02", data.Date)
+		if date.Year() == currentYear {
+			thisYearStudyCount += data.Count
+		}
+	}
+
+	return &HeatmapResponse{
+		Data:          heatmapData,
+		TotalCommits:  totalStudyCount,    // 总学习次数（题目数）
+		CurrentStreak: currentStreak,      // 当前连续学习天数
+		MaxStreak:     maxStreak,          // 最长连续学习天数
+		ThisYear:      thisYearStudyCount, // 今年学习次数
+	}, nil
 }
