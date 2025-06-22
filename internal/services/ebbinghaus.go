@@ -354,10 +354,37 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 		return errors.New("今日已打卡")
 	}
 
+	// 获取昨天的打卡记录来计算连续天数和最长连续天数
+	yesterday := today.AddDate(0, 0, -1)
+	var yesterdayCheckIn database.UserCheckIn
+	consecutiveDays := 1 // 默认为1（今天是第一天）
+	bestStreak := 1      // 默认为1
+
+	err = s.db.Where("user_id = ? AND check_date = ?", userID, yesterday).First(&yesterdayCheckIn).Error
+	if err == nil {
+		// 昨天有打卡，连续天数 = 昨天的连续天数 + 1
+		consecutiveDays = yesterdayCheckIn.ConsecutiveDays + 1
+		// 最长连续天数 = max(当前连续天数, 昨天的最长连续天数)
+		bestStreak = max(consecutiveDays, yesterdayCheckIn.BestStreak)
+	} else {
+		// 昨天没打卡，获取最近的一条记录来获取历史最长连续天数
+		var latestCheckIn database.UserCheckIn
+		err = s.db.Where("user_id = ?", userID).
+			Order("check_date DESC").
+			First(&latestCheckIn).Error
+		if err == nil {
+			// 有历史记录，使用历史最长连续天数
+			bestStreak = max(1, latestCheckIn.BestStreak)
+		}
+		// 如果没有历史记录，bestStreak 保持默认值 1
+	}
+
 	// 创建打卡记录
 	checkIn := database.UserCheckIn{
-		UserID:    userID,
-		CheckDate: today,
+		UserID:          userID,
+		CheckDate:       today,
+		ConsecutiveDays: consecutiveDays,
+		BestStreak:      bestStreak,
 	}
 
 	return s.db.Create(&checkIn).Error
@@ -369,43 +396,53 @@ func (s *EbbinghausService) GetCheckInStats(userID uint) (*CheckInStats, error) 
 	// 明确使用UTC时间，避免时区问题
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 
-	// 检查今日是否已打卡
+	// 检查今日是否已打卡，同时获取连续天数和最长连续天数
 	var todayCheckIn database.UserCheckIn
 	err := s.db.Where("user_id = ? AND check_date = ?", userID, today).First(&todayCheckIn).Error
-	stats.CheckedInToday = err == nil
+	if err == nil {
+		stats.CheckedInToday = true
+		stats.ConsecutiveDays = int64(todayCheckIn.ConsecutiveDays)
+		stats.BestStreak = int64(todayCheckIn.BestStreak)
+	} else {
+		stats.CheckedInToday = false
+
+		// 获取昨天的打卡记录
+		yesterday := today.AddDate(0, 0, -1)
+		var yesterdayCheckIn database.UserCheckIn
+		err = s.db.Where("user_id = ? AND check_date = ?", userID, yesterday).First(&yesterdayCheckIn).Error
+		if err == nil {
+			// 昨天有打卡，显示昨天的连续天数和最长连续天数
+			stats.ConsecutiveDays = int64(yesterdayCheckIn.ConsecutiveDays)
+			stats.BestStreak = int64(yesterdayCheckIn.BestStreak)
+		} else {
+			// 昨天没打卡，连续天数归零，但仍需获取历史最长连续天数
+			stats.ConsecutiveDays = 0
+
+			// 获取最近的一条记录来获取历史最长连续天数
+			var latestCheckIn database.UserCheckIn
+			err = s.db.Where("user_id = ?", userID).
+				Order("check_date DESC").
+				First(&latestCheckIn).Error
+			if err == nil {
+				stats.BestStreak = int64(latestCheckIn.BestStreak)
+			} else {
+				stats.BestStreak = 0 // 没有任何历史记录
+			}
+		}
+	}
 
 	// 计算总打卡天数
 	s.db.Model(&database.UserCheckIn{}).Where("user_id = ?", userID).Count(&stats.TotalCheckInDays)
 
-	// 计算连续打卡天数
-	stats.ConsecutiveDays = s.calculateConsecutiveDays(userID, today)
-
 	return &stats, nil
-}
-
-// calculateConsecutiveDays 计算连续打卡天数
-func (s *EbbinghausService) calculateConsecutiveDays(userID uint, today time.Time) int64 {
-	var consecutiveDays int64 = 0
-	currentDate := today
-
-	for {
-		var checkIn database.UserCheckIn
-		err := s.db.Where("user_id = ? AND check_date = ?", userID, currentDate).First(&checkIn).Error
-		if err != nil {
-			break
-		}
-		consecutiveDays++
-		currentDate = currentDate.AddDate(0, 0, -1)
-	}
-
-	return consecutiveDays
 }
 
 // CheckInStats 打卡统计
 type CheckInStats struct {
 	CheckedInToday   bool  `json:"checked_in_today"`    // 今日是否已打卡
 	TotalCheckInDays int64 `json:"total_check_in_days"` // 总打卡天数
-	ConsecutiveDays  int64 `json:"consecutive_days"`    // 连续打卡天数
+	ConsecutiveDays  int64 `json:"consecutive_days"`    // 当前连续打卡天数
+	BestStreak       int64 `json:"best_streak"`         // 历史最长连续天数
 }
 
 // StudyPlanProgress 学习计划进度统计
