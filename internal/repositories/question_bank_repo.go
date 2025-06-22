@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"ggcode/internal/models"
 
 	"gorm.io/gorm"
@@ -22,9 +23,17 @@ type QuestionBankListResult struct {
 	TotalPages int
 }
 
+type QuestionBankUpdateData struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 type QuestionBankRepository interface {
 	GetQuestionBanks(options QuestionBankQueryOptions) (*QuestionBankListResult, error)
 	GetStarredBankIDs(userID uint, bankIDs []uint) ([]uint, error)
+	CreateQuestionBank(name, description string) error
+	UpdateQuestionBank(bankID, userID uint, updateData QuestionBankUpdateData) error
+	DeleteQuestionBank(bankID, userID uint) error
 }
 
 type questionBankRepository struct {
@@ -99,4 +108,70 @@ func (r *questionBankRepository) GetStarredBankIDs(userID uint, bankIDs []uint) 
 		Pluck("question_bank_id", &starredBankIDs).Error
 
 	return starredBankIDs, err
+}
+
+func (r *questionBankRepository) CreateQuestionBank(name, description string) error {
+	return r.db.Create(&models.QuestionBank{
+		Name:        name,
+		Description: description,
+	}).Error
+}
+
+func (r *questionBankRepository) UpdateQuestionBank(bankID, userID uint, updateData QuestionBankUpdateData) error {
+	return r.db.Model(&models.QuestionBank{}).
+		Where("id = ? AND created_by = ?", bankID, userID).
+		Updates(updateData).Error
+}
+
+func (r *questionBankRepository) DeleteQuestionBank(bankID, userID uint) error {
+	// 检查题库是否存在且属于当前用户
+	var questionBank models.QuestionBank
+	if err := r.db.Where("id = ? AND created_by = ?", bankID, userID).First(&questionBank).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.New("题库不存在或无权限删除")
+		}
+		return errors.New("查询题库失败")
+	}
+
+	// 定义一个通用的学习计划结构体（根据database模型修改）
+	type UserStudyPlan struct {
+		ID             uint `gorm:"primaryKey"`
+		UserID         uint
+		QuestionBankID uint
+	}
+
+	// 检查是否有用户正在使用此题库的学习计划
+	var studyPlanCount int64
+	r.db.Model(&UserStudyPlan{}).Where("question_bank_id = ?", bankID).Count(&studyPlanCount)
+	if studyPlanCount > 0 {
+		return errors.New("该题库正在被学习计划使用，无法删除")
+	}
+
+	// 开始事务删除题库及其题目
+	tx := r.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 定义一个通用的题目结构体
+	type Question struct {
+		ID             uint `gorm:"primaryKey"`
+		QuestionBankID uint
+	}
+
+	// 删除题库中的所有题目
+	if err := tx.Where("question_bank_id = ?", bankID).Delete(&Question{}).Error; err != nil {
+		tx.Rollback()
+		return errors.New("删除题目失败")
+	}
+
+	// 删除题库
+	if err := tx.Delete(&questionBank).Error; err != nil {
+		tx.Rollback()
+		return errors.New("删除题库失败")
+	}
+
+	return tx.Commit().Error
 }

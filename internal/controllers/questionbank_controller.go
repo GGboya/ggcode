@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"ggcode/internal/repositories"
 	"ggcode/internal/services"
 	"net/http"
 	"strconv"
@@ -58,6 +59,70 @@ func (ctrl *QuestionBankController) CreateQuestionBank(c *gin.Context) {
 		return
 	}
 
-	// TODO: 实现创建题库的服务层方法
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "创建题库功能待实现"})
+	err := ctrl.questionBankService.CreateQuestionBank(req.Name, req.Description)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建题库失败"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "题库创建成功"})
+}
+
+// UpdateQuestionBank 更新题库
+func (ctrl *QuestionBankController) UpdateQuestionBank(c *gin.Context) {
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		Description string `json:"description"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	err = ctrl.questionBankService.UpdateQuestionBank(uint(bankID), userID, repositories.QuestionBankUpdateData{
+		Name:        req.Name,
+		Description: req.Description,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新题库失败"})
+		return
+	}
+
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "更新题库功能待实现"})
+}
+
+// DeleteQuestionBank 删除题库
+func (ctrl *QuestionBankController) DeleteQuestionBank(c *gin.Context) {
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	err = ctrl.questionBankService.DeleteQuestionBank(uint(bankID), userID)
+	if err != nil {
+		// 根据错误类型返回不同的HTTP状态码
+		switch err.Error() {
+		case "题库不存在或无权限删除":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case "该题库正在被学习计划使用，无法删除":
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "题库删除成功"})
 }

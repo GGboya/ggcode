@@ -1,0 +1,15 @@
+"filename", "language", "Go", "comment", "blank", "total"
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/controllers/controllers.go", "Go", 24, 0, 4, 28
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/controllers/usercontroller.go", "Go", 56, 0, 16, 72
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/database/database.go", "Go", 86, 0, 16, 102
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/database/models.go", "Go", 88, 0, 12, 100
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/handlers/handlers.go", "Go", 996, 0, 180, 1176
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/middleware/auth.go", "Go", 83, 0, 14, 97
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/models/user.go", "Go", 13, 0, 3, 16
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/repositories/respositories.go", "Go", 24, 0, 4, 28
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/repositories/user_repositories.go", "Go", 33, 0, 9, 42
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/server/server.go", "Go", 122, 0, 20, 142
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/services/ebbinghaus.go", "Go", 434, 0, 84, 518
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/services/services.go", "Go", 26, 0, 4, 30
+"/home/syh/study/projects/github.com/GGboya/ggcode/internal/services/user_service.go", "Go", 69, 0, 15, 84
+"Total", "-", 2054, 0, 381, 2435

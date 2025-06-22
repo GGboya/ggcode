@@ -98,3 +98,15 @@ func (s *QuestionBankService) GetQuestionBanks(userID uint, bankType, sortBy str
 
 	return response, nil
 }
+
+func (s *QuestionBankService) CreateQuestionBank(name, description string) error {
+	return s.questionBankRepo.CreateQuestionBank(name, description)
+}
+
+func (s *QuestionBankService) UpdateQuestionBank(bankID, userID uint, updateData repositories.QuestionBankUpdateData) error {
+	return s.questionBankRepo.UpdateQuestionBank(bankID, userID, updateData)
+}
+
+func (s *QuestionBankService) DeleteQuestionBank(bankID, userID uint) error {
+	return s.questionBankRepo.DeleteQuestionBank(bankID, userID)
+}

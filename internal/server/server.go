@@ -94,9 +94,11 @@ func (s *Server) setupRoutes() {
 		{
 			// 题库相关
 			api.GET("/questionbanks", ctrl.QuestionBank.GetQuestionBanks)
-			api.POST("/questionbanks", h.CreateQuestionBank)
-			api.PUT("/questionbanks/:id", h.UpdateQuestionBank)
-			api.DELETE("/questionbanks/:id", h.DeleteQuestionBank)
+			api.POST("/questionbanks", ctrl.QuestionBank.CreateQuestionBank)
+			api.PUT("/questionbanks/:id", ctrl.QuestionBank.UpdateQuestionBank)
+			api.DELETE("/questionbanks/:id", ctrl.QuestionBank.DeleteQuestionBank)
+
+			// 题库题目相关
 			api.GET("/questionbanks/:id/questions", h.GetQuestions)
 			api.POST("/questionbanks/:id/questions", h.CreateQuestion)
 			api.GET("/questions/:id", h.GetQuestion)

@@ -1,0 +1,45 @@
+Date : 2025-06-21 18:10:02
+Directory : /home/syh/study/projects/github.com/GGboya/ggcode/internal
+Total : 13 files,  2054 codes, 0 comments, 381 blanks, all 2435 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Go       |         13 |      2,054 |          0 |        381 |      2,435 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                         | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                            |         13 |      2,054 |          0 |        381 |      2,435 |
+| controllers                                                                                  |          2 |         80 |          0 |         20 |        100 |
+| database                                                                                     |          2 |        174 |          0 |         28 |        202 |
+| handlers                                                                                     |          1 |        996 |          0 |        180 |      1,176 |
+| middleware                                                                                   |          1 |         83 |          0 |         14 |         97 |
+| models                                                                                       |          1 |         13 |          0 |          3 |         16 |
+| repositories                                                                                 |          2 |         57 |          0 |         13 |         70 |
+| server                                                                                       |          1 |        122 |          0 |         20 |        142 |
+| services                                                                                     |          3 |        529 |          0 |        103 |        632 |
++----------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                     | language | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/controllers/controllers.go        | Go       |         24 |          0 |          4 |         28 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/controllers/usercontroller.go     | Go       |         56 |          0 |         16 |         72 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/database/database.go              | Go       |         86 |          0 |         16 |        102 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/database/models.go                | Go       |         88 |          0 |         12 |        100 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/handlers/handlers.go              | Go       |        996 |          0 |        180 |      1,176 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/middleware/auth.go                | Go       |         83 |          0 |         14 |         97 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/models/user.go                    | Go       |         13 |          0 |          3 |         16 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/repositories/respositories.go     | Go       |         24 |          0 |          4 |         28 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/repositories/user_repositories.go | Go       |         33 |          0 |          9 |         42 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/server/server.go                  | Go       |        122 |          0 |         20 |        142 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/services/ebbinghaus.go            | Go       |        434 |          0 |         84 |        518 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/services/services.go              | Go       |         26 |          0 |          4 |         30 |
+| /home/syh/study/projects/github.com/GGboya/ggcode/internal/services/user_service.go          | Go       |         69 |          0 |         15 |         84 |
+| Total                                                                                        |          |      2,054 |          0 |        381 |      2,435 |
++----------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
