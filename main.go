@@ -33,11 +33,28 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server starting on :%s", port)
-	log.Printf("Database: MySQL")
-	log.Printf("Visit: http://localhost:%s", port)
+	// 检查是否启用TLS
+	tlsCert := os.Getenv("TLS_CERT_FILE")
+	tlsKey := os.Getenv("TLS_KEY_FILE")
+	enableTLS := os.Getenv("ENABLE_TLS")
 
-	if err := srv.Run(":" + port); err != nil {
-		log.Fatal("Failed to start server:", err)
+	if enableTLS == "true" && tlsCert != "" && tlsKey != "" {
+		log.Printf("HTTPS Server starting on :%s", port)
+		log.Printf("Database: MySQL")
+		log.Printf("TLS Certificate: %s", tlsCert)
+		log.Printf("TLS Key: %s", tlsKey)
+		log.Printf("Visit: https://localhost:%s", port)
+
+		if err := srv.RunTLS(":"+port, tlsCert, tlsKey); err != nil {
+			log.Fatal("Failed to start HTTPS server:", err)
+		}
+	} else {
+		log.Printf("HTTP Server starting on :%s", port)
+		log.Printf("Database: MySQL")
+		log.Printf("Visit: http://localhost:%s", port)
+
+		if err := srv.Run(":" + port); err != nil {
+			log.Fatal("Failed to start HTTP server:", err)
+		}
 	}
 }

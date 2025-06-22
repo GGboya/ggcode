@@ -145,3 +145,8 @@ func (s *Server) setupRoutes() {
 func (s *Server) Run(addr string) error {
 	return s.router.Run(addr)
 }
+
+// RunTLS 启动HTTPS服务器
+func (s *Server) RunTLS(addr, certFile, keyFile string) error {
+	return s.router.RunTLS(addr, certFile, keyFile)
+}
