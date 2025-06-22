@@ -77,7 +77,7 @@ func (s *UserService) Login(username, password string) (*models.User, string, er
 	return user, token, nil
 }
 
-// GetUserByID 通过ID获取用户信息
-func (s *UserService) GetUserByID(id uint) (*models.User, error) {
-	return s.userRepo.GetByID(id)
-}
+// // GetUserByID 通过ID获取用户信息
+// func (s *UserService) GetUserByID(id uint) (*models.User, error) {
+// 	return s.userRepo.GetByID(id)
+// }

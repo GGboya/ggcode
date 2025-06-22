@@ -1,21 +1,18 @@
 package controllers
 
 import (
-	"ggcode/internal/database"
-	"ggcode/internal/middleware"
 	"ggcode/internal/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserController struct {
 	userService *services.UserService
 }
 
-func NewUserController(userService *services.UserService) *UserController {
-	return &UserController{userService: userService}
+func NewUserController(services *services.Services) *UserController {
+	return &UserController{userService: services.User}
 }
 
 func (ctrl *UserController) Login(c *gin.Context) {
@@ -61,37 +58,6 @@ func (ctrl *UserController) Register(c *gin.Context) {
 	user, token, err := ctrl.userService.Register(req.Username, req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 检查用户名是否已存在
-	var existingUser database.User
-	if err := h.db.Where("username = ? OR email = ?", req.Username, req.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "用户名或邮箱已存在"})
-		return
-	}
-
-	// 密码加密
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
-		return
-	}
-
-	user := database.User{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: string(hashedPassword),
-	}
-
-	if err := h.db.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
-		return
-	}
-
-	token, err := middleware.GenerateToken(user.ID, user.Username)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成token失败"})
 		return
 	}
 

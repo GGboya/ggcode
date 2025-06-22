@@ -4,8 +4,8 @@ import "gorm.io/gorm"
 
 // Repositories 包含所有仓库接口
 type Repositories struct {
-	User UserRepository
-	// QuestionBank QuestionBankRepository
+	User         UserRepository
+	QuestionBank QuestionBankRepository
 	// Question     QuestionRepository
 	// StudyPlan    StudyPlanRepository
 	// Progress     ProgressRepository
@@ -16,8 +16,8 @@ type Repositories struct {
 // NewRepositories 创建所有仓库实例
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		User: NewUserRepository(db),
-		// QuestionBank: NewQuestionBankRepository(db),
+		User:         NewUserRepository(db),
+		QuestionBank: NewQuestionBankRepository(db),
 		// Question:     NewQuestionRepository(db),
 		// StudyPlan:    NewStudyPlanRepository(db),
 		// Progress:     NewProgressRepository(db),

@@ -93,7 +93,7 @@ func (s *Server) setupRoutes() {
 		api := auth.Group("/api")
 		{
 			// 题库相关
-			api.GET("/questionbanks", h.GetQuestionBanks)
+			api.GET("/questionbanks", ctrl.QuestionBank.GetQuestionBanks)
 			api.POST("/questionbanks", h.CreateQuestionBank)
 			api.PUT("/questionbanks/:id", h.UpdateQuestionBank)
 			api.DELETE("/questionbanks/:id", h.DeleteQuestionBank)

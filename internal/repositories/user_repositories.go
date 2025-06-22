@@ -6,15 +6,21 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserRepository struct {
+type UserRepository interface {
+	Create(user *models.User) error
+	GetByUsername(username string) (*models.User, error)
+	GetByUsernameOrEmail(username, email string) (*models.User, error)
+}
+
+type userRepository struct {
 	db *gorm.DB
 }
 
-func (r *UserRepository) Create(user *models.User) error {
+func (r *userRepository) Create(user *models.User) error {
 	return r.db.Create(user).Error
 }
 
-func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
+func (r *userRepository) GetByUsername(username string) (*models.User, error) {
 	user := &models.User{}
 	if err := r.db.Where("username = ?", username).First(user).Error; err != nil {
 		return nil, err
@@ -22,7 +28,7 @@ func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) GetByUsernameOrEmail(username, email string) (*models.User, error) {
+func (r *userRepository) GetByUsernameOrEmail(username, email string) (*models.User, error) {
 	user := &models.User{}
 	if err := r.db.Where("username = ? OR email = ?", username, email).First(user).Error; err != nil {
 		return nil, err
@@ -30,6 +36,6 @@ func (r *UserRepository) GetByUsernameOrEmail(username, email string) (*models.U
 	return user, nil
 }
 
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepository{db: db}
 }
