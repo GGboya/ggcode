@@ -18,16 +18,7 @@
                     </p>
                 </div>
                 <div class="col-lg-4 text-end">
-                    <div class="welcome-stats">
-                        <div class="stat-item d-inline-block me-4">
-                            <div class="stat-number" id="todayProgress">0</div>
-                            <div class="stat-label">今日进度</div>
-                        </div>
-                        <div class="stat-item d-inline-block">
-                            <div class="stat-number" id="streak">0</div>
-                            <div class="stat-label">连续天数</div>
-                        </div>
-                    </div>
+                    <!-- 预留空间，可以添加其他内容 -->
                 </div>
             </div>
         </div>
@@ -153,7 +144,7 @@
                     <i class="fas fa-clock fa-2x"></i>
                 </div>
                 <h4 class="stats-number" id="todayReview">-</h4>
-                <p class="stats-label">今日待复习</p>
+                <p class="stats-label">待复习</p>
                 <div class="stats-trend">
                     <i class="fas fa-bell text-warning"></i>
                     <span class="trend-text">待完成</span>
@@ -296,56 +287,7 @@
     </div>
 </div>
 
-<!-- 快速统计概览 -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card modern-card">
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    学习进度概览
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-lg-4 mb-3">
-                        <div class="progress-section">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">总体进度</span>
-                                <span class="fw-bold" id="overallProgress">0%</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar" role="progressbar" style="width: 0%" id="overallProgressBar"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 mb-3">
-                        <div class="progress-section">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">本周目标</span>
-                                <span class="fw-bold" id="weeklyProgress">0%</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="weeklyProgressBar"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 mb-3">
-                        <div class="progress-section">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">月度目标</span>
-                                <span class="fw-bold" id="monthlyProgress">0%</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="monthlyProgressBar"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Dashboard页面脚本 -->
 <script>
@@ -476,8 +418,7 @@ async function loadStats() {
             Math.round((stats.completed / stats.total_studied) * 100) : 0;
         animateNumber('completionRate', completionRate, '%');
         
-        // 更新进度条
-        updateProgressBars(stats);
+
         
     } catch (error) {
         console.error('加载统计信息失败:', error);
@@ -503,24 +444,7 @@ function animateNumber(elementId, targetValue, suffix = '') {
     }, 16);
 }
 
-// 更新进度条
-function updateProgressBars(stats) {
-    const overallProgress = stats.total_studied > 0 ? 
-        Math.round((stats.completed / stats.total_studied) * 100) : 0;
-    
-    document.getElementById('overallProgress').textContent = overallProgress + '%';
-    document.getElementById('overallProgressBar').style.width = overallProgress + '%';
-    
-    // 模拟周度和月度进度
-    const weeklyProgress = Math.min(overallProgress + 10, 100);
-    const monthlyProgress = Math.min(overallProgress + 5, 100);
-    
-    document.getElementById('weeklyProgress').textContent = weeklyProgress + '%';
-    document.getElementById('weeklyProgressBar').style.width = weeklyProgress + '%';
-    
-    document.getElementById('monthlyProgress').textContent = monthlyProgress + '%';
-    document.getElementById('monthlyProgressBar').style.width = monthlyProgress + '%';
-}
+
 
 // 加载打卡统计
 async function loadCheckInStats() {
@@ -552,9 +476,6 @@ async function loadCheckInStats() {
         
         // 更新进度圆环
         updateCheckinProgress();
-        
-        // 更新欢迎区域的连续天数
-        document.getElementById('streak').textContent = checkInStats.consecutive_days || 0;
         
     } catch (error) {
         console.error('加载打卡统计失败:', error);
