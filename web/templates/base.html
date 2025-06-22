@@ -4,6 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.title}} - GGCode</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Meta tags for better SEO and mobile experience -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="description" content="GGCode - 基于艾宾浩斯遗忘曲线的智能算法学习平台">
+    
+    <!-- Safari pinned tab -->
+    <link rel="mask-icon" href="/static/favicon.svg" color="#667eea">
+    
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -33,6 +53,8 @@
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-weight: 400;
             line-height: 1.6;
+            display: flex;
+            flex-direction: column;
         }
 
         body::before {
@@ -520,6 +542,38 @@
         .auth-required.authenticated {
             display: block;
         }
+
+        /* Footer styling */
+        .footer {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: auto;
+        }
+
+        .footer .text-muted {
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 0.9rem;
+        }
+
+        .footer .icp-link {
+            transition: all 0.3s ease;
+        }
+
+        .footer .icp-link:hover {
+            color: rgba(255, 255, 255, 0.9) !important;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+        }
+
+        .footer .fa-shield-alt {
+            color: #4CAF50;
+        }
+
+        /* 确保页面内容占满视口高度 */
+        main.container {
+            flex: 1;
+        }
     </style>
 </head>
 <body{{if .userID}} data-user-id="{{.userID}}"{{end}}>
@@ -601,6 +655,27 @@
             </div>
         {{end}}
     </main>
+
+    <!-- 网站底部 -->
+    <footer class="footer mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <div class="footer-content">
+                        <p class="text-muted mb-2">
+                            &copy; 2024 GGCode - 智能算法学习平台
+                        </p>
+                        <p class="text-muted mb-0">
+                            <a href="https://beian.miit.gov.cn/" target="_blank" class="text-muted text-decoration-none icp-link">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                京ICP备2024087391号-1
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <!-- Bootstrap JS -->
     <script src="/static/js/bootstrap.bundle.min.js"></script>
