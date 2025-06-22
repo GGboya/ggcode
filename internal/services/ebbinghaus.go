@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"ggcode/internal/database"
 	"time"
 
@@ -590,8 +589,6 @@ func (s *EbbinghausService) GetStudyHeatmap(userID uint) (*HeatmapResponse, erro
 		dateStr := stat.Date.Format("2006-01-02")
 		statsMap[dateStr] = stat.Count
 	}
-
-	fmt.Println("statsMap", statsMap, "startDate", startDate, "endDate", endDate)
 
 	// 填充过去一年的每一天，包括今天
 	tomorrow := time.Now().AddDate(0, 0, 1).Truncate(24 * time.Hour)

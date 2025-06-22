@@ -350,32 +350,14 @@ function setGreeting() {
 
 // 加载学习活动热力图
 async function loadStudyHeatmap() {
-    console.log('开始加载学习活动热力图');
-    
     try {
         const response = await axios.get('/api/study-heatmap');
-        console.log('热力图数据响应:', response.data);
         const heatmapData = response.data;
-        
-        // 添加调试信息
-        console.log('热力图数据详情:');
-        console.log('- 总学习次数:', heatmapData.total_commits);
-        console.log('- 今年学习次数:', heatmapData.this_year);
-        console.log('- 数据条数:', heatmapData.data ? heatmapData.data.length : 0);
-        if (heatmapData.data && heatmapData.data.length > 0) {
-            console.log('- 前5条数据:', heatmapData.data.slice(0, 5));
-            const nonZeroData = heatmapData.data.filter(d => d.count > 0);
-            console.log('- 有数据的天数:', nonZeroData.length);
-            if (nonZeroData.length > 0) {
-                console.log('- 有数据的前5天:', nonZeroData.slice(0, 5));
-            }
-        }
         
         renderHeatmap(heatmapData);
         updateHeatmapStats(heatmapData);
         
     } catch (error) {
-        console.error('加载热力图数据失败:', error);
         document.getElementById('heatmapContainer').innerHTML = `
             <div class="alert alert-warning text-center">
                 <i class="fas fa-exclamation-triangle me-2"></i>
@@ -402,13 +384,8 @@ function animateCards() {
 
 // 加载统计信息
 async function loadStats() {
-    console.log('开始加载统计信息');
-    console.log('当前axios headers:', axios.defaults.headers.common);
-    
     try {
-        console.log('发送请求到 /api/study-stats');
         const response = await axios.get('/api/study-stats');
-        console.log('统计信息响应:', response.data);
         const stats = response.data;
         
         // 更新统计数字
@@ -421,9 +398,7 @@ async function loadStats() {
         animateNumber('completionRate', completionRate, '%');
         
 
-        
     } catch (error) {
-        console.error('加载统计信息失败:', error);
         showAlert('加载统计信息失败', 'warning');
     }
 }
@@ -450,12 +425,8 @@ function animateNumber(elementId, targetValue, suffix = '') {
 
 // 加载打卡统计
 async function loadCheckInStats() {
-    console.log('开始加载打卡统计');
-    
     try {
-        console.log('发送请求到 /api/checkin-stats');
         const response = await axios.get('/api/checkin-stats');
-        console.log('打卡统计响应:', response.data);
         checkInStats = response.data;
         
         document.getElementById('totalCheckInDays').textContent = checkInStats.total_check_in_days || 0;
@@ -478,9 +449,8 @@ async function loadCheckInStats() {
         
         // 更新进度圆环
         updateCheckinProgress();
-        
     } catch (error) {
-        console.error('加载打卡统计失败:', error);
+        // 静默处理错误
     }
 }
 
@@ -500,12 +470,8 @@ function updateCheckinProgress() {
 
 // 加载主要学习计划列表
 async function loadMainStudyPlans() {
-    console.log('开始加载主要学习计划列表');
-    
     try {
-        console.log('发送请求获取学习计划');
         const plansResponse = await axios.get('/api/study-plans?limit=20');
-        console.log('学习计划响应:', plansResponse.data);
         
         // 处理分页格式的响应
         let studyPlans;
@@ -538,15 +504,11 @@ async function loadMainStudyPlans() {
         }
         
         renderMainStudyPlans(studyPlans);
-        
     } catch (error) {
-        console.error('加载学习计划失败:', error);
         document.getElementById('studyPlansMainList').innerHTML = `
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 加载学习计划失败，请稍后重试
-                <br>
-                <small class="text-muted">错误信息: ${error.response?.data?.error || error.message}</small>
             </div>
         `;
     }
@@ -616,8 +578,6 @@ function renderMainStudyPlans(studyPlans) {
 
 // 加载学习进度汇总
 async function loadStudyProgressSummary() {
-    console.log('开始加载学习进度汇总');
-    
     try {
         const [statsResponse, progressResponse] = await Promise.all([
             axios.get('/api/study-stats'),
@@ -628,9 +588,7 @@ async function loadStudyProgressSummary() {
         const progressList = progressResponse.data;
         
         renderStudyProgressSummary(stats, progressList);
-        
     } catch (error) {
-        console.error('加载学习进度汇总失败:', error);
         document.getElementById('studyProgressSummary').innerHTML = `
             <div class="alert alert-warning alert-sm">
                 <small>加载进度信息失败</small>
@@ -719,27 +677,7 @@ function renderHeatmap(heatmapData) {
         dataMap[item.date] = item;
     });
     
-    // 调试：检查最后几天的数据映射
-    console.log('数据映射示例（最后10条）:');
-    const lastFewDates = data.slice(-10);
-    lastFewDates.forEach(item => {
-        const date = new Date(item.date);
-        console.log(`  ${item.date}: count=${item.count}, level=${item.level} (${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日)`);
-    });
-    
-    // 检查是否有重复日期
-    const dateSet = new Set();
-    const duplicates = [];
-    data.forEach(item => {
-        if (dateSet.has(item.date)) {
-            duplicates.push(item.date);
-        } else {
-            dateSet.add(item.date);
-        }
-    });
-    if (duplicates.length > 0) {
-        console.warn('发现重复日期:', duplicates);
-    }
+
     
     // 计算起始日期（一年前的今天）
     const endDate = new Date();
@@ -751,17 +689,11 @@ function renderHeatmap(heatmapData) {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // 设置为今天的开始时间
     
-    console.log('开始按月份分组数据，起始日期:', startDate.toISOString().split('T')[0], '结束日期:', endDate.toISOString().split('T')[0]);
-    console.log('今天:', today.toISOString().split('T')[0]);
-    console.log('数据总条数:', data.length);
-    
     // 过滤掉未来的数据，只保留今天及之前的
     const filteredData = data.filter(item => {
         const itemDate = new Date(item.date);
         return itemDate <= today;
     });
-    
-    console.log('过滤后数据条数:', filteredData.length);
     
     // 生成从起始日期到今天的所有月份
     const monthsToGenerate = [];
@@ -778,7 +710,7 @@ function renderHeatmap(heatmapData) {
         currentMonth.setMonth(currentMonth.getMonth() + 1);
     }
     
-    console.log('需要生成的月份:', monthsToGenerate.map(m => `${m.year}年${m.month + 1}月`));
+
     
     monthsToGenerate.forEach(monthInfo => {
         const year = monthInfo.year;
@@ -787,8 +719,6 @@ function renderHeatmap(heatmapData) {
         
         // 获取这个月的所有天数
         const monthEnd = new Date(year, month + 1, 0);
-        
-        console.log(`处理月份: ${year}年${month + 1}月，共${monthEnd.getDate()}天`);
         
         // 添加这个月的所有日期，但只显示到今天为止
         for (let day = 1; day <= monthEnd.getDate(); day++) {
@@ -804,16 +734,9 @@ function renderHeatmap(heatmapData) {
             if (d <= today) {
                 const dayData = dataMap[dateStr] || { date: dateStr, count: 0, level: 0 };
                 monthDays.push(dayData);
-                
-
             }
         }
-        
-        console.log(`${year}年${month + 1}月 实际天数: ${monthDays.length}`);
-        if (monthDays.length > 0) {
-            console.log(`  - 第一天: ${monthDays[0].date}`);
-            console.log(`  - 最后一天: ${monthDays[monthDays.length - 1].date}`);
-        }
+
         
         if (monthDays.length > 0) {
             monthsData.push({
@@ -825,35 +748,47 @@ function renderHeatmap(heatmapData) {
         }
     });
     
-    console.log('月份分组完成，共', monthsData.length, '个月');
+    // 计算自适应尺寸
+    const containerWidth = container.clientWidth;
+    const totalWeeks = monthsData.reduce((total, monthData) => {
+        const firstDayOfWeek = new Date(monthData.year, monthData.month, 1).getDay();
+        const totalCells = firstDayOfWeek + monthData.days.length;
+        const weeksInMonth = Math.ceil(totalCells / 7);
+        return total + weeksInMonth;
+    }, 0);
+    
+    // 计算每周的宽度和方块大小（LeetCode风格）
+    const monthGaps = (monthsData.length - 1) * 6; // 紧凑的月份间隔
+    const availableWidth = containerWidth - 30 - monthGaps; // 紧凑的边距
+    const weekWidth = Math.floor(availableWidth / totalWeeks);
+    const daySize = Math.max(10, Math.min(12, weekWidth - 1)); // 小而精致的方块
+    const actualWeekWidth = daySize + 2; // LeetCode标准间距
+    
+
     
     // 渲染月份标签
     html += '<div class="month-labels-leetcode">';
     const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-    let currentX = 0;
+    let currentX = 15; // LeetCode风格起始位置
     
     monthsData.forEach((monthData, monthIndex) => {
         html += `<span class="month-label-leetcode" style="left: ${currentX}px;">${months[monthData.month]}</span>`;
         
-        // 计算这个月需要的宽度：第一天是星期几 + 月份天数，然后除以7取整
+        // 计算这个月需要的宽度
         const firstDayOfWeek = new Date(monthData.year, monthData.month, 1).getDay();
         const totalCells = firstDayOfWeek + monthData.days.length;
         const weeksInMonth = Math.ceil(totalCells / 7);
-        currentX += weeksInMonth * 18 + 20; // 每周18px，月份间隔20px
+        currentX += weeksInMonth * actualWeekWidth + 6; // LeetCode紧凑间隔
     });
     html += '</div>';
     
     // 渲染热力图方块（按月份分组，按周排列）
     html += '<div class="heatmap-days-leetcode">';
-    let globalX = 0;
+    let globalX = 15; // LeetCode风格起始位置
     
     monthsData.forEach((monthData, monthIndex) => {
         // 按周排列每个月的天数
         const firstDayOfWeek = new Date(monthData.year, monthData.month, 1).getDay(); // 0=周日, 1=周一...
-        
-
-        
-
         
         monthData.days.forEach((day, dayIdx) => {
             const date = new Date(day.date);
@@ -870,23 +805,21 @@ function renderHeatmap(heatmapData) {
             const currentWeek = Math.floor(totalDayIndex / 7);
             const currentDayInWeek = totalDayIndex % 7;
             
-            const leftPosition = globalX + currentWeek * 18;
-            const topPosition = currentDayInWeek * 18 + 25;
-            
-
+            const leftPosition = globalX + currentWeek * actualWeekWidth;
+            const topPosition = currentDayInWeek * (daySize + 2) + 18; // LeetCode标准间距
             
             html += `<div class="heatmap-day-leetcode level-${day.level}" 
                           title="${title}" 
                           data-date="${day.date}" 
                           data-count="${day.count}"
                           onclick="showDayDetail('${day.date}', ${day.count})"
-                          style="left: ${leftPosition}px; top: ${topPosition}px;"></div>`;
+                          style="left: ${leftPosition}px; top: ${topPosition}px; --day-size: ${daySize}px;"></div>`;
         });
         
         // 移动到下一个月的起始位置
         const totalCells = firstDayOfWeek + monthData.days.length;
         const weeksInMonth = Math.ceil(totalCells / 7);
-        const nextGlobalX = globalX + weeksInMonth * 18 + 20;
+        const nextGlobalX = globalX + weeksInMonth * actualWeekWidth + 6; // LeetCode紧凑间隔
         globalX = nextGlobalX;
     });
     html += '</div>';
@@ -941,7 +874,6 @@ async function loadPlanProgress(planId) {
         
         showAlert(`学习进度：${progress.progress_rate}% | 掌握率：${progress.mastery_rate}%`, 'info');
     } catch (error) {
-        console.error('加载学习计划进度失败:', error);
         showAlert('加载进度信息失败', 'warning');
     }
 }
@@ -1319,13 +1251,14 @@ function updateTimeBasedContent() {
 }
 
 .leetcode-heatmap-container-large {
-    overflow-x: auto;
+    overflow-x: visible;
     overflow-y: hidden;
-    padding: 20px 0;
+    padding: 10px 5px;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 200px;
+    min-height: 140px;
+    width: 100%;
 }
 
 .leetcode-grid {
@@ -1338,11 +1271,10 @@ function updateTimeBasedContent() {
 
 .leetcode-grid-large {
     position: relative;
-    display: inline-block;
-    margin-left: 30px;
-    margin-top: 15px;
-    min-width: 1200px;
-    width: auto;
+    display: block;
+    margin: 5px auto 0;
+    width: 100%;
+    max-width: 100%;
     transform: scale(1.0);
     transform-origin: center;
     white-space: nowrap;
@@ -1350,8 +1282,8 @@ function updateTimeBasedContent() {
 
 .month-labels-leetcode {
     position: relative;
-    height: 15px;
-    margin-bottom: 3px;
+    height: 12px;
+    margin-bottom: 5px;
 }
 
 .month-label-leetcode {
@@ -1363,25 +1295,27 @@ function updateTimeBasedContent() {
 
 .heatmap-days-leetcode {
     position: relative;
-    height: 150px;
+    height: 105px;
     width: 100%;
     overflow: visible;
 }
 
 .heatmap-day-leetcode {
     position: absolute;
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
+    width: var(--day-size, 11px);
+    height: var(--day-size, 11px);
+    border-radius: 2px;
     cursor: pointer;
     transition: all 0.1s ease;
     border: 1px solid rgba(27, 31, 35, 0.06);
+    box-sizing: border-box;
 }
 
 .heatmap-day-leetcode:hover {
-    stroke: rgba(27, 31, 35, 0.8);
-    stroke-width: 1px;
+    border-color: rgba(27, 31, 35, 0.8);
+    border-width: 2px;
     transform: scale(1.1);
+    z-index: 10;
 }
 
 /* LeetCode 绿色系颜色方案 */
@@ -1426,10 +1360,11 @@ function updateTimeBasedContent() {
 }
 
 .legend-square {
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
     border: 1px solid rgba(27, 31, 35, 0.06);
+    box-sizing: border-box;
 }
 
 .legend-square.level-0 {
@@ -1493,15 +1428,14 @@ function updateTimeBasedContent() {
     }
     
     .leetcode-grid-large {
-        margin-left: 15px;
-        transform: scale(0.7);
+        margin: 10px auto 0;
+        transform: scale(0.8);
         transform-origin: center;
-        min-width: 900px;
     }
     
     .leetcode-heatmap-container-large {
         padding: 15px 0;
-        min-height: 160px;
+        min-height: 140px;
     }
     
     .leetcode-legend {
