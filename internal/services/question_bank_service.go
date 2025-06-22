@@ -110,3 +110,13 @@ func (s *QuestionBankService) UpdateQuestionBank(bankID, userID uint, updateData
 func (s *QuestionBankService) DeleteQuestionBank(bankID, userID uint) error {
 	return s.questionBankRepo.DeleteQuestionBank(bankID, userID)
 }
+
+// GetOrCreateWrongQuestionBook 获取或创建用户的错题本
+func (s *QuestionBankService) GetOrCreateWrongQuestionBook(userID uint) (*models.QuestionBank, error) {
+	return s.questionBankRepo.GetOrCreateWrongQuestionBook(userID)
+}
+
+// AddQuestionToWrongBook 添加题目到错题本
+func (s *QuestionBankService) AddQuestionToWrongBook(userID, questionID uint) error {
+	return s.questionBankRepo.AddQuestionToWrongBook(userID, questionID)
+}

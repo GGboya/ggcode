@@ -20,8 +20,9 @@ type QuestionBank struct {
 	Name         string        `json:"name" gorm:"not null"`
 	Description  string        `json:"description"`
 	IsOfficial   bool          `json:"is_official" gorm:"default:false"`
-	IsShared     bool          `json:"is_shared" gorm:"default:false"` // 是否为共享题库
-	CreatedBy    *uint         `json:"created_by"`                     // 使用指针类型，允许为空
+	IsShared     bool          `json:"is_shared" gorm:"default:false"`     // 是否为共享题库
+	IsWrongBook  bool          `json:"is_wrong_book" gorm:"default:false"` // 是否为错题本
+	CreatedBy    *uint         `json:"created_by"`                         // 使用指针类型，允许为空
 	Creator      User          `json:"creator" gorm:"foreignKey:CreatedBy"`
 	ForkedFrom   *uint         `json:"forked_from"`                                          // Fork来源题库ID
 	OriginalBank *QuestionBank `json:"original_bank,omitempty" gorm:"foreignKey:ForkedFrom"` // 原始题库

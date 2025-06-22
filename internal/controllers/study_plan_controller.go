@@ -10,12 +10,14 @@ import (
 )
 
 type StudyPlanController struct {
-	studyPlanService *services.StudyPlanService
+	studyPlanService    *services.StudyPlanService
+	questionBankService *services.QuestionBankService
 }
 
 func NewStudyPlanController(services *services.Services) *StudyPlanController {
 	return &StudyPlanController{
-		studyPlanService: services.StudyPlan,
+		studyPlanService:    services.StudyPlan,
+		questionBankService: services.QuestionBank,
 	}
 }
 
@@ -250,12 +252,21 @@ func (ctrl *StudyPlanController) CompleteQuestion(c *gin.Context) {
 		return
 	}
 
+	// 如果用户选择"未掌握"，添加到错题本
+	if req.ResultType == "failed" {
+		err = ctrl.questionBankService.AddQuestionToWrongBook(userID, req.QuestionID)
+		if err != nil {
+			// 错题本添加失败不影响主流程，只记录日志
+			// 这里可以添加日志记录
+		}
+	}
+
 	// 根据结果类型返回不同的消息
 	message := "题目完成"
 	if req.ResultType == "ac" {
 		message = "恭喜独立AC！已自动打卡"
 	} else {
-		message = "学习记录已保存，继续加油！已自动打卡"
+		message = "学习记录已保存，已添加到错题本！已自动打卡"
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": message})

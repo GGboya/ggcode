@@ -34,6 +34,8 @@ type QuestionBankRepository interface {
 	CreateQuestionBank(name, description string, userID uint) (*models.QuestionBank, error)
 	UpdateQuestionBank(bankID, userID uint, updateData QuestionBankUpdateData) error
 	DeleteQuestionBank(bankID, userID uint) error
+	GetOrCreateWrongQuestionBook(userID uint) (*models.QuestionBank, error)
+	AddQuestionToWrongBook(userID, questionID uint) error
 }
 
 type questionBankRepository struct {
@@ -142,6 +144,11 @@ func (r *questionBankRepository) DeleteQuestionBank(bankID, userID uint) error {
 		return errors.New("查询题库失败")
 	}
 
+	// 检查是否为错题本，错题本不允许删除
+	if questionBank.IsWrongBook {
+		return errors.New("错题本不允许删除")
+	}
+
 	// 定义一个通用的学习计划结构体（根据database模型修改）
 	type UserStudyPlan struct {
 		ID             uint `gorm:"primaryKey"`
@@ -183,4 +190,76 @@ func (r *questionBankRepository) DeleteQuestionBank(bankID, userID uint) error {
 	}
 
 	return tx.Commit().Error
+}
+
+// GetOrCreateWrongQuestionBook 获取或创建用户的错题本
+func (r *questionBankRepository) GetOrCreateWrongQuestionBook(userID uint) (*models.QuestionBank, error) {
+	var wrongBook models.QuestionBank
+
+	// 先尝试查找现有的错题本
+	err := r.db.Where("created_by = ? AND is_wrong_book = ?", userID, true).First(&wrongBook).Error
+	if err == nil {
+		return &wrongBook, nil
+	}
+
+	if err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	// 如果不存在，创建新的错题本
+	wrongBook = models.QuestionBank{
+		Name:        "我的错题本",
+		Description: "系统自动创建的错题本，收录学习中未掌握的题目",
+		CreatedBy:   &userID,
+		IsOfficial:  false,
+		IsShared:    false,
+		IsWrongBook: true,
+	}
+
+	err = r.db.Create(&wrongBook).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &wrongBook, nil
+}
+
+// AddQuestionToWrongBook 添加题目到错题本
+func (r *questionBankRepository) AddQuestionToWrongBook(userID, questionID uint) error {
+	// 获取或创建错题本
+	wrongBook, err := r.GetOrCreateWrongQuestionBook(userID)
+	if err != nil {
+		return err
+	}
+
+	// 获取原题目信息
+	var originalQuestion models.Question
+	err = r.db.First(&originalQuestion, questionID).Error
+	if err != nil {
+		return err
+	}
+
+	// 检查题目是否已经在错题本中
+	var existingQuestion models.Question
+	err = r.db.Where("question_bank_id = ? AND title = ? AND leetcode_url = ?",
+		wrongBook.ID, originalQuestion.Title, originalQuestion.LeetcodeURL).First(&existingQuestion).Error
+
+	if err == nil {
+		// 题目已存在，不重复添加
+		return nil
+	}
+
+	if err != gorm.ErrRecordNotFound {
+		return err
+	}
+
+	// 创建新的错题记录
+	wrongQuestion := models.Question{
+		Title:          originalQuestion.Title,
+		LeetcodeURL:    originalQuestion.LeetcodeURL,
+		Difficulty:     originalQuestion.Difficulty,
+		QuestionBankID: wrongBook.ID,
+	}
+
+	return r.db.Create(&wrongQuestion).Error
 }
