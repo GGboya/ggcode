@@ -12,6 +12,7 @@ type Controllers struct {
 	Share        *ShareController
 	Page         *PageController
 	Interview    *InterviewController
+	HydroJudge   *HydroJudgeController
 	// Study        *StudyController
 	// CheckIn      *CheckInController
 }
@@ -27,6 +28,7 @@ func NewControllers(services *services.Services) *Controllers {
 		Share:        NewShareController(services),
 		Page:         NewPageController(),
 		Interview:    NewInterviewController(services.Interview),
+		HydroJudge:   NewHydroJudgeController(services.HydroJudge),
 		// Study:        NewStudyController(services),
 		// CheckIn:      NewCheckInController(services),
 	}

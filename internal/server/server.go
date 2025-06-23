@@ -141,12 +141,22 @@ func (s *Server) setupRoutes() {
 			// 学习热力图
 			api.GET("/study-heatmap", ctrl.Progress.GetStudyHeatmap)
 
-			// 面试岛相关
+			// 面试岛相关（原版评测）
 			api.GET("/interview-island/map", ctrl.Interview.GetIslandMap)
 			api.GET("/interview-island/level/:levelId", ctrl.Interview.GetLevelDetail)
 			api.POST("/interview-island/level/:levelId/test", ctrl.Interview.TestCode)
 			api.POST("/interview-island/level/:levelId/submit", ctrl.Interview.SubmitCode)
 			api.GET("/interview-island/progress", ctrl.Interview.GetUserProgress)
+
+			// Hydro评测系统
+			hydro := api.Group("/hydro-judge")
+			{
+				hydro.POST("/level/:levelId/test", ctrl.HydroJudge.TestCode)
+				hydro.POST("/level/:levelId/submit", ctrl.HydroJudge.SubmitCode)
+				hydro.GET("/result/:submissionId", ctrl.HydroJudge.GetJudgeResult)
+				hydro.GET("/queue-status", ctrl.HydroJudge.GetQueueStatus)
+				hydro.GET("/system-info", ctrl.HydroJudge.GetJudgeSystemInfo)
+			}
 		}
 	}
 }

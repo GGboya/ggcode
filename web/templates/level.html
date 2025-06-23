@@ -147,6 +147,24 @@
         </div>
     </div>
 
+    <!-- Hydro评测结果模态框 -->
+    <div class="modal fade" id="hydroResultModal" tabindex="-1" aria-labelledby="hydroResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="hydroResultModalLabel">Hydro评测结果</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="hydroResultContent">
+                    <!-- 动态生成内容 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 主容器 -->
     <div class="container-fluid main-container">
         <div class="row h-100">
@@ -175,11 +193,14 @@
                             <option value="python">Python</option>
                             <option value="java">Java</option>
                         </select>
-                        <button id="testBtn" class="btn btn-outline-primary me-2">
-                            <i class="fas fa-play me-1"></i>测试代码
+                        <button id="testBtn" class="btn btn-outline-success me-2">
+                            <i class="fas fa-play me-1"></i>Hydro测试
                         </button>
-                        <button id="submitBtn" class="btn btn-success">
-                            <i class="fas fa-paper-plane me-1"></i>提交代码
+                        <button id="submitBtn" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-1"></i>Hydro提交
+                        </button>
+                        <button id="sandboxInfoBtn" class="btn btn-outline-info btn-sm ms-2" title="查看沙箱信息">
+                            <i class="fas fa-shield-alt"></i>
                         </button>
                     </div>
                     <div>
@@ -223,20 +244,10 @@
 
         function loadLanguageModes() {
             const resources = [
-                // 语言模式
+                // 只加载语言模式，删除补全功能
                 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js',
-                // 代码补全相关
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/anyword-hint.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/javascript-hint.min.js'
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js'
             ];
-            
-            // 加载补全样式
-            const hintCss = document.createElement('link');
-            hintCss.rel = 'stylesheet';
-            hintCss.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css';
-            document.head.appendChild(hintCss);
             
             let loadedCount = 0;
             resources.forEach(src => {
@@ -271,108 +282,7 @@
             };
         }
 
-        // 代码补全配置
-        const completionKeywords = {
-            cpp: [
-                // 关键字
-                'auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do',
-                'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if',
-                'inline', 'int', 'long', 'register', 'return', 'short', 'signed',
-                'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned',
-                'void', 'volatile', 'while', 'bool', 'true', 'false', 'namespace',
-                'using', 'class', 'public', 'private', 'protected', 'virtual',
-                'template', 'typename', 'try', 'catch', 'throw', 'new', 'delete',
-                // STL容器和算法
-                'vector', 'string', 'map', 'set', 'queue', 'stack', 'priority_queue',
-                'unordered_map', 'unordered_set', 'pair', 'make_pair',
-                'sort', 'find', 'lower_bound', 'upper_bound', 'binary_search',
-                'push_back', 'pop_back', 'size', 'empty', 'begin', 'end',
-                // 常用函数
-                'cout', 'cin', 'endl', 'printf', 'scanf', 'malloc', 'free'
-            ],
-            python: [
-                // 关键字
-                'and', 'as', 'assert', 'break', 'class', 'continue', 'def', 'del',
-                'elif', 'else', 'except', 'exec', 'finally', 'for', 'from', 'global',
-                'if', 'import', 'in', 'is', 'lambda', 'not', 'or', 'pass', 'print',
-                'raise', 'return', 'try', 'while', 'with', 'yield', 'True', 'False',
-                'None', 'self', '__init__', '__main__',
-                // 内置函数
-                'len', 'range', 'enumerate', 'zip', 'map', 'filter', 'sum', 'max',
-                'min', 'abs', 'round', 'sorted', 'reversed', 'list', 'dict', 'set',
-                'tuple', 'str', 'int', 'float', 'bool', 'type', 'isinstance',
-                'hasattr', 'getattr', 'setattr', 'open', 'input', 'split', 'join',
-                'append', 'extend', 'insert', 'remove', 'pop', 'index', 'count'
-            ],
-            java: [
-                // 关键字
-                'abstract', 'boolean', 'break', 'byte', 'case', 'catch', 'char',
-                'class', 'const', 'continue', 'default', 'do', 'double', 'else',
-                'extends', 'final', 'finally', 'float', 'for', 'goto', 'if',
-                'implements', 'import', 'instanceof', 'int', 'interface', 'long',
-                'native', 'new', 'package', 'private', 'protected', 'public',
-                'return', 'short', 'static', 'strictfp', 'super', 'switch',
-                'synchronized', 'this', 'throw', 'throws', 'transient', 'try',
-                'void', 'volatile', 'while', 'true', 'false', 'null',
-                // 常用类和方法
-                'String', 'Integer', 'Double', 'Boolean', 'ArrayList', 'HashMap',
-                'HashSet', 'LinkedList', 'TreeMap', 'TreeSet', 'Collections',
-                'Arrays', 'System', 'Scanner', 'StringBuilder', 'StringBuffer',
-                'Math', 'Object', 'Exception', 'RuntimeException',
-                'println', 'print', 'length', 'size', 'add', 'remove', 'get',
-                'put', 'contains', 'isEmpty', 'clear', 'toString', 'equals'
-            ]
-        };
-
-        // 自定义代码补全函数
-        function getCompletions(language) {
-            return function(cm, option) {
-                const cursor = cm.getCursor();
-                const line = cm.getLine(cursor.line);
-                let start = cursor.ch;
-                let end = cursor.ch;
-                
-                // 找到当前单词的开始位置
-                while (start && /\w/.test(line.charAt(start - 1))) start--;
-                // 找到当前单词的结束位置
-                while (end < line.length && /\w/.test(line.charAt(end))) end++;
-                
-                const word = line.slice(start, end).toLowerCase();
-                const keywords = completionKeywords[language] || [];
-                
-                // 过滤匹配的关键字
-                const completions = keywords.filter(keyword => 
-                    keyword.toLowerCase().startsWith(word)
-                ).map(keyword => ({
-                    text: keyword,
-                    displayText: keyword,
-                    className: 'CodeMirror-hint-keyword'
-                }));
-                
-                // 添加文档中已有的单词
-                const content = cm.getValue();
-                const words = content.match(/\b\w{3,}\b/g) || [];
-                const uniqueWords = [...new Set(words)];
-                
-                uniqueWords.forEach(w => {
-                    if (w.toLowerCase().startsWith(word) && 
-                        w.toLowerCase() !== word &&
-                        !keywords.includes(w.toLowerCase())) {
-                        completions.push({
-                            text: w,
-                            displayText: w,
-                            className: 'CodeMirror-hint-word'
-                        });
-                    }
-                });
-                
-                return {
-                    list: completions.slice(0, 10), // 限制显示数量
-                    from: CodeMirror.Pos(cursor.line, start),
-                    to: CodeMirror.Pos(cursor.line, end)
-                };
-            };
-        }
+        // 删除复杂的代码补全功能，避免乱码问题
 
         async function initializePage() {
             try {
@@ -459,50 +369,48 @@
                     return;
                 }
                 
-                // 创建CodeMirror编辑器
-                editor = CodeMirror(document.getElementById('codeEditor'), {
-                    value: getInitialCode('cpp'),
+                // 确保容器存在并可见
+                const container = document.getElementById('codeEditor');
+                if (!container) {
+                    console.error('编辑器容器未找到');
+                    resolve();
+                    return;
+                }
+                
+                // 创建简化的CodeMirror编辑器
+                editor = CodeMirror(container, {
+                    value: '', // 先创建空编辑器
                     mode: 'text/x-c++src',
                     theme: 'monokai',
                     lineNumbers: true,
                     indentUnit: 4,
-                    smartIndent: true,
                     tabSize: 4,
                     indentWithTabs: false,
-                    electricChars: true,
                     autoCloseBrackets: true,
                     matchBrackets: true,
-                    showCursorWhenSelecting: true,
-                    // 性能优化配置
-                    viewportMargin: 10,  // 只渲染可见区域附近的行
-                    lineWrapping: false,
-                    foldGutter: false,
                     gutters: ["CodeMirror-linenumbers"],
-                    // 禁用一些功能以提升性能
-                    highlightSelectionMatches: false,
-                    searchcursor: false,
-                    // 样式配置
-                    styleActiveLine: true,
-                    cursorBlinkRate: 530,
-                    // 代码补全配置
-                    hintOptions: {
-                        hint: getCompletions('cpp'),
-                        completeSingle: false,  // 不自动完成单个匹配
-                        closeOnUnfocus: true,   // 失去焦点时关闭
-                        alignWithWord: true,    // 与单词对齐
-                        closeCharacters: /[\s()\[\]{};:>,]/  // 这些字符会关闭补全
-                    },
-                    extraKeys: {
-                        "Ctrl-Space": "autocomplete",  // Ctrl+Space 触发补全
-                        "Tab": function(cm) {
-                            // Tab键处理：如果有补全则选择，否则插入缩进
-                            if (cm.state.completionActive) {
-                                return CodeMirror.Pass;
-                            }
-                            cm.replaceSelection("    ");  // 插入4个空格
-                        }
-                    }
+                    styleActiveLine: true
                 });
+                
+                // 初始化完成后再设置内容
+                setTimeout(function() {
+                    editor.setValue(getInitialCode('cpp'));
+                }, 100);
+
+                // 修复编辑器显示问题：多次刷新确保正确渲染
+                setTimeout(function() {
+                    editor.refresh();
+                    // 强制重新设置内容并刷新
+                    const currentValue = editor.getValue();
+                    editor.setValue(currentValue);
+                    editor.refresh();
+                    editor.focus();
+                }, 300);
+                
+                // 额外的刷新确保完全渲染
+                setTimeout(function() {
+                    editor.refresh();
+                }, 1000);
 
                 // 暂时禁用复制粘贴限制，方便测试
                 /*
@@ -523,24 +431,7 @@
                 });
                 */
 
-                // 自动触发代码补全
-                let autoCompleteTimeout;
-                editor.on('inputRead', function(cm, change) {
-                    // 只在输入字母时触发
-                    if (change.text[0] && /[a-zA-Z]/.test(change.text[0])) {
-                        clearTimeout(autoCompleteTimeout);
-                        autoCompleteTimeout = setTimeout(function() {
-                            const cursor = cm.getCursor();
-                            const line = cm.getLine(cursor.line);
-                            const word = line.slice(0, cursor.ch).match(/\w+$/);
-                            
-                            // 如果当前单词长度>=2，自动触发补全
-                            if (word && word[0].length >= 2) {
-                                cm.showHint();
-                            }
-                        }, 300); // 300ms延迟，避免频繁触发
-                    }
-                });
+                // 简化的输入处理（删除自动补全）
 
                 setupEventListeners();
                 resolve();
@@ -582,21 +473,13 @@
                 }
                 editor.setOption('mode', mode);
                 
-                // 更新代码补全配置
-                editor.setOption('hintOptions', {
-                    hint: getCompletions(language),
-                    completeSingle: false,
-                    closeOnUnfocus: true,
-                    alignWithWord: true,
-                    closeCharacters: /[\s()\[\]{};:>,]/
-                });
-                
                 // 重新聚焦编辑器
                 editor.focus();
             });
 
             document.getElementById('testBtn').addEventListener('click', testCode);
             document.getElementById('submitBtn').addEventListener('click', submitCode);
+            document.getElementById('sandboxInfoBtn').addEventListener('click', showSandboxInfo);
         }
 
         function startTimer() {
@@ -626,12 +509,21 @@
             const language = document.getElementById('languageSelector').value;
             
             try {
-                const response = await axios.post('/api/interview-island/level/' + currentLevelId + '/test', {
+                const response = await axios.post('/api/hydro-judge/level/' + currentLevelId + '/test', {
                     code: code,
                     language: language
                 });
-
-                alert('测试结果: ' + response.data.data.message);
+                
+                // Hydro评测系统返回详细结果
+                const result = response.data.data;
+                const submissionId = response.data.submission_id;
+                
+                // 如果是PENDING状态，开始轮询
+                if (result.status === 'PENDING') {
+                    pollHydroResult(submissionId, false);
+                } else {
+                    displayHydroTestResult(result);
+                }
             } catch (error) {
                 const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
                 alert('测试失败: ' + errorMsg);
@@ -649,21 +541,42 @@
             const submitTime = Math.floor((Date.now() - startTime) / 1000);
             
             try {
-                const response = await axios.post('/api/interview-island/level/' + currentLevelId + '/submit', {
+                const response = await axios.post('/api/hydro-judge/level/' + currentLevelId + '/submit', {
                     code: code,
                     language: language,
                     submit_time: submitTime
                 });
-
-                const result = response.data.data;
-                alert('提交结果: ' + result.status + '\n获得星数: ' + result.stars + '\n' + result.message);
                 
-                if (result.status === 'AC') {
-                    clearInterval(timerInterval);
-                    if (result.next_unlocked) {
-                        if (confirm('恭喜通关！下一关已解锁，是否前往？')) {
-                            goBack();
-                        }
+                // Hydro评测系统返回详细结果
+                const result = response.data.data;
+                const submissionId = response.data.submission_id;
+                
+                // 如果是PENDING状态，开始轮询
+                if (result.status === 'PENDING') {
+                    pollHydroResult(submissionId, true);
+                } else {
+                    displayHydroSubmitResult(result);
+                    
+                    // 检查通关状态（同步结果）
+                    if (result.status === 'AC') {
+                        // 停止计时器
+                        clearInterval(timerInterval);
+                        
+                        // 计算用时和得分
+                        const timeUsed = Math.floor((Date.now() - startTime) / 1000);
+                        
+                        // 提交关卡进度
+                        submitLevelProgress(timeUsed, result.score, result.max_score);
+                        
+                        // 显示通关消息
+                        setTimeout(() => {
+                            if (confirm('🎉 恭喜通关！ 🎉\n' +
+                                       `得分: ${result.score}/${result.max_score}\n` +
+                                       `用时: ${Math.floor(timeUsed/60)}:${(timeUsed%60).toString().padStart(2,'0')}\n` +
+                                       '是否返回地图查看进度？')) {
+                                goBack();
+                            }
+                        }, 1000);
                     }
                 }
             } catch (error) {
@@ -679,6 +592,453 @@
 
         function goBack() {
             window.location.href = '/interview-island';
+        }
+
+
+
+        // 显示Hydro测试结果
+        function displayHydroTestResult(result) {
+            const content = generateHydroResultHTML(result, false);
+            document.getElementById('hydroResultContent').innerHTML = content;
+            document.getElementById('hydroResultModalLabel').textContent = 'Hydro测试结果';
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
+            modal.show();
+        }
+
+        // 显示Hydro提交结果
+        function displayHydroSubmitResult(result) {
+            const content = generateHydroResultHTML(result, true);
+            document.getElementById('hydroResultContent').innerHTML = content;
+            document.getElementById('hydroResultModalLabel').textContent = 'Hydro提交结果';
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
+            modal.show();
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'PENDING': '等待评测',
+                'JUDGING': '评测中',
+                'AC': '通过',
+                'WA': '答案错误',
+                'TLE': '超时',
+                'MLE': '内存超限',
+                'RE': '运行错误',
+                'CE': '编译错误',
+                'SE': '系统错误',
+                'PC': '部分正确'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 获取状态徽章样式
+        function getStatusBadgeClass(status) {
+            const classMap = {
+                'AC': 'bg-success',
+                'WA': 'bg-danger',
+                'TLE': 'bg-warning',
+                'MLE': 'bg-warning',
+                'RE': 'bg-danger',
+                'CE': 'bg-secondary',
+                'SE': 'bg-dark',
+                'PC': 'bg-info',
+                'PENDING': 'bg-secondary',
+                'JUDGING': 'bg-primary'
+            };
+            return classMap[status] || 'bg-secondary';
+        }
+
+        // 提交关卡进度
+        async function submitLevelProgress(timeUsed, score, maxScore) {
+            try {
+                const response = await axios.post('/api/interview-island/level/' + currentLevelId + '/submit', {
+                    code: editor.getValue(),
+                    language: document.getElementById('languageSelector').value,
+                    submit_time: timeUsed,
+                    status: 'AC',
+                    score: score,
+                    max_score: maxScore
+                });
+                
+                console.log('关卡进度已提交:', response.data);
+            } catch (error) {
+                console.error('提交关卡进度失败:', error);
+                // 不影响用户体验，只记录错误
+            }
+        }
+
+        // 生成Hydro结果HTML
+        function generateHydroResultHTML(result, isSubmit) {
+            let html = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                    <span class="badge ${getStatusBadgeClass(result.status)} me-2">${getStatusText(result.status)}</span>
+                                    得分: ${result.score}/${result.max_score}
+                                    ${isSubmit ? `| 获得星数: ${result.stars || 0}` : ''}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>用时:</strong> ${result.time_used}ms
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>内存:</strong> ${result.memory_used}KB
+                                    </div>
+                                </div>
+            `;
+            
+            if (result.compile_message) {
+                html += `
+                    <hr>
+                    <div class="alert alert-info">
+                        <strong>编译信息:</strong>
+                        <pre class="mb-0 mt-2">${result.compile_message}</pre>
+                    </div>
+                `;
+            }
+            
+            if (result.error) {
+                html += `
+                    <hr>
+                    <div class="alert alert-danger">
+                        <strong>错误信息:</strong> ${result.error}
+                    </div>
+                `;
+            }
+            
+            html += `</div></div></div></div>`;
+            
+            // 子任务结果
+            if (result.subtask_results && result.subtask_results.length > 0) {
+                html += `
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">子任务结果</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>子任务</th>
+                                                    <th>状态</th>
+                                                    <th>得分</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                `;
+                
+                result.subtask_results.forEach((subtask, index) => {
+                    html += `
+                        <tr>
+                            <td>子任务 ${index + 1}</td>
+                            <td><span class="badge ${getStatusBadgeClass(subtask.status)}">${getStatusText(subtask.status)}</span></td>
+                            <td>${subtask.score}/${subtask.max_score}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `</tbody></table></div></div></div></div>`;
+            }
+            
+            // 测试点结果
+            if (result.test_cases && result.test_cases.length > 0) {
+                const visibleCases = result.test_cases.filter(tc => !tc.is_hidden);
+                if (visibleCases.length > 0) {
+                    html += `
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">测试点详情</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>测试点</th>
+                                                        <th>状态</th>
+                                                        <th>用时</th>
+                                                        <th>内存</th>
+                                                        <th>得分</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                    `;
+                    
+                    visibleCases.forEach((testCase, index) => {
+                        html += `
+                            <tr>
+                                <td>测试点 ${testCase.id || (index + 1)}</td>
+                                <td><span class="badge ${getStatusBadgeClass(testCase.status)}">${getStatusText(testCase.status)}</span></td>
+                                <td>${testCase.time_used}ms</td>
+                                <td>${testCase.memory_used}KB</td>
+                                <td>${testCase.score}/${testCase.max_score}</td>
+                            </tr>
+                        `;
+                        
+                        // 显示WA的详细信息
+                        if (testCase.status === 'WA' && testCase.output && testCase.expected) {
+                            html += `
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="accordion" id="accordion${index}">
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                                                        查看输出详情
+                                                    </button>
+                                                </h2>
+                                                <div id="collapse${index}" class="accordion-collapse collapse" data-bs-parent="#accordion${index}">
+                                                    <div class="accordion-body">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <strong>您的输出:</strong>
+                                                                <pre class="bg-light p-2 mt-1">${testCase.output}</pre>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <strong>期望输出:</strong>
+                                                                <pre class="bg-light p-2 mt-1">${testCase.expected}</pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    });
+                    
+                    html += `</tbody></table></div></div></div></div>`;
+                }
+            }
+            
+            // 系统信息
+            if (result.system_info) {
+                html += `
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">系统信息</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>评测服务器:</strong> ${result.system_info.judge_server || 'Unknown'}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>评测时长:</strong> ${Math.round((result.judge_duration || 0) / 1000000)}ms
+                                        </div>
+                                    </div>
+                                    ${result.system_info.compiler_info ? `
+                                        <div class="row mt-2">
+                                            <div class="col-md-12">
+                                                <strong>编译器信息:</strong> ${result.system_info.compiler_info}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+
+        // 轮询获取Hydro评测结果
+        async function pollHydroResult(submissionId, isSubmit) {
+            const maxAttempts = 30; // 最多轮询30次 (30秒)
+            let attempts = 0;
+            
+            // 显示轮询状态
+            let statusMessage = isSubmit ? '正在评测中...' : '正在测试中...';
+            showPollingStatus(statusMessage);
+            
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await axios.get(`/api/hydro-judge/result/${submissionId}`);
+                    const result = response.data.data;
+                    
+                    // 更新轮询状态
+                    updatePollingStatus(`${statusMessage} (${attempts}/${maxAttempts})`);
+                    
+                    // 检查是否完成
+                    if (result.status !== 'PENDING' && result.status !== 'JUDGING') {
+                        clearInterval(pollInterval);
+                        hidePollingStatus();
+                        
+                        // 显示最终结果
+                        if (isSubmit) {
+                            displayHydroSubmitResult(result);
+                            
+                            // 检查通关状态
+                            if (result.status === 'AC') {
+                                // 停止计时器
+                                clearInterval(timerInterval);
+                                
+                                // 计算用时和得分
+                                const timeUsed = Math.floor((Date.now() - startTime) / 1000);
+                                
+                                // 提交关卡进度
+                                submitLevelProgress(timeUsed, result.score, result.max_score);
+                                
+                                // 显示通关消息
+                                setTimeout(() => {
+                                    if (confirm('🎉 恭喜通关！ 🎉\n' +
+                                               `得分: ${result.score}/${result.max_score}\n` +
+                                               `用时: ${Math.floor(timeUsed/60)}:${(timeUsed%60).toString().padStart(2,'0')}\n` +
+                                               '是否返回地图查看进度？')) {
+                                        goBack();
+                                    }
+                                }, 1000);
+                            }
+                        } else {
+                            displayHydroTestResult(result);
+                        }
+                        return;
+                    }
+                    
+                    // 检查是否超时
+                    if (attempts >= maxAttempts) {
+                        clearInterval(pollInterval);
+                        hidePollingStatus();
+                        alert('评测超时，请稍后手动查询结果');
+                    }
+                } catch (error) {
+                    console.error('轮询出错:', error);
+                    
+                    // 连续失败3次就停止轮询
+                    if (attempts >= 3) {
+                        clearInterval(pollInterval);
+                        hidePollingStatus();
+                        alert('获取评测结果失败: ' + (error.message || '网络错误'));
+                    }
+                }
+            }, 1000); // 每秒轮询一次
+        }
+
+        // 显示轮询状态
+        function showPollingStatus(message) {
+            // 禁用按钮防止重复提交
+            const testBtn = document.getElementById('testBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            testBtn.disabled = true;
+            submitBtn.disabled = true;
+            
+            // 更新按钮文本
+            if (message.includes('测试')) {
+                testBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + message;
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + message;
+            }
+        }
+
+        // 更新轮询状态
+        function updatePollingStatus(message) {
+            const testBtn = document.getElementById('testBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (message.includes('测试')) {
+                testBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + message;
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + message;
+            }
+        }
+
+        // 隐藏轮询状态
+        function hidePollingStatus() {
+            const testBtn = document.getElementById('testBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // 恢复按钮状态
+            testBtn.disabled = false;
+            submitBtn.disabled = false;
+            
+            // 恢复按钮文本
+            const judgeSystem = document.getElementById('judgeSystemSelector').value;
+            if (judgeSystem === 'hydro') {
+                testBtn.innerHTML = '<i class="fas fa-play me-1"></i>Hydro测试';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Hydro提交';
+            } else {
+                testBtn.innerHTML = '<i class="fas fa-play me-1"></i>测试代码';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>提交代码';
+            }
+        }
+
+        // 显示沙箱信息
+        async function showSandboxInfo() {
+            try {
+                const response = await axios.get('/api/hydro-judge/system-info');
+                const info = response.data.data;
+                
+                let content = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Hydro沙箱信息</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>沙箱模式:</strong> ${info.sandbox_mode || 'Enhanced'}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>安全级别:</strong> <span class="badge bg-success">中等</span>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <strong>支持特性:</strong>
+                                    <ul class="mt-2">
+                                        <li>✅ PID命名空间隔离</li>
+                                        <li>✅ 用户权限降级</li>
+                                        <li>✅ 进程资源监控</li>
+                                        <li>✅ 严格时间限制</li>
+                                        <li>✅ 代码安全检查</li>
+                                        <li>⚠️ 部分文件系统隔离</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <strong>限制说明:</strong>
+                                    <ul class="mt-2 text-muted">
+                                        <li>内存限制: 通过系统监控(非cgroup)</li>
+                                        <li>网络隔离: 无完全隔离</li>
+                                        <li>权限要求: 普通用户可用</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('hydroResultContent').innerHTML = content;
+                document.getElementById('hydroResultModalLabel').textContent = 'Hydro沙箱环境信息';
+                
+                const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
+                modal.show();
+            } catch (error) {
+                alert('获取沙箱信息失败: ' + (error.message || '未知错误'));
+            }
         }
     </script>
 {{end}} 

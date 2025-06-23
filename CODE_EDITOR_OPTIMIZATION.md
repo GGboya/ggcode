@@ -231,6 +231,53 @@ function loadLanguageModes() {
 }
 ```
 
+## 常见问题解决
+
+### 1. 编辑器初始显示不完整问题
+
+**问题描述**：编辑器初始化时显示不完整，如`.nt main() {`代替`int main() {`，但切换语言后恢复正常。
+
+**原因分析**：编辑器初始化时DOM容器未完全准备好，导致部分内容渲染不完整。
+
+**解决方案**：
+
+```javascript
+// 1. 分步初始化 - 先创建空编辑器
+editor = CodeMirror(container, {
+    value: '', // 先创建空编辑器
+    mode: 'text/x-c++src',
+    theme: 'monokai',
+    lineNumbers: true,
+    // ...其他配置
+});
+
+// 2. 延迟设置内容
+setTimeout(function() {
+    editor.setValue(getInitialCode('cpp'));
+}, 100);
+
+// 3. 多次刷新确保正确渲染
+setTimeout(function() {
+    editor.refresh();
+    // 强制重新设置内容并刷新
+    const currentValue = editor.getValue();
+    editor.setValue(currentValue);
+    editor.refresh();
+    editor.focus();
+}, 300);
+
+// 4. 额外刷新确保完全渲染
+setTimeout(function() {
+    editor.refresh();
+}, 1000);
+```
+
+**关键点**：
+- 先创建空编辑器容器，确保DOM完全准备
+- 延迟设置内容，避免初始化冲突
+- 多次刷新确保渲染完整
+- 强制重新设置内容触发完整渲染
+
 ## 安全性配置
 
 ### 1. 禁用复制粘贴

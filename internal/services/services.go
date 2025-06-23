@@ -16,6 +16,7 @@ type Services struct {
 	Progress     *ProgressService
 	Ebbinghaus   *EbbinghausService
 	Interview    InterviewService
+	HydroJudge   HydroJudgeService
 	// CheckIn      *CheckInService
 }
 
@@ -23,6 +24,9 @@ type Services struct {
 func NewServices(repos *repositories.Repositories, db *gorm.DB) *Services {
 	// 首先创建EbbinghausService
 	ebbinghausService := NewEbbinghausService(db)
+
+	// 创建Hydro评测服务
+	hydroJudgeService := NewHydroJudgeService(repos.Interview)
 
 	return &Services{
 		User:         NewUserService(repos),
@@ -33,6 +37,7 @@ func NewServices(repos *repositories.Repositories, db *gorm.DB) *Services {
 		Progress:     NewProgressService(repos, ebbinghausService),
 		Ebbinghaus:   ebbinghausService,
 		Interview:    NewInterviewService(repos.Interview),
+		HydroJudge:   hydroJudgeService,
 		// CheckIn:      NewCheckInService(repos),
 	}
 }
