@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  judge-service:
+    build:
+      context: ./docker/judge
+      dockerfile: Dockerfile
+    image: ggcode-judge:latest
+    container_name: ggcode-judge
+    volumes:
+      # 挂载评测数据目录
+      - ./judge-data:/opt/judge-data:rw
+      # 挂载临时目录
+      - ./judge-temp:/tmp/judge:rw
+    environment:
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # 安全配置
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp:size=100M
+    # 网络隔离（评测容器不需要网络访问）
+    network_mode: none
+    # 重启策略
+    restart: unless-stopped
+    # 保持容器运行
+    tty: true
+    stdin_open: true 

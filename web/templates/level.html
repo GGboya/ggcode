@@ -147,12 +147,58 @@
         </div>
     </div>
 
-    <!-- Hydro评测结果模态框 -->
+    <!-- 自定义测试模态框 -->
+    <div class="modal fade" id="customTestModal" tabindex="-1" aria-labelledby="customTestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="customTestModalLabel">
+                        <i class="fas fa-flask me-2"></i>自定义测试用例
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customInput" class="form-label">
+                                    <strong>输入数据:</strong>
+                                    <small class="text-muted">(可以为空)</small>
+                                </label>
+                                <textarea id="customInput" class="form-control" rows="4" placeholder="在此输入测试数据..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customExpected" class="form-label">
+                                    <strong>期望输出:</strong>
+                                    <small class="text-muted">(可选，用于对比)</small>
+                                </label>
+                                <textarea id="customExpected" class="form-control" rows="4" placeholder="在此输入期望的输出结果..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>提示:</strong> 自定义测试可以帮助您调试代码。输入您的测试数据，系统会运行您的代码并显示实际输出。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="runCustomTest()">
+                        <i class="fas fa-play me-1"></i>运行测试
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 评测结果模态框 -->
     <div class="modal fade" id="hydroResultModal" tabindex="-1" aria-labelledby="hydroResultModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="hydroResultModalLabel">Hydro评测结果</h5>
+                    <h5 class="modal-title" id="hydroResultModalLabel">评测结果</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="hydroResultContent">
@@ -192,12 +238,20 @@
                             <option value="cpp">C++</option>
                             <option value="python">Python</option>
                             <option value="java">Java</option>
+                            <option value="go">Go</option>
+                        </select>
+                        <select id="judgeSelector" class="form-select d-inline-block me-2" style="width: auto;">
+                            <option value="docker">🚀 Docker容器池</option>
+                            <option value="hydro">⚡ Hydro评测</option>
                         </select>
                         <button id="testBtn" class="btn btn-outline-success me-2">
-                            <i class="fas fa-play me-1"></i>Hydro测试
+                            <i class="fas fa-play me-1"></i><span id="testBtnText">Docker测试</span>
+                        </button>
+                        <button id="customTestBtn" class="btn btn-outline-warning me-2" data-bs-toggle="modal" data-bs-target="#customTestModal">
+                            <i class="fas fa-flask me-1"></i>自定义测试
                         </button>
                         <button id="submitBtn" class="btn btn-primary">
-                            <i class="fas fa-paper-plane me-1"></i>Hydro提交
+                            <i class="fas fa-paper-plane me-1"></i><span id="submitBtnText">Docker提交</span>
                         </button>
                         <button id="sandboxInfoBtn" class="btn btn-outline-info btn-sm ms-2" title="查看沙箱信息">
                             <i class="fas fa-shield-alt"></i>
@@ -244,9 +298,10 @@
 
         function loadLanguageModes() {
             const resources = [
-                // 只加载语言模式，删除补全功能
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js'
+                // 加载所有支持的语言模式
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js',     // C++, Java
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js',  // Python
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/go/go.min.js'           // Go
             ];
             
             let loadedCount = 0;
@@ -254,6 +309,13 @@
                 const script = document.createElement('script');
                 script.src = src;
                 script.onload = function() {
+                    loadedCount++;
+                    if (loadedCount === resources.length) {
+                        initializePage();
+                    }
+                };
+                script.onerror = function() {
+                    console.warn('Failed to load:', src);
                     loadedCount++;
                     if (loadedCount === resources.length) {
                         initializePage();
@@ -296,6 +358,7 @@
                 await loadLevelData();
                 await initializeEditor();
                 startTimer();
+                setupJudgeSelector();
             } catch (error) {
                 console.error('初始化失败:', error);
                 alert('页面初始化失败，请刷新重试');
@@ -444,7 +507,9 @@
             } else if (language === 'python') {
                 return '# 在这里编写你的代码\n\ndef main():\n    pass\n\nif __name__ == "__main__":\n    main()';
             } else if (language === 'java') {
-                return 'import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        // 在这里编写你的代码\n    }\n}';
+                return 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // 在这里编写你的代码\n        \n    }\n}';
+            } else if (language === 'go') {
+                return 'package main\n\nimport (\n    "fmt"\n)\n\nfunc main() {\n    // 在这里编写你的代码\n    \n}';
             }
             return '';
         }
@@ -467,6 +532,9 @@
                         break;
                     case 'python':
                         mode = 'text/x-python';
+                        break;
+                    case 'go':
+                        mode = 'text/x-go';
                         break;
                     default:
                         mode = 'text/plain';
@@ -507,22 +575,36 @@
             }
 
             const language = document.getElementById('languageSelector').value;
+            const judgeType = document.getElementById('judgeSelector').value;
             
             try {
-                const response = await axios.post('/api/hydro-judge/level/' + currentLevelId + '/test', {
-                    code: code,
-                    language: language
-                });
-                
-                // Hydro评测系统返回详细结果
-                const result = response.data.data;
-                const submissionId = response.data.submission_id;
-                
-                // 如果是PENDING状态，开始轮询
-                if (result.status === 'PENDING') {
-                    pollHydroResult(submissionId, false);
-                } else {
+                let response;
+                if (judgeType === 'docker') {
+                    // 使用Docker容器池进行评测（高性能）
+                    response = await axios.post('/api/docker-judge/level/' + currentLevelId + '/test', {
+                        code: code,
+                        language: language
+                    });
+                    
+                    // Docker评测系统返回即时结果（无需轮询）
+                    const result = response.data.data;
                     displayHydroTestResult(result);
+                } else {
+                    // 使用Hydro评测系统
+                    response = await axios.post('/api/hydro-judge/level/' + currentLevelId + '/test', {
+                        code: code,
+                        language: language
+                    });
+                    
+                    const result = response.data.data;
+                    const submissionId = response.data.submission_id;
+                    
+                    // 如果是PENDING状态，开始轮询
+                    if (result.status === 'PENDING') {
+                        pollHydroResult(submissionId, false);
+                    } else {
+                        displayHydroTestResult(result);
+                    }
                 }
             } catch (error) {
                 const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
@@ -538,51 +620,97 @@
             }
 
             const language = document.getElementById('languageSelector').value;
+            const judgeType = document.getElementById('judgeSelector').value;
             const submitTime = Math.floor((Date.now() - startTime) / 1000);
             
             try {
-                const response = await axios.post('/api/hydro-judge/level/' + currentLevelId + '/submit', {
-                    code: code,
-                    language: language,
-                    submit_time: submitTime
-                });
-                
-                // Hydro评测系统返回详细结果
-                const result = response.data.data;
-                const submissionId = response.data.submission_id;
-                
-                // 如果是PENDING状态，开始轮询
-                if (result.status === 'PENDING') {
-                    pollHydroResult(submissionId, true);
-                } else {
+                let response;
+                if (judgeType === 'docker') {
+                    // 使用Docker容器池进行评测（高性能）
+                    response = await axios.post('/api/docker-judge/level/' + currentLevelId + '/submit', {
+                        code: code,
+                        language: language,
+                        submit_time: submitTime
+                    });
+                    
+                    // Docker评测系统返回即时结果（无需轮询）
+                    const result = response.data.data;
                     displayHydroSubmitResult(result);
                     
                     // 检查通关状态（同步结果）
                     if (result.status === 'AC') {
-                        // 停止计时器
-                        clearInterval(timerInterval);
-                        
-                        // 计算用时和得分
-                        const timeUsed = Math.floor((Date.now() - startTime) / 1000);
-                        
-                        // 提交关卡进度
-                        submitLevelProgress(timeUsed, result.score, result.max_score);
-                        
-                        // 显示通关消息
-                        setTimeout(() => {
-                            if (confirm('🎉 恭喜通关！ 🎉\n' +
-                                       `得分: ${result.score}/${result.max_score}\n` +
-                                       `用时: ${Math.floor(timeUsed/60)}:${(timeUsed%60).toString().padStart(2,'0')}\n` +
-                                       '是否返回地图查看进度？')) {
-                                goBack();
-                            }
-                        }, 1000);
+                        handleSuccess(result, submitTime);
+                    }
+                } else {
+                    // 使用Hydro评测系统
+                    response = await axios.post('/api/hydro-judge/level/' + currentLevelId + '/submit', {
+                        code: code,
+                        language: language,
+                        submit_time: submitTime
+                    });
+                    
+                    const result = response.data.data;
+                    const submissionId = response.data.submission_id;
+                    
+                    // 如果是PENDING状态，开始轮询
+                    if (result.status === 'PENDING') {
+                        pollHydroResult(submissionId, true);
+                    } else {
+                        displayHydroSubmitResult(result);
+                        if (result.status === 'AC') {
+                            handleSuccess(result, submitTime);
+                        }
                     }
                 }
             } catch (error) {
                 const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
                 alert('提交失败: ' + errorMsg);
             }
+        }
+
+        function handleSuccess(result, submitTime) {
+            // 停止计时器
+            clearInterval(timerInterval);
+            
+            // 计算用时和得分
+            const timeUsed = Math.floor((Date.now() - startTime) / 1000);
+            
+            // 只有在使用Hydro评测时才需要提交关卡进度
+            // Docker评测已经在后端处理了进度提交
+            const judgeType = document.getElementById('judgeSelector').value;
+            if (judgeType === 'hydro') {
+                submitLevelProgress(timeUsed, result.score, result.max_score);
+            }
+            
+            // 显示通关消息
+            setTimeout(() => {
+                if (confirm('🎉 恭喜通关！ 🎉\n' +
+                           `得分: ${result.score}/${result.max_score}\n` +
+                           `用时: ${Math.floor(timeUsed/60)}:${(timeUsed%60).toString().padStart(2,'0')}\n` +
+                           '是否返回地图查看进度？')) {
+                    goBack();
+                }
+            }, 1000);
+        }
+
+        function setupJudgeSelector() {
+            const judgeSelector = document.getElementById('judgeSelector');
+            const testBtnText = document.getElementById('testBtnText');
+            const submitBtnText = document.getElementById('submitBtnText');
+            
+            function updateButtonText() {
+                const judgeType = judgeSelector.value;
+                if (judgeType === 'docker') {
+                    testBtnText.textContent = 'Docker测试';
+                    submitBtnText.textContent = 'Docker提交';
+                } else {
+                    testBtnText.textContent = 'Hydro测试';
+                    submitBtnText.textContent = 'Hydro提交';
+                }
+            }
+            
+            judgeSelector.addEventListener('change', updateButtonText);
+            updateButtonText(); // 初始化按钮文本
         }
 
         function resetCode() {
@@ -594,13 +722,65 @@
             window.location.href = '/interview-island';
         }
 
+        // 运行自定义测试
+        async function runCustomTest() {
+            const code = editor.getValue().trim();
+            if (!code) {
+                alert('请先编写代码');
+                return;
+            }
+
+            const language = document.getElementById('languageSelector').value;
+            const customInput = document.getElementById('customInput').value;
+            const customExpected = document.getElementById('customExpected').value;
+            
+            try {
+                // 关闭自定义测试模态框
+                const customModal = bootstrap.Modal.getInstance(document.getElementById('customTestModal'));
+                customModal.hide();
+                
+                // 调用自定义测试API
+                const response = await axios.post('/api/docker-judge/custom-test', {
+                    code: code,
+                    language: language,
+                    input: customInput,
+                    expected: customExpected
+                });
+                
+                const result = response.data.data;
+                
+                // 显示结果
+                const content = generateDockerResultHTML(result, false);
+                document.getElementById('hydroResultContent').innerHTML = content;
+                document.getElementById('hydroResultModalLabel').textContent = '自定义测试结果';
+                
+                // 显示结果模态框
+                const resultModal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
+                resultModal.show();
+                
+            } catch (error) {
+                const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
+                alert('自定义测试失败: ' + errorMsg);
+            }
+        }
+
 
 
         // 显示Hydro测试结果
         function displayHydroTestResult(result) {
-            const content = generateHydroResultHTML(result, false);
+            const judgeType = document.getElementById('judgeSelector').value;
+            let content, title;
+            
+            if (judgeType === 'docker') {
+                content = generateDockerResultHTML(result, false);
+                title = 'Docker测试结果';
+            } else {
+                content = generateHydroResultHTML(result, false);
+                title = 'Hydro测试结果';
+            }
+            
             document.getElementById('hydroResultContent').innerHTML = content;
-            document.getElementById('hydroResultModalLabel').textContent = 'Hydro测试结果';
+            document.getElementById('hydroResultModalLabel').textContent = title;
             
             // 显示模态框
             const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
@@ -609,9 +789,19 @@
 
         // 显示Hydro提交结果
         function displayHydroSubmitResult(result) {
-            const content = generateHydroResultHTML(result, true);
+            const judgeType = document.getElementById('judgeSelector').value;
+            let content, title;
+            
+            if (judgeType === 'docker') {
+                content = generateDockerResultHTML(result, true);
+                title = 'Docker提交结果';
+            } else {
+                content = generateHydroResultHTML(result, true);
+                title = 'Hydro提交结果';
+            }
+            
             document.getElementById('hydroResultContent').innerHTML = content;
-            document.getElementById('hydroResultModalLabel').textContent = 'Hydro提交结果';
+            document.getElementById('hydroResultModalLabel').textContent = title;
             
             // 显示模态框
             const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
@@ -669,6 +859,109 @@
                 console.error('提交关卡进度失败:', error);
                 // 不影响用户体验，只记录错误
             }
+        }
+
+        // 生成Docker结果HTML
+        function generateDockerResultHTML(result, isSubmit) {
+            let html = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                    <span class="badge ${getStatusBadgeClass(result.status)} me-2">${getStatusText(result.status)}</span>
+                                    得分: ${result.score}/${result.max_score}
+                                    ${isSubmit ? `| 获得星数: ${result.stars || 0}` : ''}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>用时:</strong> ${result.time_used}ms
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>内存:</strong> ${result.memory_used}KB
+                                    </div>
+                                </div>
+            `;
+            
+            if (result.compile_message) {
+                html += `
+                    <hr>
+                    <div class="alert alert-warning">
+                        <strong>编译信息:</strong>
+                        <pre class="mb-0 mt-2">${result.compile_message}</pre>
+                    </div>
+                `;
+            }
+            
+            if (result.error) {
+                html += `
+                    <hr>
+                    <div class="alert alert-danger">
+                        <strong>错误信息:</strong>
+                        <pre class="mb-0 mt-2">${result.error}</pre>
+                    </div>
+                `;
+            }
+            
+            html += `</div></div></div></div>`;
+            
+            // 测试用例详情
+            if (result.test_cases && result.test_cases.length > 0) {
+                html += `
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-vial me-2"></i>测试用例详情
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                `;
+                
+                result.test_cases.forEach((testCase, index) => {
+                    const statusClass = getStatusBadgeClass(testCase.status);
+                    const statusText = getStatusText(testCase.status);
+                    
+                    html += `
+                        <div class="test-case-item mb-3 ${index > 0 ? 'border-top pt-3' : ''}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">
+                                    ${testCase.is_sample ? '样例' : '测试用例'} ${index + 1}
+                                    <span class="badge ${statusClass} ms-2">${statusText}</span>
+                                </h6>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="input-section">
+                                        <strong class="text-muted">输入:</strong>
+                                        <pre class="bg-light p-2 mt-1 small">${testCase.input || '(空)'}</pre>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="output-section">
+                                        <strong class="text-muted">您的输出:</strong>
+                                        <pre class="bg-light p-2 mt-1 small ${testCase.status === 'WA' ? 'border-danger' : ''}">${testCase.output || '(无输出)'}</pre>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="expected-section">
+                                        <strong class="text-muted">期望输出:</strong>
+                                        <pre class="bg-light p-2 mt-1 small">${testCase.expected || '(空)'}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div></div></div></div>`;
+            }
+            
+            return html;
         }
 
         // 生成Hydro结果HTML
@@ -972,15 +1265,9 @@
             testBtn.disabled = false;
             submitBtn.disabled = false;
             
-            // 恢复按钮文本
-            const judgeSystem = document.getElementById('judgeSystemSelector').value;
-            if (judgeSystem === 'hydro') {
-                testBtn.innerHTML = '<i class="fas fa-play me-1"></i>Hydro测试';
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Hydro提交';
-            } else {
-                testBtn.innerHTML = '<i class="fas fa-play me-1"></i>测试代码';
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>提交代码';
-            }
+            // 恢复按钮文本 - 修复空指针错误，直接使用Hydro系统
+            testBtn.innerHTML = '<i class="fas fa-play me-1"></i>Hydro测试';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Hydro提交';
         }
 
         // 显示沙箱信息

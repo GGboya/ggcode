@@ -121,6 +121,14 @@ var languageConfigs = map[string]JudgeConfig{
 		MemoryLimit: 512,
 		Extension:   ".java",
 	},
+	"go": {
+		Language:    "go",
+		CompileCmd:  "go build -o {executable} {source}",
+		RunCmd:      "./{executable}",
+		TimeLimit:   3,
+		MemoryLimit: 256,
+		Extension:   ".go",
+	},
 }
 
 // GetIslandMap 获取面试岛地图

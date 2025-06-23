@@ -5,15 +5,17 @@ import (
 	"ggcode/internal/middleware"
 	"ggcode/internal/repositories"
 	"ggcode/internal/services"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 type Server struct {
-	router      *gin.Engine
-	db          *gorm.DB
-	controllers *controllers.Controllers
+	router        *gin.Engine
+	db            *gorm.DB
+	controllers   *controllers.Controllers
+	containerPool *services.SimpleContainerPool
 }
 
 func New(db *gorm.DB) (*Server, error) {
@@ -49,9 +51,10 @@ func New(db *gorm.DB) (*Server, error) {
 	controllers := controllers.NewControllers(serviceLayer)
 
 	server := &Server{
-		router:      router,
-		db:          db,
-		controllers: controllers,
+		router:        router,
+		db:            db,
+		controllers:   controllers,
+		containerPool: serviceLayer.ContainerPool,
 	}
 
 	server.setupRoutes()
@@ -141,21 +144,18 @@ func (s *Server) setupRoutes() {
 			// 学习热力图
 			api.GET("/study-heatmap", ctrl.Progress.GetStudyHeatmap)
 
-			// 面试岛相关（原版评测）
+			// 面试岛相关
 			api.GET("/interview-island/map", ctrl.Interview.GetIslandMap)
 			api.GET("/interview-island/level/:levelId", ctrl.Interview.GetLevelDetail)
-			api.POST("/interview-island/level/:levelId/test", ctrl.Interview.TestCode)
-			api.POST("/interview-island/level/:levelId/submit", ctrl.Interview.SubmitCode)
 			api.GET("/interview-island/progress", ctrl.Interview.GetUserProgress)
 
-			// Hydro评测系统
-			hydro := api.Group("/hydro-judge")
+			// Docker容器池评测系统
+			docker := api.Group("/docker-judge")
 			{
-				hydro.POST("/level/:levelId/test", ctrl.HydroJudge.TestCode)
-				hydro.POST("/level/:levelId/submit", ctrl.HydroJudge.SubmitCode)
-				hydro.GET("/result/:submissionId", ctrl.HydroJudge.GetJudgeResult)
-				hydro.GET("/queue-status", ctrl.HydroJudge.GetQueueStatus)
-				hydro.GET("/system-info", ctrl.HydroJudge.GetJudgeSystemInfo)
+				docker.POST("/level/:levelId/test", ctrl.DockerJudge.TestCode)
+				docker.POST("/level/:levelId/submit", ctrl.DockerJudge.SubmitCode)
+				docker.POST("/custom-test", ctrl.DockerJudge.CustomTest)
+				docker.GET("/system-info", ctrl.DockerJudge.GetSystemInfo)
 			}
 		}
 	}
@@ -168,4 +168,39 @@ func (s *Server) Run(addr string) error {
 // RunTLS 启动HTTPS服务器
 func (s *Server) RunTLS(addr, certFile, keyFile string) error {
 	return s.router.RunTLS(addr, certFile, keyFile)
+}
+
+// Shutdown 优雅关闭服务器
+func (s *Server) Shutdown() error {
+	log.Printf("正在优雅关闭服务器...")
+
+	// 1. 关闭容器池
+	if s.containerPool != nil {
+		log.Printf("正在关闭容器池...")
+		if err := s.containerPool.Shutdown(); err != nil {
+			log.Printf("关闭容器池失败: %v", err)
+		} else {
+			log.Printf("容器池已关闭")
+		}
+	}
+
+	// 2. 关闭数据库连接
+	if s.db != nil {
+		log.Printf("正在关闭数据库连接...")
+		if sqlDB, err := s.db.DB(); err == nil {
+			if err := sqlDB.Close(); err != nil {
+				log.Printf("关闭数据库连接失败: %v", err)
+			} else {
+				log.Printf("数据库连接已关闭")
+			}
+		}
+	}
+
+	log.Printf("服务器已优雅关闭")
+	return nil
+}
+
+// GetRouter 获取路由器（用于优雅关闭）
+func (s *Server) GetRouter() *gin.Engine {
+	return s.router
 }

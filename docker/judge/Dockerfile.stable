@@ -1,0 +1,89 @@
+ # 代码评测专用镜像 - 稳定版本基于Ubuntu
+FROM ubuntu:20.04
+
+# 设置时区，避免交互式安装
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 更新系统并安装基础工具
+RUN apt-get update && apt-get install -y \
+    # 基础工具
+    curl \
+    wget \
+    vim \
+    bash \
+    coreutils \
+    ca-certificates \
+    tzdata \
+    # C++ 编译器
+    g++ \
+    gcc \
+    build-essential \
+    # Python
+    python3 \
+    python3-pip \
+    # Java
+    openjdk-11-jdk \
+    # 清理缓存
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 手动安装最新版本的Go
+RUN wget https://golang.google.cn/dl/go1.24.4.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
+    rm go1.24.4.linux-amd64.tar.gz
+
+# 设置环境变量
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV GOROOT=/usr/local/go
+ENV GOPATH=/home/judge/go
+ENV PATH=$PATH:$JAVA_HOME/bin:$GOROOT/bin:$GOPATH/bin
+
+# 创建评测用户
+RUN useradd -m -s /bin/bash judge
+RUN mkdir -p /opt/judge && chown judge:judge /opt/judge
+RUN mkdir -p /home/judge/go && chown judge:judge /home/judge/go
+
+# 设置工作目录
+WORKDIR /opt/judge
+
+# 创建 Java 安全策略文件
+RUN echo 'grant {' > /opt/java.policy && \
+    echo '  permission java.io.FilePermission "/opt/judge/-", "read,write,delete";' >> /opt/java.policy && \
+    echo '  permission java.io.FilePermission "/tmp/-", "read,write,delete";' >> /opt/java.policy && \
+    echo '  permission java.lang.RuntimePermission "exitVM";' >> /opt/java.policy && \
+    echo '  permission java.util.PropertyPermission "*", "read";' >> /opt/java.policy && \
+    echo '};' >> /opt/java.policy
+
+# 复制评测脚本
+COPY judge-script.sh /opt/judge/
+RUN chmod +x /opt/judge/judge-script.sh
+
+# 切换到评测用户
+USER judge
+
+# 预热Go环境 - 创建一个简单的Go模块来初始化环境
+RUN cd /home/judge && \
+    mkdir -p go-warmup && \
+    cd go-warmup && \
+    echo 'module warmup' > go.mod && \
+    echo 'package main\nimport "fmt"\nfunc main() { fmt.Println("warmup") }' > main.go && \
+    go build main.go && \
+    ./main && \
+    cd .. && \
+    rm -rf go-warmup
+
+# 验证所有环境
+RUN echo "=== 验证编译环境 ===" && \
+    g++ --version && \
+    echo "=== Python ===" && \
+    python3 --version && \
+    echo "=== Java ===" && \
+    java -version && \
+    javac -version && \
+    echo "=== Go ===" && \
+    go version && \
+    echo "=== 环境验证完成 ==="
+
+# 设置默认命令 - 让容器一直运行
+CMD ["sleep", "infinity"]

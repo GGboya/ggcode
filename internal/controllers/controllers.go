@@ -12,9 +12,7 @@ type Controllers struct {
 	Share        *ShareController
 	Page         *PageController
 	Interview    *InterviewController
-	HydroJudge   *HydroJudgeController
-	// Study        *StudyController
-	// CheckIn      *CheckInController
+	DockerJudge  *DockerJudgeController
 }
 
 // NewControllers 创建所有控制器实例
@@ -28,8 +26,6 @@ func NewControllers(services *services.Services) *Controllers {
 		Share:        NewShareController(services),
 		Page:         NewPageController(),
 		Interview:    NewInterviewController(services.Interview),
-		HydroJudge:   NewHydroJudgeController(services.HydroJudge),
-		// Study:        NewStudyController(services),
-		// CheckIn:      NewCheckInController(services),
+		DockerJudge:  NewDockerJudgeController(services.Interview, services.DockerJudge, services.ContainerPool),
 	}
 }
