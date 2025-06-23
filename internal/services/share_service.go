@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"ggcode/internal/database"
+	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 )
 
@@ -82,7 +82,7 @@ func (s *ShareService) UnstarQuestionBank(bankID, userID uint) error {
 }
 
 // ForkQuestionBank Fork题库
-func (s *ShareService) ForkQuestionBank(bankID, userID uint) (*database.QuestionBank, error) {
+func (s *ShareService) ForkQuestionBank(bankID, userID uint) (*models.QuestionBank, error) {
 	// 检查题库是否存在且为共享状态
 	isShared, err := s.shareRepo.CheckQuestionBankShared(bankID)
 	if err != nil {
@@ -105,6 +105,6 @@ func (s *ShareService) ForkQuestionBank(bankID, userID uint) (*database.Question
 }
 
 // GetUserStarredBanks 获取用户收藏的题库
-func (s *ShareService) GetUserStarredBanks(userID uint, page, limit int) ([]database.QuestionBank, int64, error) {
+func (s *ShareService) GetUserStarredBanks(userID uint, page, limit int) ([]models.QuestionBank, int64, error) {
 	return s.shareRepo.GetUserStarredBanks(userID, page, limit)
 }

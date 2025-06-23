@@ -1,18 +1,18 @@
 package repositories
 
 import (
-	"ggcode/internal/database"
+	"ggcode/internal/models"
 
 	"gorm.io/gorm"
 )
 
 type StudyPlanRepository interface {
 	CheckStudyPlanExists(userID, questionBankID uint) (bool, error)
-	CreateStudyPlan(studyPlan *database.UserStudyPlan) (*database.UserStudyPlan, error)
-	GetStudyPlan(planID, userID uint) (*database.UserStudyPlan, error)
+	CreateStudyPlan(studyPlan *models.UserStudyPlan) (*models.UserStudyPlan, error)
+	GetStudyPlan(planID, userID uint) (*models.UserStudyPlan, error)
 	UpdateStudyPlan(planID, userID uint, dailyCount int) error
-	GetAllStudyPlans(userID uint, page, limit int) ([]database.UserStudyPlan, int64, error)
-	GetRandomMasteredQuestions(userID, questionBankID uint, count int) ([]database.UserQuestionProgress, error)
+	GetAllStudyPlans(userID uint, page, limit int) ([]models.UserStudyPlan, int64, error)
+	GetRandomMasteredQuestions(userID, questionBankID uint, count int) ([]models.UserQuestionProgress, error)
 }
 
 type studyPlanRepository struct {
@@ -25,13 +25,13 @@ func NewStudyPlanRepository(db *gorm.DB) StudyPlanRepository {
 
 func (r *studyPlanRepository) CheckStudyPlanExists(userID, questionBankID uint) (bool, error) {
 	var count int64
-	err := r.db.Model(&database.UserStudyPlan{}).
+	err := r.db.Model(&models.UserStudyPlan{}).
 		Where("user_id = ? AND question_bank_id = ?", userID, questionBankID).
 		Count(&count).Error
 	return count > 0, err
 }
 
-func (r *studyPlanRepository) CreateStudyPlan(studyPlan *database.UserStudyPlan) (*database.UserStudyPlan, error) {
+func (r *studyPlanRepository) CreateStudyPlan(studyPlan *models.UserStudyPlan) (*models.UserStudyPlan, error) {
 	if err := r.db.Create(studyPlan).Error; err != nil {
 		return nil, err
 	}
@@ -42,8 +42,8 @@ func (r *studyPlanRepository) CreateStudyPlan(studyPlan *database.UserStudyPlan)
 	return studyPlan, nil
 }
 
-func (r *studyPlanRepository) GetStudyPlan(planID, userID uint) (*database.UserStudyPlan, error) {
-	var studyPlan database.UserStudyPlan
+func (r *studyPlanRepository) GetStudyPlan(planID, userID uint) (*models.UserStudyPlan, error) {
+	var studyPlan models.UserStudyPlan
 	err := r.db.Where("id = ? AND user_id = ?", planID, userID).
 		Preload("QuestionBank").First(&studyPlan).Error
 	if err != nil {
@@ -53,16 +53,16 @@ func (r *studyPlanRepository) GetStudyPlan(planID, userID uint) (*database.UserS
 }
 
 func (r *studyPlanRepository) UpdateStudyPlan(planID, userID uint, dailyCount int) error {
-	return r.db.Model(&database.UserStudyPlan{}).
+	return r.db.Model(&models.UserStudyPlan{}).
 		Where("id = ? AND user_id = ?", planID, userID).
 		Update("daily_count", dailyCount).Error
 }
 
-func (r *studyPlanRepository) GetAllStudyPlans(userID uint, page, limit int) ([]database.UserStudyPlan, int64, error) {
-	var studyPlans []database.UserStudyPlan
+func (r *studyPlanRepository) GetAllStudyPlans(userID uint, page, limit int) ([]models.UserStudyPlan, int64, error) {
+	var studyPlans []models.UserStudyPlan
 	var total int64
 
-	query := r.db.Model(&database.UserStudyPlan{}).Where("user_id = ?", userID)
+	query := r.db.Model(&models.UserStudyPlan{}).Where("user_id = ?", userID)
 
 	// 获取总数
 	if err := query.Count(&total).Error; err != nil {
@@ -81,8 +81,8 @@ func (r *studyPlanRepository) GetAllStudyPlans(userID uint, page, limit int) ([]
 	return studyPlans, total, nil
 }
 
-func (r *studyPlanRepository) GetRandomMasteredQuestions(userID, questionBankID uint, count int) ([]database.UserQuestionProgress, error) {
-	var progresses []database.UserQuestionProgress
+func (r *studyPlanRepository) GetRandomMasteredQuestions(userID, questionBankID uint, count int) ([]models.UserQuestionProgress, error) {
+	var progresses []models.UserQuestionProgress
 	err := r.db.Where("user_id = ? AND is_completed = ?", userID, true).
 		Preload("Question", "question_bank_id = ?", questionBankID).
 		Order("RANDOM()").

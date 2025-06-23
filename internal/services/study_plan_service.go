@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"ggcode/internal/database"
+	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 )
 
@@ -21,7 +21,7 @@ func NewStudyPlanService(repos *repositories.Repositories, ebbinghausService *Eb
 }
 
 // CreateStudyPlan 创建学习计划
-func (s *StudyPlanService) CreateStudyPlan(userID, questionBankID uint, dailyCount int) (*database.UserStudyPlan, error) {
+func (s *StudyPlanService) CreateStudyPlan(userID, questionBankID uint, dailyCount int) (*models.UserStudyPlan, error) {
 	// 检查用户是否已经为该题库创建了学习计划
 	exists, err := s.studyPlanRepo.CheckStudyPlanExists(userID, questionBankID)
 	if err != nil {
@@ -32,7 +32,7 @@ func (s *StudyPlanService) CreateStudyPlan(userID, questionBankID uint, dailyCou
 	}
 
 	// 创建学习计划
-	studyPlan := &database.UserStudyPlan{
+	studyPlan := &models.UserStudyPlan{
 		UserID:         userID,
 		QuestionBankID: questionBankID,
 		DailyCount:     dailyCount,
@@ -47,7 +47,7 @@ func (s *StudyPlanService) CreateStudyPlan(userID, questionBankID uint, dailyCou
 }
 
 // GetStudyPlan 获取学习计划
-func (s *StudyPlanService) GetStudyPlan(planID, userID uint) (*database.UserStudyPlan, error) {
+func (s *StudyPlanService) GetStudyPlan(planID, userID uint) (*models.UserStudyPlan, error) {
 	return s.studyPlanRepo.GetStudyPlan(planID, userID)
 }
 
@@ -62,7 +62,7 @@ func (s *StudyPlanService) DeleteStudyPlan(planID, userID uint) error {
 }
 
 // GetAllStudyPlans 获取所有学习计划
-func (s *StudyPlanService) GetAllStudyPlans(userID uint, page, limit int) ([]database.UserStudyPlan, int64, error) {
+func (s *StudyPlanService) GetAllStudyPlans(userID uint, page, limit int) ([]models.UserStudyPlan, int64, error) {
 	return s.studyPlanRepo.GetAllStudyPlans(userID, page, limit)
 }
 

@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"ggcode/internal/database"
+	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 	"os"
 	"os/exec"
@@ -30,11 +30,11 @@ type InterviewService interface {
 
 // LevelDetailResponse 关卡详情响应
 type LevelDetailResponse struct {
-	Level          database.InterviewLevel       `json:"level"`
-	Question       database.Question             `json:"question"`
-	SampleCases    []database.InterviewTestCase  `json:"sample_cases"`
-	UserProgress   database.UserLevelProgress    `json:"user_progress"`
-	BestSubmission *database.UserLevelSubmission `json:"best_submission,omitempty"`
+	Level          models.InterviewLevel       `json:"level"`
+	Question       models.Question             `json:"question"`
+	SampleCases    []models.InterviewTestCase  `json:"sample_cases"`
+	UserProgress   models.UserLevelProgress    `json:"user_progress"`
+	BestSubmission *models.UserLevelSubmission `json:"best_submission,omitempty"`
 }
 
 // TestResult 测试结果
@@ -190,7 +190,7 @@ func (s *interviewService) SubmitCode(userID, levelID uint, code, language strin
 	stars := s.calculateStars(testResult.Status, submitTime)
 
 	// 创建提交记录
-	submission := &database.UserLevelSubmission{
+	submission := &models.UserLevelSubmission{
 		UserID:     userID,
 		LevelID:    levelID,
 		Code:       code,
@@ -219,7 +219,7 @@ func (s *interviewService) SubmitCode(userID, levelID uint, code, language strin
 	// 更新用户关卡进度
 	var nextUnlocked bool
 	if testResult.Status == "AC" {
-		progress := &database.UserLevelProgress{
+		progress := &models.UserLevelProgress{
 			UserID:   userID,
 			LevelID:  levelID,
 			Status:   "completed",
@@ -254,7 +254,7 @@ func (s *interviewService) SubmitCode(userID, levelID uint, code, language strin
 }
 
 // executeCode 执行代码
-func (s *interviewService) executeCode(code, language string, testCases []database.InterviewTestCase) (*TestResult, error) {
+func (s *interviewService) executeCode(code, language string, testCases []models.InterviewTestCase) (*TestResult, error) {
 	config, exists := languageConfigs[language]
 	if !exists {
 		return nil, errors.New("不支持的编程语言")

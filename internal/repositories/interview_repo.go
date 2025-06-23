@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"ggcode/internal/database"
+	"ggcode/internal/models"
 	"time"
 
 	"gorm.io/gorm"
@@ -10,41 +10,41 @@ import (
 // InterviewRepository 面试岛仓库接口
 type InterviewRepository interface {
 	// 岛屿管理
-	GetAllIslands() ([]database.InterviewIsland, error)
-	GetIslandByID(id uint) (*database.InterviewIsland, error)
-	CreateIsland(island *database.InterviewIsland) error
+	GetAllIslands() ([]models.InterviewIsland, error)
+	GetIslandByID(id uint) (*models.InterviewIsland, error)
+	CreateIsland(island *models.InterviewIsland) error
 
 	// 关卡管理
-	GetLevelsByIslandID(islandID uint) ([]database.InterviewLevel, error)
-	GetLevelByID(id uint) (*database.InterviewLevel, error)
-	CreateLevel(level *database.InterviewLevel) error
+	GetLevelsByIslandID(islandID uint) ([]models.InterviewLevel, error)
+	GetLevelByID(id uint) (*models.InterviewLevel, error)
+	CreateLevel(level *models.InterviewLevel) error
 
 	// 用户进度管理
 	GetUserIslandProgress(userID uint) ([]IslandProgressInfo, error)
-	GetUserLevelProgress(userID, levelID uint) (*database.UserLevelProgress, error)
-	CreateOrUpdateLevelProgress(progress *database.UserLevelProgress) error
+	GetUserLevelProgress(userID, levelID uint) (*models.UserLevelProgress, error)
+	CreateOrUpdateLevelProgress(progress *models.UserLevelProgress) error
 	UnlockNextLevel(userID, currentLevelID uint) error
 
 	// 提交管理
-	CreateSubmission(submission *database.UserLevelSubmission) error
-	GetUserSubmissions(userID, levelID uint, limit int) ([]database.UserLevelSubmission, error)
-	GetBestSubmission(userID, levelID uint) (*database.UserLevelSubmission, error)
+	CreateSubmission(submission *models.UserLevelSubmission) error
+	GetUserSubmissions(userID, levelID uint, limit int) ([]models.UserLevelSubmission, error)
+	GetBestSubmission(userID, levelID uint) (*models.UserLevelSubmission, error)
 
 	// 测试用例管理
-	GetTestCasesByLevelID(levelID uint) ([]database.InterviewTestCase, error)
-	GetSampleTestCases(levelID uint) ([]database.InterviewTestCase, error)
-	CreateTestCase(testCase *database.InterviewTestCase) error
+	GetTestCasesByLevelID(levelID uint) ([]models.InterviewTestCase, error)
+	GetSampleTestCases(levelID uint) ([]models.InterviewTestCase, error)
+	CreateTestCase(testCase *models.InterviewTestCase) error
 }
 
 // IslandProgressInfo 岛屿进度信息
 type IslandProgressInfo struct {
-	Island         database.InterviewIsland     `json:"island"`
-	Levels         []database.InterviewLevel    `json:"levels"`
-	UserProgress   []database.UserLevelProgress `json:"user_progress"`
-	CompletedCount int                          `json:"completed_count"`
-	TotalCount     int                          `json:"total_count"`
-	TotalStars     int                          `json:"total_stars"`
-	MaxStars       int                          `json:"max_stars"`
+	Island         models.InterviewIsland     `json:"island"`
+	Levels         []models.InterviewLevel    `json:"levels"`
+	UserProgress   []models.UserLevelProgress `json:"user_progress"`
+	CompletedCount int                        `json:"completed_count"`
+	TotalCount     int                        `json:"total_count"`
+	TotalStars     int                        `json:"total_stars"`
+	MaxStars       int                        `json:"max_stars"`
 }
 
 type interviewRepository struct {
@@ -56,15 +56,15 @@ func NewInterviewRepository(db *gorm.DB) InterviewRepository {
 }
 
 // GetAllIslands 获取所有激活的面试岛
-func (r *interviewRepository) GetAllIslands() ([]database.InterviewIsland, error) {
-	var islands []database.InterviewIsland
+func (r *interviewRepository) GetAllIslands() ([]models.InterviewIsland, error) {
+	var islands []models.InterviewIsland
 	err := r.db.Where("is_active = ?", true).Order("`order` ASC, created_at ASC").Find(&islands).Error
 	return islands, err
 }
 
 // GetIslandByID 根据ID获取面试岛
-func (r *interviewRepository) GetIslandByID(id uint) (*database.InterviewIsland, error) {
-	var island database.InterviewIsland
+func (r *interviewRepository) GetIslandByID(id uint) (*models.InterviewIsland, error) {
+	var island models.InterviewIsland
 	err := r.db.Where("id = ? AND is_active = ?", id, true).First(&island).Error
 	if err != nil {
 		return nil, err
@@ -73,13 +73,13 @@ func (r *interviewRepository) GetIslandByID(id uint) (*database.InterviewIsland,
 }
 
 // CreateIsland 创建面试岛
-func (r *interviewRepository) CreateIsland(island *database.InterviewIsland) error {
+func (r *interviewRepository) CreateIsland(island *models.InterviewIsland) error {
 	return r.db.Create(island).Error
 }
 
 // GetLevelsByIslandID 获取指定岛屿的所有关卡
-func (r *interviewRepository) GetLevelsByIslandID(islandID uint) ([]database.InterviewLevel, error) {
-	var levels []database.InterviewLevel
+func (r *interviewRepository) GetLevelsByIslandID(islandID uint) ([]models.InterviewLevel, error) {
+	var levels []models.InterviewLevel
 	err := r.db.Where("island_id = ?", islandID).
 		Preload("Question").
 		Preload("Island").
@@ -89,8 +89,8 @@ func (r *interviewRepository) GetLevelsByIslandID(islandID uint) ([]database.Int
 }
 
 // GetLevelByID 根据ID获取关卡
-func (r *interviewRepository) GetLevelByID(id uint) (*database.InterviewLevel, error) {
-	var level database.InterviewLevel
+func (r *interviewRepository) GetLevelByID(id uint) (*models.InterviewLevel, error) {
+	var level models.InterviewLevel
 	err := r.db.Where("id = ?", id).
 		Preload("Question").
 		Preload("Island").
@@ -102,7 +102,7 @@ func (r *interviewRepository) GetLevelByID(id uint) (*database.InterviewLevel, e
 }
 
 // CreateLevel 创建关卡
-func (r *interviewRepository) CreateLevel(level *database.InterviewLevel) error {
+func (r *interviewRepository) CreateLevel(level *models.InterviewLevel) error {
 	return r.db.Create(level).Error
 }
 
@@ -123,7 +123,7 @@ func (r *interviewRepository) GetUserIslandProgress(userID uint) ([]IslandProgre
 		}
 
 		// 获取用户在这些关卡的进度
-		var userProgress []database.UserLevelProgress
+		var userProgress []models.UserLevelProgress
 		if len(levels) > 0 {
 			levelIDs := make([]uint, len(levels))
 			for i, level := range levels {
@@ -136,7 +136,7 @@ func (r *interviewRepository) GetUserIslandProgress(userID uint) ([]IslandProgre
 
 		// 初始化第一关卡为解锁状态
 		if len(levels) > 0 && len(userProgress) == 0 {
-			firstProgress := database.UserLevelProgress{
+			firstProgress := models.UserLevelProgress{
 				UserID:  userID,
 				LevelID: levels[0].ID,
 				Status:  "unlocked",
@@ -172,8 +172,8 @@ func (r *interviewRepository) GetUserIslandProgress(userID uint) ([]IslandProgre
 }
 
 // GetUserLevelProgress 获取用户关卡进度
-func (r *interviewRepository) GetUserLevelProgress(userID, levelID uint) (*database.UserLevelProgress, error) {
-	var progress database.UserLevelProgress
+func (r *interviewRepository) GetUserLevelProgress(userID, levelID uint) (*models.UserLevelProgress, error) {
+	var progress models.UserLevelProgress
 	err := r.db.Where("user_id = ? AND level_id = ?", userID, levelID).
 		Preload("Level").
 		Preload("Level.Question").
@@ -189,7 +189,7 @@ func (r *interviewRepository) GetUserLevelProgress(userID, levelID uint) (*datab
 		// 检查前置关卡是否已完成
 		if level.LevelNum == 1 {
 			// 第一关自动解锁
-			progress = database.UserLevelProgress{
+			progress = models.UserLevelProgress{
 				UserID:  userID,
 				LevelID: levelID,
 				Status:  "unlocked",
@@ -197,7 +197,7 @@ func (r *interviewRepository) GetUserLevelProgress(userID, levelID uint) (*datab
 			r.db.Create(&progress)
 		} else {
 			// 其他关卡默认锁定
-			progress = database.UserLevelProgress{
+			progress = models.UserLevelProgress{
 				UserID:  userID,
 				LevelID: levelID,
 				Status:  "locked",
@@ -210,8 +210,8 @@ func (r *interviewRepository) GetUserLevelProgress(userID, levelID uint) (*datab
 }
 
 // CreateOrUpdateLevelProgress 创建或更新关卡进度
-func (r *interviewRepository) CreateOrUpdateLevelProgress(progress *database.UserLevelProgress) error {
-	var existing database.UserLevelProgress
+func (r *interviewRepository) CreateOrUpdateLevelProgress(progress *models.UserLevelProgress) error {
+	var existing models.UserLevelProgress
 	err := r.db.Where("user_id = ? AND level_id = ?", progress.UserID, progress.LevelID).First(&existing).Error
 
 	if err == gorm.ErrRecordNotFound {
@@ -246,7 +246,7 @@ func (r *interviewRepository) UnlockNextLevel(userID, currentLevelID uint) error
 	}
 
 	// 查找下一关卡
-	var nextLevel database.InterviewLevel
+	var nextLevel models.InterviewLevel
 	err = r.db.Where("island_id = ? AND level_num = ?",
 		currentLevel.IslandID, currentLevel.LevelNum+1).First(&nextLevel).Error
 
@@ -258,12 +258,12 @@ func (r *interviewRepository) UnlockNextLevel(userID, currentLevelID uint) error
 	}
 
 	// 检查下一关卡的进度
-	var nextProgress database.UserLevelProgress
+	var nextProgress models.UserLevelProgress
 	err = r.db.Where("user_id = ? AND level_id = ?", userID, nextLevel.ID).First(&nextProgress).Error
 
 	if err == gorm.ErrRecordNotFound {
 		// 创建下一关卡的进度记录
-		nextProgress = database.UserLevelProgress{
+		nextProgress = models.UserLevelProgress{
 			UserID:  userID,
 			LevelID: nextLevel.ID,
 			Status:  "unlocked",
@@ -283,13 +283,13 @@ func (r *interviewRepository) UnlockNextLevel(userID, currentLevelID uint) error
 }
 
 // CreateSubmission 创建提交记录
-func (r *interviewRepository) CreateSubmission(submission *database.UserLevelSubmission) error {
+func (r *interviewRepository) CreateSubmission(submission *models.UserLevelSubmission) error {
 	return r.db.Create(submission).Error
 }
 
 // GetUserSubmissions 获取用户关卡提交记录
-func (r *interviewRepository) GetUserSubmissions(userID, levelID uint, limit int) ([]database.UserLevelSubmission, error) {
-	var submissions []database.UserLevelSubmission
+func (r *interviewRepository) GetUserSubmissions(userID, levelID uint, limit int) ([]models.UserLevelSubmission, error) {
+	var submissions []models.UserLevelSubmission
 	query := r.db.Where("user_id = ? AND level_id = ?", userID, levelID).
 		Order("created_at DESC")
 
@@ -302,8 +302,8 @@ func (r *interviewRepository) GetUserSubmissions(userID, levelID uint, limit int
 }
 
 // GetBestSubmission 获取用户关卡最佳提交
-func (r *interviewRepository) GetBestSubmission(userID, levelID uint) (*database.UserLevelSubmission, error) {
-	var submission database.UserLevelSubmission
+func (r *interviewRepository) GetBestSubmission(userID, levelID uint) (*models.UserLevelSubmission, error) {
+	var submission models.UserLevelSubmission
 	err := r.db.Where("user_id = ? AND level_id = ? AND status = ?", userID, levelID, "AC").
 		Order("stars DESC, submit_time ASC").
 		First(&submission).Error
@@ -315,20 +315,20 @@ func (r *interviewRepository) GetBestSubmission(userID, levelID uint) (*database
 }
 
 // GetTestCasesByLevelID 获取关卡的所有测试用例
-func (r *interviewRepository) GetTestCasesByLevelID(levelID uint) ([]database.InterviewTestCase, error) {
-	var testCases []database.InterviewTestCase
+func (r *interviewRepository) GetTestCasesByLevelID(levelID uint) ([]models.InterviewTestCase, error) {
+	var testCases []models.InterviewTestCase
 	err := r.db.Where("level_id = ?", levelID).Order("`order` ASC").Find(&testCases).Error
 	return testCases, err
 }
 
 // GetSampleTestCases 获取关卡的样例测试用例
-func (r *interviewRepository) GetSampleTestCases(levelID uint) ([]database.InterviewTestCase, error) {
-	var testCases []database.InterviewTestCase
+func (r *interviewRepository) GetSampleTestCases(levelID uint) ([]models.InterviewTestCase, error) {
+	var testCases []models.InterviewTestCase
 	err := r.db.Where("level_id = ? AND is_sample = ?", levelID, true).Order("`order` ASC").Find(&testCases).Error
 	return testCases, err
 }
 
 // CreateTestCase 创建测试用例
-func (r *interviewRepository) CreateTestCase(testCase *database.InterviewTestCase) error {
+func (r *interviewRepository) CreateTestCase(testCase *models.InterviewTestCase) error {
 	return r.db.Create(testCase).Error
 }

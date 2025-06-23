@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"ggcode/internal/database"
+	"ggcode/internal/models"
 	"time"
 
 	"gorm.io/gorm"
@@ -25,7 +25,7 @@ var acReviewIntervals = []int{1, 4, 15}
 // GetDailyQuestions 获取指定学习计划的当天需要学习的题目
 func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]QuestionWithProgress, error) {
 	// 获取指定的学习计划
-	var studyPlan database.UserStudyPlan
+	var studyPlan models.UserStudyPlan
 	err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).
 		Preload("QuestionBank").First(&studyPlan).Error
 
@@ -65,7 +65,7 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 	if len(reviewQuestions) == 0 {
 		// 检查题库是否有题目
 		var questionCount int64
-		s.db.Model(&database.Question{}).Where("question_bank_id = ?", studyPlan.QuestionBankID).Count(&questionCount)
+		s.db.Model(&models.Question{}).Where("question_bank_id = ?", studyPlan.QuestionBankID).Count(&questionCount)
 		if questionCount == 0 {
 			return nil, errors.New("题库中没有题目，请先添加题目")
 		}
@@ -82,7 +82,7 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 
 // getReviewQuestions 获取需要复习的题目
 func (s *EbbinghausService) getReviewQuestions(userID, questionBankID uint, today time.Time, reviewQuestions *[]QuestionWithProgress) error {
-	var progresses []database.UserQuestionProgress
+	var progresses []models.UserQuestionProgress
 
 	// 查找到了复习时间的题目
 	if err := s.db.Where("user_id = ? AND next_review_date <= ? AND is_completed = ?",
@@ -108,7 +108,7 @@ func (s *EbbinghausService) getReviewQuestions(userID, questionBankID uint, toda
 
 // getNewQuestions 获取新题目
 func (s *EbbinghausService) getNewQuestions(userID, questionBankID uint, count int) ([]QuestionWithProgress, error) {
-	var questions []database.Question
+	var questions []models.Question
 
 	// 获取用户没有学习过的题目
 	if err := s.db.Table("questions").
@@ -122,7 +122,7 @@ func (s *EbbinghausService) getNewQuestions(userID, questionBankID uint, count i
 	for _, question := range questions {
 		result = append(result, QuestionWithProgress{
 			Question: question,
-			Progress: database.UserQuestionProgress{}, // 新题目没有进度
+			Progress: models.UserQuestionProgress{}, // 新题目没有进度
 			IsReview: false,
 		})
 	}
@@ -132,7 +132,7 @@ func (s *EbbinghausService) getNewQuestions(userID, questionBankID uint, count i
 
 // getMasteredQuestions 获取已掌握的题目供重新学习
 func (s *EbbinghausService) getMasteredQuestions(userID, questionBankID uint, count int) ([]QuestionWithProgress, error) {
-	var progresses []database.UserQuestionProgress
+	var progresses []models.UserQuestionProgress
 
 	// 获取已掌握的题目，按最后复习时间排序（最久没复习的优先）
 	if err := s.db.Where("user_id = ? AND is_completed = ?", userID, true).
@@ -160,14 +160,14 @@ func (s *EbbinghausService) getMasteredQuestions(userID, questionBankID uint, co
 // CompleteQuestion 完成题目学习
 func (s *EbbinghausService) CompleteQuestion(userID, questionID uint, resultType string) error {
 	// 查找或创建学习进度记录
-	var progress database.UserQuestionProgress
+	var progress models.UserQuestionProgress
 	err := s.db.Where("user_id = ? AND question_id = ?", userID, questionID).First(&progress).Error
 
 	now := time.Now()
 
 	if err == gorm.ErrRecordNotFound {
 		// 新题目，创建进度记录
-		progress = database.UserQuestionProgress{
+		progress = models.UserQuestionProgress{
 			UserID:         userID,
 			QuestionID:     questionID,
 			ReviewLevel:    0,
@@ -230,9 +230,9 @@ func (s *EbbinghausService) CompleteQuestion(userID, questionID uint, resultType
 
 // QuestionWithProgress 带学习进度的题目
 type QuestionWithProgress struct {
-	Question database.Question             `json:"question"`
-	Progress database.UserQuestionProgress `json:"progress"`
-	IsReview bool                          `json:"is_review"` // 是否是复习题目
+	Question models.Question             `json:"question"`
+	Progress models.UserQuestionProgress `json:"progress"`
+	IsReview bool                        `json:"is_review"` // 是否是复习题目
 }
 
 // GetStudyStats 获取学习统计信息
@@ -240,16 +240,16 @@ func (s *EbbinghausService) GetStudyStats(userID uint) (*StudyStats, error) {
 	var stats StudyStats
 
 	// 总学习题目数
-	s.db.Model(&database.UserQuestionProgress{}).
+	s.db.Model(&models.UserQuestionProgress{}).
 		Where("user_id = ?", userID).Count(&stats.TotalStudied)
 
 	// 已完成题目数
-	s.db.Model(&database.UserQuestionProgress{}).
+	s.db.Model(&models.UserQuestionProgress{}).
 		Where("user_id = ? AND is_completed = ?", userID, true).Count(&stats.Completed)
 
 	// 今日需复习题目数
 	today := time.Now().Truncate(24 * time.Hour)
-	s.db.Model(&database.UserQuestionProgress{}).
+	s.db.Model(&models.UserQuestionProgress{}).
 		Where("user_id = ? AND next_review_date <= ? AND is_completed = ?",
 			userID, today, false).Count(&stats.TodayReview)
 
@@ -280,14 +280,14 @@ func (s *EbbinghausService) GetQuestionBankProgress(userID, questionBankID uint)
 	progress.QuestionBankID = questionBankID
 
 	// 获取题库总题目数
-	if err := s.db.Model(&database.Question{}).
+	if err := s.db.Model(&models.Question{}).
 		Where("question_bank_id = ?", questionBankID).
 		Count(&progress.TotalQuestions).Error; err != nil {
 		return nil, err
 	}
 
 	// 获取已学习题目数（有学习记录的）
-	if err := s.db.Model(&database.UserQuestionProgress{}).
+	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ?", userID, questionBankID).
 		Count(&progress.StudiedCount).Error; err != nil {
@@ -295,7 +295,7 @@ func (s *EbbinghausService) GetQuestionBankProgress(userID, questionBankID uint)
 	}
 
 	// 获取已掌握题目数
-	if err := s.db.Model(&database.UserQuestionProgress{}).
+	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ?",
 			userID, questionBankID, true).
@@ -305,7 +305,7 @@ func (s *EbbinghausService) GetQuestionBankProgress(userID, questionBankID uint)
 
 	// 获取待复习题目数（未完成且到了复习时间）
 	today := time.Now().Truncate(24 * time.Hour)
-	if err := s.db.Model(&database.UserQuestionProgress{}).
+	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ? AND user_question_progresses.next_review_date <= ?",
 			userID, questionBankID, false, today).
@@ -325,7 +325,7 @@ func (s *EbbinghausService) GetQuestionBankProgress(userID, questionBankID uint)
 // GetAllQuestionBanksProgress 获取用户在所有题库的学习进度
 func (s *EbbinghausService) GetAllQuestionBanksProgress(userID uint) ([]QuestionBankProgress, error) {
 	// 获取所有题库
-	var questionBanks []database.QuestionBank
+	var questionBanks []models.QuestionBank
 	if err := s.db.Find(&questionBanks).Error; err != nil {
 		return nil, err
 	}
@@ -348,7 +348,7 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 
 	// 检查今日是否已打卡
-	var existingCheckIn database.UserCheckIn
+	var existingCheckIn models.UserCheckIn
 	err := s.db.Where("user_id = ? AND check_date = ?", userID, today).First(&existingCheckIn).Error
 	if err == nil {
 		return errors.New("今日已打卡")
@@ -356,7 +356,7 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 
 	// 获取昨天的打卡记录来计算连续天数和最长连续天数
 	yesterday := today.AddDate(0, 0, -1)
-	var yesterdayCheckIn database.UserCheckIn
+	var yesterdayCheckIn models.UserCheckIn
 	consecutiveDays := 1 // 默认为1（今天是第一天）
 	bestStreak := 1      // 默认为1
 
@@ -368,7 +368,7 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 		bestStreak = max(consecutiveDays, yesterdayCheckIn.BestStreak)
 	} else {
 		// 昨天没打卡，获取最近的一条记录来获取历史最长连续天数
-		var latestCheckIn database.UserCheckIn
+		var latestCheckIn models.UserCheckIn
 		err = s.db.Where("user_id = ?", userID).
 			Order("check_date DESC").
 			First(&latestCheckIn).Error
@@ -380,7 +380,7 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 	}
 
 	// 创建打卡记录
-	checkIn := database.UserCheckIn{
+	checkIn := models.UserCheckIn{
 		UserID:          userID,
 		CheckDate:       today,
 		ConsecutiveDays: consecutiveDays,
@@ -397,7 +397,7 @@ func (s *EbbinghausService) GetCheckInStats(userID uint) (*CheckInStats, error) 
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 
 	// 检查今日是否已打卡，同时获取连续天数和最长连续天数
-	var todayCheckIn database.UserCheckIn
+	var todayCheckIn models.UserCheckIn
 	err := s.db.Where("user_id = ? AND check_date = ?", userID, today).First(&todayCheckIn).Error
 	if err == nil {
 		stats.CheckedInToday = true
@@ -408,7 +408,7 @@ func (s *EbbinghausService) GetCheckInStats(userID uint) (*CheckInStats, error) 
 
 		// 获取昨天的打卡记录
 		yesterday := today.AddDate(0, 0, -1)
-		var yesterdayCheckIn database.UserCheckIn
+		var yesterdayCheckIn models.UserCheckIn
 		err = s.db.Where("user_id = ? AND check_date = ?", userID, yesterday).First(&yesterdayCheckIn).Error
 		if err == nil {
 			// 昨天有打卡，显示昨天的连续天数和最长连续天数
@@ -419,7 +419,7 @@ func (s *EbbinghausService) GetCheckInStats(userID uint) (*CheckInStats, error) 
 			stats.ConsecutiveDays = 0
 
 			// 获取最近的一条记录来获取历史最长连续天数
-			var latestCheckIn database.UserCheckIn
+			var latestCheckIn models.UserCheckIn
 			err = s.db.Where("user_id = ?", userID).
 				Order("check_date DESC").
 				First(&latestCheckIn).Error
@@ -432,7 +432,7 @@ func (s *EbbinghausService) GetCheckInStats(userID uint) (*CheckInStats, error) 
 	}
 
 	// 计算总打卡天数
-	s.db.Model(&database.UserCheckIn{}).Where("user_id = ?", userID).Count(&stats.TotalCheckInDays)
+	s.db.Model(&models.UserCheckIn{}).Where("user_id = ?", userID).Count(&stats.TotalCheckInDays)
 
 	return &stats, nil
 }
@@ -459,7 +459,7 @@ type StudyPlanProgress struct {
 // GetStudyPlanProgress 获取学习计划的学习进度
 func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*StudyPlanProgress, error) {
 	// 获取学习计划
-	var studyPlan database.UserStudyPlan
+	var studyPlan models.UserStudyPlan
 	if err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).
 		Preload("QuestionBank").First(&studyPlan).Error; err != nil {
 		return nil, errors.New("学习计划不存在")
@@ -469,14 +469,14 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 	progress.StudyPlanID = studyPlanID
 
 	// 获取题库总题目数
-	if err := s.db.Model(&database.Question{}).
+	if err := s.db.Model(&models.Question{}).
 		Where("question_bank_id = ?", studyPlan.QuestionBankID).
 		Count(&progress.TotalQuestions).Error; err != nil {
 		return nil, err
 	}
 
 	// 获取已学习题目数（有学习记录的）
-	if err := s.db.Model(&database.UserQuestionProgress{}).
+	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ?", userID, studyPlan.QuestionBankID).
 		Count(&progress.StudiedCount).Error; err != nil {
@@ -484,7 +484,7 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 	}
 
 	// 获取已掌握题目数
-	if err := s.db.Model(&database.UserQuestionProgress{}).
+	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ?",
 			userID, studyPlan.QuestionBankID, true).
@@ -494,7 +494,7 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 
 	// 获取待复习题目数（未完成且到了复习时间）
 	today := time.Now().Truncate(24 * time.Hour)
-	if err := s.db.Model(&database.UserQuestionProgress{}).
+	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ? AND user_question_progresses.next_review_date <= ?",
 			userID, studyPlan.QuestionBankID, false, today).
@@ -514,7 +514,7 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 // DeleteStudyPlanWithProgress 删除学习计划并清空相关的学习进度
 func (s *EbbinghausService) DeleteStudyPlanWithProgress(userID, studyPlanID uint) error {
 	// 先获取学习计划信息
-	var studyPlan database.UserStudyPlan
+	var studyPlan models.UserStudyPlan
 	if err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).First(&studyPlan).Error; err != nil {
 		return errors.New("学习计划不存在")
 	}
@@ -540,7 +540,7 @@ func (s *EbbinghausService) DeleteStudyPlanWithProgress(userID, studyPlanID uint
 
 	// 删除学习计划
 	if err := tx.Where("id = ? AND user_id = ?", studyPlanID, userID).
-		Delete(&database.UserStudyPlan{}).Error; err != nil {
+		Delete(&models.UserStudyPlan{}).Error; err != nil {
 		tx.Rollback()
 		return errors.New("删除学习计划失败")
 	}

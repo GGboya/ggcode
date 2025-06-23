@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"ggcode/internal/database"
+	"ggcode/internal/models"
 
 	"gorm.io/gorm"
 )
@@ -15,8 +15,8 @@ type ShareRepository interface {
 	UnshareQuestionBank(bankID uint) error
 	StarQuestionBank(bankID, userID uint) error
 	UnstarQuestionBank(bankID, userID uint) error
-	ForkQuestionBank(bankID, userID uint) (*database.QuestionBank, error)
-	GetUserStarredBanks(userID uint, page, limit int) ([]database.QuestionBank, int64, error)
+	ForkQuestionBank(bankID, userID uint) (*models.QuestionBank, error)
+	GetUserStarredBanks(userID uint, page, limit int) ([]models.QuestionBank, int64, error)
 }
 
 type shareRepository struct {
@@ -29,7 +29,7 @@ func NewShareRepository(db *gorm.DB) ShareRepository {
 
 func (r *shareRepository) CheckQuestionBankOwnership(bankID, userID uint) (bool, error) {
 	var count int64
-	err := r.db.Model(&database.QuestionBank{}).
+	err := r.db.Model(&models.QuestionBank{}).
 		Where("id = ? AND created_by = ?", bankID, userID).
 		Count(&count).Error
 	return count > 0, err
@@ -37,7 +37,7 @@ func (r *shareRepository) CheckQuestionBankOwnership(bankID, userID uint) (bool,
 
 func (r *shareRepository) CheckQuestionBankShared(bankID uint) (bool, error) {
 	var count int64
-	err := r.db.Model(&database.QuestionBank{}).
+	err := r.db.Model(&models.QuestionBank{}).
 		Where("id = ? AND (is_official = ? OR is_shared = ?)", bankID, true, true).
 		Count(&count).Error
 	return count > 0, err
@@ -45,7 +45,7 @@ func (r *shareRepository) CheckQuestionBankShared(bankID uint) (bool, error) {
 
 func (r *shareRepository) CheckQuestionBankStarred(bankID, userID uint) (bool, error) {
 	var count int64
-	err := r.db.Model(&database.QuestionBankStar{}).
+	err := r.db.Model(&models.QuestionBankStar{}).
 		Where("user_id = ? AND question_bank_id = ?", userID, bankID).
 		Count(&count).Error
 	return count > 0, err
@@ -53,20 +53,20 @@ func (r *shareRepository) CheckQuestionBankStarred(bankID, userID uint) (bool, e
 
 func (r *shareRepository) CheckQuestionBankForked(bankID, userID uint) (bool, error) {
 	var count int64
-	err := r.db.Model(&database.QuestionBank{}).
+	err := r.db.Model(&models.QuestionBank{}).
 		Where("created_by = ? AND forked_from = ?", userID, bankID).
 		Count(&count).Error
 	return count > 0, err
 }
 
 func (r *shareRepository) ShareQuestionBank(bankID uint) error {
-	return r.db.Model(&database.QuestionBank{}).
+	return r.db.Model(&models.QuestionBank{}).
 		Where("id = ?", bankID).
 		Update("is_shared", true).Error
 }
 
 func (r *shareRepository) UnshareQuestionBank(bankID uint) error {
-	return r.db.Model(&database.QuestionBank{}).
+	return r.db.Model(&models.QuestionBank{}).
 		Where("id = ?", bankID).
 		Update("is_shared", false).Error
 }
@@ -81,7 +81,7 @@ func (r *shareRepository) StarQuestionBank(bankID, userID uint) error {
 	}()
 
 	// 创建Star记录
-	star := database.QuestionBankStar{
+	star := models.QuestionBankStar{
 		UserID:         userID,
 		QuestionBankID: bankID,
 	}
@@ -91,7 +91,7 @@ func (r *shareRepository) StarQuestionBank(bankID, userID uint) error {
 	}
 
 	// 更新题库的Star数量
-	if err := tx.Model(&database.QuestionBank{}).
+	if err := tx.Model(&models.QuestionBank{}).
 		Where("id = ?", bankID).
 		Update("star_count", gorm.Expr("star_count + ?", 1)).Error; err != nil {
 		tx.Rollback()
@@ -112,13 +112,13 @@ func (r *shareRepository) UnstarQuestionBank(bankID, userID uint) error {
 
 	// 删除Star记录
 	if err := tx.Where("user_id = ? AND question_bank_id = ?", userID, bankID).
-		Delete(&database.QuestionBankStar{}).Error; err != nil {
+		Delete(&models.QuestionBankStar{}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	// 更新题库的Star数量
-	if err := tx.Model(&database.QuestionBank{}).
+	if err := tx.Model(&models.QuestionBank{}).
 		Where("id = ?", bankID).
 		Update("star_count", gorm.Expr("star_count - ?", 1)).Error; err != nil {
 		tx.Rollback()
@@ -128,7 +128,7 @@ func (r *shareRepository) UnstarQuestionBank(bankID, userID uint) error {
 	return tx.Commit().Error
 }
 
-func (r *shareRepository) ForkQuestionBank(bankID, userID uint) (*database.QuestionBank, error) {
+func (r *shareRepository) ForkQuestionBank(bankID, userID uint) (*models.QuestionBank, error) {
 	// 开始事务
 	tx := r.db.Begin()
 	defer func() {
@@ -138,14 +138,14 @@ func (r *shareRepository) ForkQuestionBank(bankID, userID uint) (*database.Quest
 	}()
 
 	// 获取原题库
-	var originalBank database.QuestionBank
+	var originalBank models.QuestionBank
 	if err := tx.Where("id = ?", bankID).First(&originalBank).Error; err != nil {
 		tx.Rollback()
 		return nil, err
 	}
 
 	// 创建Fork的题库
-	forkedBank := database.QuestionBank{
+	forkedBank := models.QuestionBank{
 		Name:        originalBank.Name + " (Fork)",
 		Description: originalBank.Description,
 		CreatedBy:   &userID,
@@ -160,7 +160,7 @@ func (r *shareRepository) ForkQuestionBank(bankID, userID uint) (*database.Quest
 	}
 
 	// 复制原题库的所有题目
-	var originalQuestions []database.Question
+	var originalQuestions []models.Question
 	if err := tx.Where("question_bank_id = ?", bankID).Find(&originalQuestions).Error; err != nil {
 		tx.Rollback()
 		return nil, err
@@ -168,7 +168,7 @@ func (r *shareRepository) ForkQuestionBank(bankID, userID uint) (*database.Quest
 
 	// 批量插入题目
 	for _, question := range originalQuestions {
-		newQuestion := database.Question{
+		newQuestion := models.Question{
 			Title:          question.Title,
 			LeetcodeURL:    question.LeetcodeURL,
 			Difficulty:     question.Difficulty,
@@ -194,8 +194,8 @@ func (r *shareRepository) ForkQuestionBank(bankID, userID uint) (*database.Quest
 	return &forkedBank, nil
 }
 
-func (r *shareRepository) GetUserStarredBanks(userID uint, page, limit int) ([]database.QuestionBank, int64, error) {
-	var starredBanks []database.QuestionBank
+func (r *shareRepository) GetUserStarredBanks(userID uint, page, limit int) ([]models.QuestionBank, int64, error) {
+	var starredBanks []models.QuestionBank
 	var total int64
 
 	baseQuery := r.db.Table("question_banks").
