@@ -12,10 +12,9 @@ import (
 )
 
 type Server struct {
-	router        *gin.Engine
-	db            *gorm.DB
-	controllers   *controllers.Controllers
-	containerPool *services.SimpleContainerPool
+	router      *gin.Engine
+	db          *gorm.DB
+	controllers *controllers.Controllers
 }
 
 func New(db *gorm.DB) (*Server, error) {
@@ -51,10 +50,9 @@ func New(db *gorm.DB) (*Server, error) {
 	controllers := controllers.NewControllers(serviceLayer)
 
 	server := &Server{
-		router:        router,
-		db:            db,
-		controllers:   controllers,
-		containerPool: serviceLayer.ContainerPool,
+		router:      router,
+		db:          db,
+		controllers: controllers,
 	}
 
 	server.setupRoutes()
@@ -149,15 +147,6 @@ func (s *Server) setupRoutes() {
 			api.GET("/interview-island/level/:levelId", ctrl.Interview.GetLevelDetail)
 			api.GET("/interview-island/progress", ctrl.Interview.GetUserProgress)
 
-			// Docker容器池评测系统
-			docker := api.Group("/docker-judge")
-			{
-				docker.POST("/level/:levelId/test", ctrl.DockerJudge.TestCode)
-				docker.POST("/level/:levelId/submit", ctrl.DockerJudge.SubmitCode)
-				docker.POST("/custom-test", ctrl.DockerJudge.CustomTest)
-				docker.GET("/system-info", ctrl.DockerJudge.GetSystemInfo)
-			}
-
 			// go-judge 评测系统
 			goJudge := api.Group("/go-judge")
 			{
@@ -186,17 +175,6 @@ func (s *Server) RunTLS(addr, certFile, keyFile string) error {
 func (s *Server) Shutdown() error {
 	log.Printf("正在优雅关闭服务器...")
 
-	// 1. 关闭容器池
-	if s.containerPool != nil {
-		log.Printf("正在关闭容器池...")
-		if err := s.containerPool.Shutdown(); err != nil {
-			log.Printf("关闭容器池失败: %v", err)
-		} else {
-			log.Printf("容器池已关闭")
-		}
-	}
-
-	// 2. 关闭数据库连接
 	if s.db != nil {
 		log.Printf("正在关闭数据库连接...")
 		if sqlDB, err := s.db.DB(); err == nil {

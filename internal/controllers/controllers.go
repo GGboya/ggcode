@@ -12,7 +12,6 @@ type Controllers struct {
 	Share        *ShareController
 	Page         *PageController
 	Interview    *InterviewController
-	DockerJudge  *DockerJudgeController
 	GoJudge      *GoJudgeController
 }
 
@@ -27,7 +26,6 @@ func NewControllers(services *services.Services) *Controllers {
 		Share:        NewShareController(services),
 		Page:         NewPageController(),
 		Interview:    NewInterviewController(services.Interview),
-		DockerJudge:  NewDockerJudgeController(services.Interview, services.DockerJudge, services.ContainerPool),
 		GoJudge:      NewGoJudgeController(services.GoJudge, services.Interview),
 	}
 }
