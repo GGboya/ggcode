@@ -178,6 +178,8 @@ func (c *GoJudgeController) TestCode(ctx *gin.Context) {
 	var req struct {
 		Code     string `json:"code" binding:"required"`
 		Language string `json:"language" binding:"required"`
+		Input    string `json:"input"`    // 可选自定义输入
+		Expected string `json:"expected"` // 可选期望输出
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -208,14 +210,24 @@ func (c *GoJudgeController) TestCode(ctx *gin.Context) {
 		return
 	}
 
-	// 使用第一个样例测试用例
-	testCase := levelDetail.SampleCases[0]
-	log.Printf("[GoJudge] 使用测试用例 - 输入: %q, 期望输出: %q", testCase.Input, testCase.Output)
+	// 判断是否提供自定义输入
+	var inputStr, expectedStr string
+	if strings.TrimSpace(req.Input) != "" {
+		inputStr = req.Input
+		expectedStr = req.Expected
+	} else {
+		// 使用第一个样例测试用例
+		testCase := levelDetail.SampleCases[0]
+		inputStr = testCase.Input
+		expectedStr = testCase.Output
+	}
+
+	log.Printf("[GoJudge] 使用测试用例 - 输入: %q, 期望输出: %q", inputStr, expectedStr)
 
 	judgeReq := &services.GoJudgeRequest{
 		Language:    req.Language,
 		Code:        req.Code,
-		Input:       testCase.Input,
+		Input:       inputStr,
 		TimeLimit:   5000,
 		MemoryLimit: 128 * 1024,
 	}
@@ -228,7 +240,7 @@ func (c *GoJudgeController) TestCode(ctx *gin.Context) {
 	}
 
 	// 增强结果处理 - 添加输出比较
-	enhancedResult := c.enhanceGoJudgeResult(result, testCase.Input, testCase.Output, false)
+	enhancedResult := c.enhanceGoJudgeResult(result, inputStr, expectedStr, false)
 	log.Printf("[GoJudge] 测试结果: %+v", enhancedResult)
 
 	ctx.JSON(http.StatusOK, gin.H{

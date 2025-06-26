@@ -32,24 +32,33 @@
             padding: 0;
         }
 
-        .problem-panel {
-            background: white;
-            border-right: 2px solid #dee2e6;
+        .main-panels {
+            display: flex;
             height: 100%;
+            width: 100%;
+        }
+
+        .problem-panel {
+            flex: 0 0 35%;
+            min-width: 240px;
+            max-width: 70%;
             overflow-y: auto;
-            padding: 20px;
         }
 
         .code-panel {
-            height: 100%;
+            flex: 1 1 auto;
+            min-width: 400px;
             display: flex;
             flex-direction: column;
-            background: white;
+            overflow: hidden;
         }
 
         .editor-container {
-            flex: 1;
+            flex: 1 1 0; /* 固定占据剩余所有空间，不随内容增加 */
+            min-height: 0; /* 允许在父 flex 容器中收缩，避免内容将测试面板顶出视口 */
             position: relative;
+            /* 由 CodeMirror 内部滚动，不在容器本身滚动 */
+            overflow: hidden;
         }
 
         .editor-actions {
@@ -61,9 +70,30 @@
             justify-content: space-between;
         }
 
+        /* 新增: 右侧底部测试面板 */
+        .test-container {
+            background: #ffffff;
+            border-top: 1px solid #dee2e6;
+            height: 400px; /* 扩大 */
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 防止外溢 */
+        }
+        .test-container .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .test-container pre {
+            max-height: 120px;
+            overflow: auto;
+        }
+
         /* CodeMirror编辑器样式优化 */
         .CodeMirror {
-            height: 100%;
+            height: 100% !important; /* 填满容器，禁止随内容增长 */
+            overflow: hidden; /* 防止与内部 CodeMirror-scroll 重复滚动条 */
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 14px;
         }
@@ -120,6 +150,20 @@
 
         .CodeMirror-hint-word:before {
             color: #a6e22e;
+        }
+
+        /* 分隔条 */
+        .drag-bar {
+            height: 6px;
+            background: #e0e0e0;
+            cursor: row-resize;
+        }
+
+        /* 竖向拖动分隔条 */
+        .v-drag-bar {
+            width: 6px;
+            cursor: col-resize;
+            background: #e0e0e0;
         }
     </style>
     <!-- 关卡头部 -->
@@ -213,9 +257,9 @@
 
     <!-- 主容器 -->
     <div class="container-fluid main-container">
-        <div class="row h-100">
+        <div class="main-panels" id="mainRow">
             <!-- 题目面板 -->
-            <div class="col-md-5 problem-panel">
+            <div class="problem-panel" id="problemPanel">
                 <div id="problemContent">
                     <div class="text-center">
                         <div class="spinner-border" role="status">
@@ -226,8 +270,11 @@
                 </div>
             </div>
 
+            <!-- 垂直拖动条 -->
+            <div class="v-drag-bar" id="verticalDragBar"></div>
+
             <!-- 代码面板 -->
-            <div class="col-md-7 code-panel">
+            <div class="code-panel" id="codePanel">
                 <div class="editor-container">
                     <div id="codeEditor" style="height: 100%;"></div>
                 </div>
@@ -240,21 +287,17 @@
                             <option value="java">Java</option>
                             <option value="go">Go</option>
                         </select>
-                        <select id="judgeSelector" class="form-select d-inline-block me-2" style="width: auto;">
-                            <option value="go-judge">🔥 Go-Judge (推荐)</option>
-                            <option value="docker">🚀 Docker容器池</option>
-                            <option value="hydro">⚡ Hydro评测</option>
-                        </select>
+                        <input type="hidden" id="judgeSelector" value="go-judge">
                         <button id="testBtn" class="btn btn-outline-success me-2">
-                            <i class="fas fa-play me-1"></i><span id="testBtnText">Docker测试</span>
+                            <i class="fas fa-play me-1"></i><span id="testBtnText">测试</span>
                         </button>
-                        <button id="customTestBtn" class="btn btn-outline-warning me-2" data-bs-toggle="modal" data-bs-target="#customTestModal">
+                        <button id="customTestBtn" class="btn btn-outline-warning me-2 d-none" data-bs-toggle="modal" data-bs-target="#customTestModal">
                             <i class="fas fa-flask me-1"></i>自定义测试
                         </button>
                         <button id="submitBtn" class="btn btn-primary">
-                            <i class="fas fa-paper-plane me-1"></i><span id="submitBtnText">Docker提交</span>
+                            <i class="fas fa-paper-plane me-1"></i><span id="submitBtnText">提交</span>
                         </button>
-                        <button id="sandboxInfoBtn" class="btn btn-outline-info btn-sm ms-2" title="查看沙箱信息">
+                        <button id="sandboxInfoBtn" class="btn btn-outline-info btn-sm ms-2 d-none" title="查看沙箱信息">
                             <i class="fas fa-shield-alt"></i>
                         </button>
                     </div>
@@ -262,6 +305,29 @@
                         <button class="btn btn-outline-secondary" onclick="resetCode()">
                             <i class="fas fa-undo me-1"></i>重置代码
                         </button>
+                    </div>
+                </div>
+
+                <!-- 可拖动分隔条 -->
+                <div class="drag-bar" id="editorDragBar"></div>
+
+                <!-- 右侧底部测试/结果面板 (模拟力扣) -->
+                <div class="test-container">
+                    <ul class="nav nav-tabs" id="testTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="cases-tab" data-bs-toggle="tab" data-bs-target="#testCases" type="button" role="tab">测试用例</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="result-tab" data-bs-toggle="tab" data-bs-target="#testResult" type="button" role="tab">测试结果</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content h-100">
+                        <div class="tab-pane fade show active" id="testCases" role="tabpanel">
+                            <div id="testCasesContent" class="small text-muted">正在加载...</div>
+                        </div>
+                        <div class="tab-pane fade" id="testResult" role="tabpanel">
+                            <div id="testResultContent" class="small text-muted">暂无结果</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -421,7 +487,58 @@
             
             problemHtml += '</div>';
 
+            // 存储样例用例并渲染到右侧测试用例面板
+            window.sampleCases = sampleCases;
+            renderTestCases(sampleCases);
+
             document.getElementById('problemContent').innerHTML = problemHtml;
+        }
+
+        // 渲染右下侧测试用例列表
+        function renderTestCases(cases) {
+            const container = document.getElementById('testCasesContent');
+            if (!container) return;
+            if (!cases || cases.length === 0) {
+                container.innerHTML = '<span class="text-muted">暂无测试用例</span>';
+                return;
+            }
+            let html = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">自定义输入</label>
+                    <textarea id="customInputArea" class="form-control" rows="4" placeholder="在此输入测试数据..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">期望输出 (可选)</label>
+                    <textarea id="customExpectedArea" class="form-control" rows="3" placeholder="在此输入期望输出..."></textarea>
+                </div>
+                <hr/>
+                <h6 class="fw-bold">样例测试用例</h6>`;
+            cases.forEach((c, idx) => {
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body p-2">
+                            <div class="fw-bold mb-1">样例 ${idx + 1}</div>
+                            <div class="text-muted small">输入:</div>
+                            <pre class="bg-light p-2 rounded small">${c.input || '(空)'}</pre>
+                            <div class="text-muted small">输出:</div>
+                            <pre class="bg-light p-2 rounded small">${c.output || '(空)'}</pre>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // 在面板显示结果并切换到"测试结果"Tab
+        function showResultInPanel(html) {
+            const resultContainer = document.getElementById('testResultContent');
+            if (resultContainer) {
+                resultContainer.innerHTML = html;
+            }
+            const resultTabTrigger = document.querySelector('#result-tab');
+            if (resultTabTrigger) {
+                const tab = new bootstrap.Tab(resultTabTrigger);
+                tab.show();
+            }
         }
 
         async function initializeEditor() {
@@ -579,15 +696,18 @@
             const judgeType = document.getElementById('judgeSelector').value;
             
             try {
+                showLoadingInResultPanel();
                 let response;
                 if (judgeType === 'go-judge') {
-                    // 使用 go-judge 进行评测（高性能、推荐）
+                    // 使用 go-judge 进行评测
                     response = await axios.post('/api/go-judge/level/' + currentLevelId + '/test', {
                         code: code,
-                        language: language
+                        language: language,
+                        input: document.getElementById('customInputArea') ? document.getElementById('customInputArea').value : '',
+                        expected: document.getElementById('customExpectedArea') ? document.getElementById('customExpectedArea').value : ''
                     });
                     
-                    // go-judge 评测系统返回即时结果（无需轮询）
+                    // go-judge 评测系统返回即时结果
                     const result = response.data.result;
                     displayGoJudgeTestResult(result);
                 } else if (judgeType === 'docker') {
@@ -635,16 +755,17 @@
             const submitTime = Math.floor((Date.now() - startTime) / 1000);
             
             try {
+                showLoadingInResultPanel();
                 let response;
                 if (judgeType === 'go-judge') {
-                    // 使用 go-judge 进行评测（高性能、推荐）
+                    // 使用 go-judge 进行评测
                     response = await axios.post('/api/go-judge/level/' + currentLevelId + '/submit', {
                         code: code,
                         language: language,
                         submit_time: submitTime
                     });
                     
-                    // go-judge 评测系统返回即时结果（无需轮询）
+                    // go-judge 评测系统返回即时结果
                     const result = response.data.result;
                     displayGoJudgeSubmitResult(result);
                     
@@ -737,26 +858,11 @@
         }
 
         function setupJudgeSelector() {
-            const judgeSelector = document.getElementById('judgeSelector');
+            // 按钮固定文本，无需动态切换
             const testBtnText = document.getElementById('testBtnText');
             const submitBtnText = document.getElementById('submitBtnText');
-            
-            function updateButtonText() {
-                const judgeType = judgeSelector.value;
-                if (judgeType === 'go-judge') {
-                    testBtnText.textContent = 'Go-Judge测试';
-                    submitBtnText.textContent = 'Go-Judge提交';
-                } else if (judgeType === 'docker') {
-                    testBtnText.textContent = 'Docker测试';
-                    submitBtnText.textContent = 'Docker提交';
-                } else {
-                    testBtnText.textContent = 'Hydro测试';
-                    submitBtnText.textContent = 'Hydro提交';
-                }
-            }
-            
-            judgeSelector.addEventListener('change', updateButtonText);
-            updateButtonText(); // 初始化按钮文本
+            testBtnText.textContent = '测试';
+            submitBtnText.textContent = '提交';
         }
 
         function resetCode() {
@@ -797,20 +903,13 @@
                 
                 // 显示结果
                 const content = generateDockerResultHTML(result, false);
-                document.getElementById('hydroResultContent').innerHTML = content;
-                document.getElementById('hydroResultModalLabel').textContent = '自定义测试结果';
-                
-                // 显示结果模态框
-                const resultModal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
-                resultModal.show();
+                showResultInPanel(content);
                 
             } catch (error) {
                 const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
                 alert('自定义测试失败: ' + errorMsg);
             }
         }
-
-
 
         // 显示Hydro测试结果
         function displayHydroTestResult(result) {
@@ -825,7 +924,7 @@
                 title = 'Hydro测试结果';
             }
             
-            document.getElementById('hydroResultContent').innerHTML = content;
+            showResultInPanel(content);
             document.getElementById('hydroResultModalLabel').textContent = title;
             
             // 显示模态框
@@ -846,7 +945,7 @@
                 title = 'Hydro提交结果';
             }
             
-            document.getElementById('hydroResultContent').innerHTML = content;
+            showResultInPanel(content);
             document.getElementById('hydroResultModalLabel').textContent = title;
             
             // 显示模态框
@@ -856,28 +955,14 @@
 
         // 显示 go-judge 测试结果
         function displayGoJudgeTestResult(result) {
-            const content = generateGoJudgeResultHTML(result, false);
-            const title = 'Go-Judge 测试结果';
-            
-            document.getElementById('hydroResultContent').innerHTML = content;
-            document.getElementById('hydroResultModalLabel').textContent = title;
-            
-            // 显示模态框
-            const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
-            modal.show();
+            const html = generateGoJudgeResultHTML(result, false);
+            showResultInPanel(html);
         }
 
         // 显示 go-judge 提交结果
         function displayGoJudgeSubmitResult(result) {
-            const content = generateGoJudgeResultHTML(result, true);
-            const title = 'Go-Judge 提交结果';
-            
-            document.getElementById('hydroResultContent').innerHTML = content;
-            document.getElementById('hydroResultModalLabel').textContent = title;
-            
-            // 显示模态框
-            const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
-            modal.show();
+            const html = generateGoJudgeResultHTML(result, true);
+            showResultInPanel(html);
         }
 
         // 获取状态文本
@@ -1254,199 +1339,58 @@
             return html;
         }
 
-        // 生成 go-judge 结果HTML
+        // 生成 go-judge 结果HTML（简化版）
         function generateGoJudgeResultHTML(result, isSubmit) {
-            // 从后端返回的增强结果中获取得分信息
             let score = result.score || 0;
             let maxScore = result.max_score || 100;
             let stars = result.stars || 0;
-            
+
             let html = `
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="card-title mb-0">
-                                    <span class="badge ${getStatusBadgeClass(result.status)} me-2">${getStatusText(result.status)}</span>
-                                    得分: ${score}/${maxScore}
-                                    ${isSubmit ? `| 获得星数: ${stars}` : ''}
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <strong>用时:</strong> ${result.time || 0}ms
-                                    </div>
-                                    <div class="col-md-4">
-                                        <strong>内存:</strong> ${result.memory || 0}KB
-                                    </div>
-                                    <div class="col-md-4">
-                                        <strong>退出状态:</strong> ${result.exitStatus || 0}
-                                    </div>
-                                </div>
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <span class="badge ${getStatusBadgeClass(result.status)} me-2">${getStatusText(result.status)}</span>
+                            得分: ${score}/${maxScore} ${isSubmit ? `| 星级: ${stars}` : ''}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-4"><strong>用时:</strong> ${result.time || 0}ms</div>
+                            <div class="col-4"><strong>内存:</strong> ${result.memory || 0}KB</div>
+                            <div class="col-4"><strong>退出码:</strong> ${result.exitStatus}</div>
+                        </div>
             `;
-            
-            // 显示标准输出
+
+            // 输出信息
             if (result.stdout) {
-                html += `
-                    <hr>
-                    <div class="mt-3">
-                        <h6><i class="fas fa-terminal me-2"></i>程序输出</h6>
-                        <pre class="bg-light p-3 rounded">${result.stdout}</pre>
-                    </div>
-                `;
+                html += `<div class="mb-2"><strong>输出:</strong><pre class="bg-light p-2 rounded small">${result.stdout}</pre></div>`;
             }
-            
-            // 显示错误输出
             if (result.stderr) {
-                html += `
-                    <hr>
-                    <div class="mt-3">
-                        <h6><i class="fas fa-exclamation-triangle me-2 text-warning"></i>错误输出</h6>
-                        <pre class="bg-warning bg-opacity-10 p-3 rounded border border-warning">${result.stderr}</pre>
-                    </div>
-                `;
+                html += `<div class="mb-2"><strong>错误输出:</strong><pre class="bg-warning p-2 rounded small">${result.stderr}</pre></div>`;
             }
-            
-            // 显示错误信息
             if (result.error) {
-                html += `
-                    <hr>
-                    <div class="alert alert-danger mt-3">
-                        <h6><i class="fas fa-times-circle me-2"></i>系统错误</h6>
-                        <pre class="mb-0">${result.error}</pre>
-                    </div>
-                `;
+                html += `<div class="alert alert-danger"><pre class="mb-0 small">${result.error}</pre></div>`;
             }
-            
-            // 显示测试用例信息
+
+            // 测试用例信息
             if (result.input !== undefined || result.expected !== undefined) {
-                html += `
-                    <hr>
-                    <div class="mt-3">
-                        <h6><i class="fas fa-vial me-2"></i>测试用例</h6>
-                        <div class="row">
+                html += `<hr/><div class="row">
                             <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <small class="text-muted">输入</small>
-                                    </div>
-                                    <div class="card-body">
-                                        <pre class="mb-0 small">${result.input || '(空)'}</pre>
-                                    </div>
-                                </div>
+                                <small class="text-muted">输入</small>
+                                <pre class="bg-light p-2 rounded small">${result.input || '(空)'}</pre>
                             </div>
                             <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <small class="text-muted">您的输出</small>
-                                    </div>
-                                    <div class="card-body">
-                                        <pre class="mb-0 small ${result.status === 'Wrong Answer' ? 'text-danger' : ''}">${result.stdout || '(无输出)'}</pre>
-                                    </div>
-                                </div>
+                                <small class="text-muted">您的输出</small>
+                                <pre class="bg-light p-2 rounded small ${result.status==='Wrong Answer'?'text-danger':''}">${result.stdout || '(无输出)'}</pre>
                             </div>
                             <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <small class="text-muted">期望输出</small>
-                                    </div>
-                                    <div class="card-body">
-                                        <pre class="mb-0 small">${result.expected || '(空)'}</pre>
-                                    </div>
-                                </div>
+                                <small class="text-muted">期望输出</small>
+                                <pre class="bg-light p-2 rounded small">${result.expected || '(空)'}</pre>
                             </div>
-                        </div>
-                    </div>
-                `;
+                         </div>`;
             }
-            
-            html += `
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // 性能信息卡片
-            html += `
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="card-title mb-0">
-                                    <i class="fas fa-chart-line me-2"></i>性能统计
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row text-center">
-                                    <div class="col-md-3">
-                                        <div class="border rounded p-3">
-                                            <h5 class="text-primary mb-1">${result.time || 0}</h5>
-                                            <small class="text-muted">执行时间 (ms)</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="border rounded p-3">
-                                            <h5 class="text-info mb-1">${result.memory || 0}</h5>
-                                            <small class="text-muted">内存使用 (KB)</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="border rounded p-3">
-                                            <h5 class="text-success mb-1">${score}</h5>
-                                            <small class="text-muted">得分</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="border rounded p-3">
-                                            <h5 class="text-warning mb-1">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</h5>
-                                            <small class="text-muted">星级评价</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Go-Judge 系统信息
-            html += `
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="card-title mb-0">
-                                    <i class="fas fa-cogs me-2"></i>Go-Judge 系统信息
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <strong>评测引擎:</strong> <span class="badge bg-primary">Go-Judge v1.9.4</span>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <strong>安全级别:</strong> <span class="badge bg-success">高</span>
-                                    </div>
-                                </div>
-                                <div class="row mt-2">
-                                    <div class="col-md-12">
-                                        <strong>特性:</strong>
-                                        <div class="mt-2">
-                                            <span class="badge bg-success me-1">沙箱隔离</span>
-                                            <span class="badge bg-success me-1">资源限制</span>
-                                            <span class="badge bg-success me-1">高性能</span>
-                                            <span class="badge bg-success me-1">多语言支持</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
+
+            html += `</div></div>`;
             return html;
         }
 
@@ -1623,5 +1567,99 @@
                 alert('获取沙箱信息失败: ' + (error.message || '未知错误'));
             }
         }
+
+        // 在测试结果面板显示加载占位
+        function showLoadingInResultPanel() {
+            const resultContainer = document.getElementById('testResultContent');
+            if (!resultContainer) return;
+            resultContainer.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center h-100 w-100">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>`;
+            // 切换到结果页签
+            const resultTabTrigger = document.querySelector('#result-tab');
+            if (resultTabTrigger) {
+                const tab = new bootstrap.Tab(resultTabTrigger);
+                tab.show();
+            }
+        }
+
+        // 拖动分隔条调整高度
+        (function() {
+            const dragBar = document.getElementById('editorDragBar');
+            const editorContainer = document.querySelector('.editor-container');
+            const testContainer = document.querySelector('.test-container');
+            if (!dragBar || !editorContainer || !testContainer) return;
+
+            let isDragging = false;
+            let startY = 0;
+            let startHeight = 0;
+
+            dragBar.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startY = e.clientY;
+                startHeight = testContainer.offsetHeight;
+                document.body.style.userSelect = 'none';
+            });
+
+            window.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                const dy = startY - e.clientY; // 向上拖动增大编辑器，减小测试区域
+                let newHeight = startHeight + dy;
+                const minH = 180;
+                const maxH = 600;
+                newHeight = Math.max(minH, Math.min(maxH, newHeight));
+                testContainer.style.height = newHeight + 'px';
+                testContainer.style.maxHeight = newHeight + 'px';
+            });
+
+            window.addEventListener('mouseup', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
+
+        // 垂直拖动条逻辑
+        (function() {
+            const vBar = document.getElementById('verticalDragBar');
+            const problemPanel = document.getElementById('problemPanel');
+            const codePanel = document.getElementById('codePanel');
+            if (!vBar || !problemPanel || !codePanel) return;
+
+            let dragging = false;
+            let startX = 0;
+            let startLeftWidth = 0;
+
+            vBar.addEventListener('mousedown', e => {
+                dragging = true;
+                startX = e.clientX;
+                startLeftWidth = problemPanel.getBoundingClientRect().width;
+                document.body.style.userSelect = 'none';
+            });
+
+            window.addEventListener('mousemove', e => {
+                if (!dragging) return;
+                const dx = e.clientX - startX;
+                const containerWidth = document.getElementById('mainRow').getBoundingClientRect().width;
+                let newLeft = startLeftWidth + dx;
+                const minLeft = 240;
+                const maxLeft = containerWidth - 400;
+                newLeft = Math.max(minLeft, Math.min(maxLeft, newLeft));
+
+                problemPanel.style.flex = `0 0 ${newLeft}px`;
+                codePanel.style.flex = `1 1 auto`;
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (dragging) {
+                    dragging = false;
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
     </script>
 {{end}} 
