@@ -13,6 +13,7 @@ type Controllers struct {
 	Page         *PageController
 	Interview    *InterviewController
 	DockerJudge  *DockerJudgeController
+	GoJudge      *GoJudgeController
 }
 
 // NewControllers 创建所有控制器实例
@@ -27,5 +28,6 @@ func NewControllers(services *services.Services) *Controllers {
 		Page:         NewPageController(),
 		Interview:    NewInterviewController(services.Interview),
 		DockerJudge:  NewDockerJudgeController(services.Interview, services.DockerJudge, services.ContainerPool),
+		GoJudge:      NewGoJudgeController(services.GoJudge, services.Interview),
 	}
 }

@@ -157,6 +157,18 @@ func (s *Server) setupRoutes() {
 				docker.POST("/custom-test", ctrl.DockerJudge.CustomTest)
 				docker.GET("/system-info", ctrl.DockerJudge.GetSystemInfo)
 			}
+
+			// go-judge 评测系统
+			goJudge := api.Group("/go-judge")
+			{
+				goJudge.POST("/execute", ctrl.GoJudge.ExecuteCode)
+				goJudge.GET("/execute", ctrl.GoJudge.ExecuteCodeSimple)
+				goJudge.POST("/level/:levelId/test", ctrl.GoJudge.TestCode)
+				goJudge.POST("/level/:levelId/submit", ctrl.GoJudge.SubmitCode)
+				goJudge.GET("/health", ctrl.GoJudge.HealthCheck)
+				goJudge.GET("/languages", ctrl.GoJudge.GetSupportedLanguages)
+				goJudge.GET("/system-info", ctrl.GoJudge.GetSystemInfo)
+			}
 		}
 	}
 }

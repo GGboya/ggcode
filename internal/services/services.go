@@ -18,6 +18,7 @@ type Services struct {
 	Interview     InterviewService
 	DockerJudge   *DockerJudgeService
 	ContainerPool *SimpleContainerPool
+	GoJudge       *GoJudgeService
 	// CheckIn      *CheckInService
 }
 
@@ -34,6 +35,9 @@ func NewServices(repos *repositories.Repositories, db *gorm.DB) *Services {
 	// 创建Docker评测服务，并传入容器池
 	dockerJudgeService := NewDockerJudgeServiceWithPool(containerPool)
 
+	// 创建 go-judge 服务
+	goJudgeService := NewGoJudgeService("")
+
 	return &Services{
 		User:          NewUserService(repos),
 		QuestionBank:  NewQuestionBankService(repos),
@@ -45,5 +49,6 @@ func NewServices(repos *repositories.Repositories, db *gorm.DB) *Services {
 		Interview:     NewInterviewService(repos.Interview),
 		DockerJudge:   dockerJudgeService,
 		ContainerPool: containerPool,
+		GoJudge:       goJudgeService,
 	}
 }

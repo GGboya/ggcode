@@ -10,8 +10,22 @@ type Question struct {
 	Difficulty     string       `json:"difficulty" gorm:"not null"` // Easy, Medium, Hard
 	QuestionBankID uint         `json:"question_bank_id"`
 	QuestionBank   QuestionBank `json:"question_bank" gorm:"foreignKey:QuestionBankID"`
+	TestCases      []TestCase   `json:"test_cases" gorm:"foreignKey:QuestionID"` // 关联的测试用例
 	CreatedAt      time.Time    `json:"created_at"`
 	UpdatedAt      time.Time    `json:"updated_at"`
+}
+
+// TestCase 测试用例模型
+type TestCase struct {
+	ID             uint      `json:"id" gorm:"primaryKey"`
+	QuestionID     uint      `json:"question_id" gorm:"not null"`
+	Question       Question  `json:"question" gorm:"foreignKey:QuestionID"`
+	Input          string    `json:"input" gorm:"type:text"`           // 测试输入
+	ExpectedOutput string    `json:"expected_output" gorm:"type:text"` // 期望输出
+	Description    string    `json:"description"`                      // 测试用例描述
+	IsHidden       bool      `json:"is_hidden" gorm:"default:false"`   // 是否为隐藏测试用例
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // UserQuestionProgress 用户题目学习进度（艾宾浩斯遗忘曲线）
