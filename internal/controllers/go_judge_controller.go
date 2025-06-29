@@ -319,6 +319,11 @@ func (c *GoJudgeController) SubmitCode(ctx *gin.Context) {
 	enhancedResult := c.enhanceGoJudgeResult(result, testCase.Input, testCase.Output, true)
 	log.Printf("[GoJudge] 提交结果: %+v", enhancedResult)
 
+	// 如果通过则解锁知识点
+	if status, ok := enhancedResult["status"].(string); ok && status == "Accepted" {
+		_ = c.interviewService.UnlockTags(userID.(uint), uint(levelID))
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":    "提交完成",
 		"levelId":    levelID,

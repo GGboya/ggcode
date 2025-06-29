@@ -147,6 +147,16 @@ func (s *Server) setupRoutes() {
 			api.GET("/interview-island/level/:levelId", ctrl.Interview.GetLevelDetail)
 			api.GET("/interview-island/progress", ctrl.Interview.GetUserProgress)
 
+			// 管理员 面试岛CRUD
+			api.POST("/interview-island/create", ctrl.Interview.CreateIsland)
+			api.POST("/interview-island/:id/edit", ctrl.Interview.EditIsland)
+			api.POST("/interview-island/:id/delete", ctrl.Interview.DeleteIsland)
+
+			// 测试用例接口
+			api.GET("/interview-island/level/:levelId/testcases", ctrl.Interview.GetLevelTestCases)
+			api.POST("/interview-island/level/:levelId/testcases", ctrl.Interview.AddTestCase)
+			api.DELETE("/interview-island/testcases/:id", ctrl.Interview.DeleteTestCase)
+
 			// go-judge 评测系统
 			goJudge := api.Group("/go-judge")
 			{

@@ -202,6 +202,67 @@
         justify-content: center;
         height: 300px;
     }
+
+    /* 新增：管理员控制按钮区域 */
+    .admin-controls {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: flex;
+        gap: 4px;
+        visibility: hidden;
+        z-index: 20;
+    }
+    .level-node:hover .admin-controls {
+        visibility: visible;
+    }
+    .admin-controls .btn {
+        --bs-btn-padding-y: 0.15rem;
+        --bs-btn-padding-x: 0.25rem;
+        --bs-btn-font-size: 0.65rem;
+    }
+
+    .world-map {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 40px;
+        padding: 60px 20px;
+        min-height: 400px;
+    }
+    .island-node {
+        position: relative;
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 4px solid #fff;
+        background: linear-gradient(135deg, #17a2b8 0%, #6610f2 100%);
+        color: #fff;
+        cursor: pointer;
+        transition: transform 0.3s;
+    }
+    .island-node.locked {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    .island-node:hover:not(.locked) {
+        transform: scale(1.08);
+    }
+
+    /* 管理员岛屿控制按钮 */
+    .island-admin-controls {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        display: flex;
+        gap: 4px;
+    }
 </style>
 
 <!-- 加载状态 -->
@@ -214,54 +275,45 @@
 
 <!-- 面试岛容器 -->
 <div id="islandContainer" class="island-container" style="display: none;">
-    <!-- 信息面板区域 -->
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <!-- 岛屿信息面板 -->
-        <div class="island-info">
-            <h5 id="islandTitle">
-                <i class="fas fa-island-tropical me-2"></i>算法基础岛
-            </h5>
-            <p id="islandDescription" class="text-muted mb-3">掌握基础算法，为面试打下坚实基础</p>
-            <div class="progress mb-2" style="height: 8px;">
-                <div id="islandProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
-            </div>
-            <small id="islandProgressText" class="text-muted">0/0 关卡完成</small>
+    <!-- 顶部工具栏 -->
+    <div class="d-flex justify-content-between align-items-center p-3">
+        <div>
+            <button id="backToWorldBtn" class="btn btn-outline-light d-none" onclick="showWorldMap()">
+                <i class="fas fa-arrow-left"></i> 返回地图
+            </button>
         </div>
-
-        <!-- 进度总结面板 -->
-        <div class="progress-summary">
-            <h6 class="mb-3">
-                <i class="fas fa-chart-line me-2"></i>总体进度
-            </h6>
-            <div class="row text-center">
-                <div class="col-6">
-                    <div class="h4 mb-1" id="totalStars">0</div>
-                    <small class="text-muted">总星数</small>
-                </div>
-                <div class="col-6">
-                    <div class="h4 mb-1" id="completedLevels">0</div>
-                    <small class="text-muted">完成关卡</small>
-                </div>
-            </div>
+        <div>
+            <!-- 仅管理员显示 -->
+            <button id="createIslandBtn" class="btn btn-light d-none" onclick="createIsland()">
+                <i class="fas fa-plus"></i> 新建岛屿
+            </button>
         </div>
     </div>
 
-    <!-- 地图区域 -->
-    <div class="island-map flex-grow-1">
-        <div id="levelPath" class="level-path">
-            <!-- 关卡节点将由JavaScript动态生成 -->
-        </div>
+    <!-- 世界地图视图：展示所有岛屿 -->
+    <div id="worldMap" class="world-map">
+        <!-- 岛屿节点由 JS 生成 -->
     </div>
 
-    <!-- 岛屿选择器 -->
-    <div class="island-selector">
-        <!-- 岛屿标签将由JavaScript动态生成 -->
+    <!-- 岛屿详情视图（原有内容） -->
+    <div id="islandDetail" style="display:none;" class="flex-grow-1 d-flex flex-column">
+        <!-- 保留原有 info & progress -->
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div class="island-info" id="detailInfo"></div>
+            <div class="progress-summary" id="detailSummary"></div>
+        </div>
+        <!-- 地图区域 -->
+        <div class="island-map flex-grow-1">
+            <div id="levelPath" class="level-path"></div>
+        </div>
     </div>
 </div>
 
 <script>
     let currentIslandIndex = 0;
     let islandsData = [];
+    // 是否管理员，后端需在接口返回或模板注入
+    let isAdmin = true;
 
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', function() {
@@ -274,6 +326,11 @@
             console.log('开始加载面试岛数据...');
             const response = await axios.get('/api/interview-island/map');
             islandsData = response.data.data;
+            // 从接口获取管理员标识（如果后端返回）
+            if (typeof response.data.is_admin !== 'undefined') {
+                isAdmin = !!response.data.is_admin;
+            }
+            console.log('是否管理员:', isAdmin);
             console.log('面试岛数据加载成功:', islandsData);
             
             if (islandsData && islandsData.length > 0) {
@@ -282,6 +339,7 @@
                 renderCurrentIsland();
                 updateProgressSummary();
                 console.log('面试岛界面渲染完成');
+                renderWorldMap();
             } else {
                 console.error('没有可用的面试岛数据');
                 alert('没有可用的面试岛数据');
@@ -301,9 +359,10 @@
         }
     }
 
-    // 渲染岛屿选择器
+    // 渲染岛屿选择器 (旧功能保留以兼容，但若不存在则忽略)
     function renderIslandSelector() {
         const selector = document.querySelector('.island-selector');
+        if (!selector) return; // 若页面不存在该元素则跳过
         selector.innerHTML = '';
 
         islandsData.forEach((island, index) => {
@@ -326,39 +385,37 @@
         renderCurrentIsland();
     }
 
-    // 渲染当前岛屿
+    // 渲染当前岛屿 (更新到新视图容器)
     function renderCurrentIsland() {
-        if (!islandsData[currentIslandIndex]) {
-            console.error('没有找到岛屿数据，索引:', currentIslandIndex);
-            return;
+        if (!islandsData[currentIslandIndex]) return;
+        const islandInfo = islandsData[currentIslandIndex];
+        const island = islandInfo.island;
+
+        // 更新 info 面板
+        const infoEl = document.getElementById('detailInfo');
+        if (infoEl) {
+            infoEl.innerHTML = `
+                <h5><i class="fas fa-island-tropical me-2"></i>${island.name}</h5>
+                <p class="text-muted mb-3">${island.description || ''}</p>
+                <div class="progress mb-2" style="height:8px;">
+                    <div class="progress-bar" style="width:${islandInfo.total_count? (islandInfo.completed_count/islandInfo.total_count*100):0}%"></div>
+                </div>
+                <small class="text-muted">${islandInfo.completed_count}/${islandInfo.total_count} 关卡完成</small>`;
         }
 
-        const islandInfo = islandsData[currentIslandIndex];
-        console.log('渲染岛屿:', islandInfo);
-        
-        const island = islandInfo.island;
-        const levels = islandInfo.levels || [];
-        const userProgress = islandInfo.user_progress || [];
+        // 更新 summary 面板
+        const summaryEl = document.getElementById('detailSummary');
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+                <h6 class="mb-3"><i class="fas fa-chart-line me-2"></i>总体进度</h6>
+                <div class="row text-center">
+                    <div class="col-6"><div class="h4 mb-1" id="totalStars">${islandInfo.total_stars}</div><small class="text-muted">总星数</small></div>
+                    <div class="col-6"><div class="h4 mb-1" id="completedLevels">${islandInfo.completed_count}</div><small class="text-muted">完成关卡</small></div>
+                </div>`;
+        }
 
-        console.log('岛屿信息:', island);
-        console.log('关卡列表:', levels);
-        console.log('用户进度:', userProgress);
-
-        // 更新岛屿信息
-        document.getElementById('islandTitle').innerHTML = `
-            <i class="fas fa-island-tropical me-2"></i>${island.name}
-        `;
-        document.getElementById('islandDescription').textContent = island.description || '';
-
-        // 更新进度条
-        const progressPercent = islandInfo.total_count > 0 ? 
-            (islandInfo.completed_count / islandInfo.total_count * 100) : 0;
-        document.getElementById('islandProgress').style.width = progressPercent + '%';
-        document.getElementById('islandProgressText').textContent = 
-            `${islandInfo.completed_count || 0}/${islandInfo.total_count || 0} 关卡完成`;
-
-        // 渲染关卡路径
-        renderLevelPath(levels, userProgress);
+        // 渲染关卡路径使用原函数
+        renderLevelPath(islandInfo.levels||[], islandInfo.user_progress||[]);
     }
 
     // 渲染关卡路径
@@ -384,10 +441,28 @@
             const node = document.createElement('div');
             node.className = `level-node ${progress.status}`;
             
+            // 新增：管理员控制按钮
+            let adminHtml = '';
+            if (isAdmin) {
+                adminHtml = `
+                    <div class="admin-controls">
+                        <button class="btn btn-light edit-level-btn" title="编辑关卡" onclick="editLevel(${level.id}, '${level.name.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-light manage-questions-btn" title="题目管理" onclick="manageQuestions(${level.id})">
+                            <i class="fas fa-list"></i>
+                        </button>
+                        <button class="btn btn-light manage-cases-btn" title="测试用例" onclick="manageTestCases(${level.id})">
+                            <i class="fas fa-vial"></i>
+                        </button>
+                    </div>`;
+            }
+
             // 添加难度标识
             const difficultyClass = `difficulty-${level.difficulty.toLowerCase()}`;
             
             node.innerHTML = `
+                ${adminHtml}
                 <div class="level-number">${level.level_num}</div>
                 <div class="level-stars">
                     ${generateStars(progress.stars || 0)}
@@ -398,10 +473,16 @@
                 </div>
             `;
 
-            // 添加点击事件
+            // 保持原有点击逻辑
             if (progress.status !== 'locked') {
                 node.style.cursor = 'pointer';
-                node.onclick = () => enterLevel(level.id);
+                node.onclick = (e) => {
+                    // 避免点击管理员按钮导致进入关卡
+                    if (e.target.closest('.admin-controls')) {
+                        return;
+                    }
+                    enterLevel(level.id);
+                };
             }
 
             console.log('添加关卡节点:', node);
@@ -451,5 +532,354 @@
     function enterLevel(levelId) {
         window.location.href = `/level/${levelId}`;
     }
+
+    /* ------------------ 管理员相关功能 ------------------ */
+    // 编辑关卡名称
+    async function editLevel(levelId, currentName) {
+        const newName = prompt('请输入新的关卡名称：', currentName || '');
+        if (!newName || newName === currentName) {
+            return;
+        }
+        try {
+            await axios.post(`/api/interview-island/level/${levelId}/edit`, { name: newName });
+            showAlert('关卡名称已更新', 'success');
+            // 更新前端视图
+            loadIslandMap();
+        } catch (error) {
+            const msg = error.response?.data?.error || '更新失败';
+            showAlert(msg, 'danger');
+        }
+    }
+
+    // 管理题目
+    async function manageQuestions(levelId) {
+        try {
+            // 获取题目数据
+            const res = await axios.get(`/api/interview-island/level/${levelId}/questions`);
+            const questions = res.data.data || [];
+            renderQuestionManagementModal(levelId, questions);
+        } catch (err) {
+            const msg = err.response?.data?.error || '加载题目失败';
+            showAlert(msg, 'danger');
+        }
+    }
+
+    // 渲染题目管理模态框
+    function renderQuestionManagementModal(levelId, questions) {
+        let modal = document.getElementById('questionManagementModal');
+        if (!modal) {
+            // 创建模态框骨架
+            const modalHtml = `
+            <div class="modal fade" id="questionManagementModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">题目管理 - 关卡 ${levelId}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex justify-content-end mb-2">
+                                <button class="btn btn-sm btn-primary" id="addQuestionBtn"><i class="fas fa-plus"></i> 新增题目</button>
+                            </div>
+                            <div id="questionListContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('questionManagementModal');
+        }
+
+        const listContainer = modal.querySelector('#questionListContainer');
+        if (questions.length === 0) {
+            listContainer.innerHTML = '<p class="text-muted">暂无题目</p>';
+        } else {
+            listContainer.innerHTML = questions.map(q => `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="flex-grow-1">
+                        <strong>${q.title}</strong>
+                        <span class="badge ms-2 ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary" title="打开 LeetCode"><i class="fas fa-external-link-alt"></i></a>
+                        <button class="btn btn-outline-warning" onclick="editQuestion(${q.id}, '${q.title.replace(/'/g, "\\'")}', '${q.difficulty}', '${q.leetcode_url}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-outline-danger" onclick="deleteQuestion(${q.id}, ${levelId})"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 绑定新增按钮
+        modal.querySelector('#addQuestionBtn').onclick = () => addQuestion(levelId);
+
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+
+    // 工具：根据难度获取样式
+    function getDifficultyClass(difficulty) {
+        switch (difficulty?.toLowerCase()) {
+            case 'easy': return 'bg-success';
+            case 'medium': return 'bg-warning text-dark';
+            case 'hard': return 'bg-danger';
+            default: return 'bg-secondary';
+        }
+    }
+
+    // 新增题目
+    function addQuestion(levelId) {
+        const title = prompt('题目标题：');
+        if (!title) return;
+        const leetcodeURL = prompt('LeetCode 链接：');
+        const difficulty = prompt('难度（Easy/Medium/Hard）：', 'Easy');
+        axios.post(`/api/interview-island/level/${levelId}/question/add`, { title, leetcode_url: leetcodeURL, difficulty })
+            .then(() => {
+                showAlert('题目已添加', 'success');
+                manageQuestions(levelId); // 刷新列表
+            })
+            .catch(err => {
+                const msg = err.response?.data?.error || '添加失败';
+                showAlert(msg, 'danger');
+            });
+    }
+
+    // 编辑题目
+    async function editQuestion(questionId, currentTitle, currentDifficulty, currentURL) {
+        // 先获取当前描述
+        const {data:{data:questionDetail}} = await axios.get(`/api/questions/${questionId}`);
+        const currentDesc = questionDetail?.description || '';
+
+        const title = prompt('题目标题：', currentTitle);
+        if (title===null) return;
+        const leetcodeURL = prompt('LeetCode 链接：', currentURL);
+        if (leetcodeURL===null) return;
+        const difficulty = prompt('难度（Easy/Medium/Hard）：', currentDifficulty);
+        if (difficulty===null) return;
+
+        // markdown 编辑简单实现：prompt 多行
+        const description = prompt('题目描述 (Markdown)：', currentDesc);
+        if (description===null) return;
+
+        axios.put(`/api/questions/${questionId}`, { title, leetcode_url: leetcodeURL, difficulty, description })
+            .then(() => {
+                showAlert('题目已更新', 'success');
+                // 重新加载当前模态框中的数据
+                const modal = bootstrap.Modal.getInstance(document.getElementById('questionManagementModal'));
+                if (modal) {
+                    const levelId = modal._element.querySelector('.modal-title').textContent.match(/\d+/)[0];
+                    manageQuestions(levelId);
+                }
+            })
+            .catch(err => {
+                const msg = err.response?.data?.error || '更新失败';
+                showAlert(msg, 'danger');
+            });
+    }
+
+    // 删除题目
+    function deleteQuestion(questionId, levelId) {
+        if (!confirm('确定要删除此题目吗？')) return;
+        axios.post(`/api/interview-island/question/${questionId}/delete`)
+            .then(() => {
+                showAlert('题目已删除', 'success');
+                manageQuestions(levelId);
+            })
+            .catch(err => {
+                const msg = err.response?.data?.error || '删除失败';
+                showAlert(msg, 'danger');
+            });
+    }
+
+    // ------------------ 测试用例管理 ------------------
+    async function manageTestCases(levelId) {
+        try {
+            const res = await axios.get(`/api/interview-island/level/${levelId}/testcases`);
+            const cases = res.data.data || [];
+            renderTestCaseModal(levelId, cases);
+        } catch (err) {
+            showAlert(err.response?.data?.error || '加载测试用例失败', 'danger');
+        }
+    }
+
+    function renderTestCaseModal(levelId, cases) {
+        let modal = document.getElementById('testCaseModal');
+        if (!modal) {
+            const html = `
+            <div class="modal fade" id="testCaseModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">测试用例管理 - 关卡 ${levelId}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="d-flex justify-content-end mb-2">
+                      <button class="btn btn-sm btn-primary" id="addCaseBtn"><i class="fas fa-plus"></i> 新增用例</button>
+                    </div>
+                    <div id="caseList"></div>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            modal = document.getElementById('testCaseModal');
+        }
+        const list = modal.querySelector('#caseList');
+        list.innerHTML = cases.length === 0 ? '<p class="text-muted">暂无测试用例</p>' : cases.map(c=>`<div class="card mb-2">
+            <div class="card-body p-2">
+              <div class="d-flex justify-content-between">
+                <span>#${c.order ?? 0} ${c.is_sample ? '<span class="badge bg-info">样例</span>':''}</span>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteTestCase(${c.id}, ${levelId})"><i class="fas fa-trash"></i></button>
+              </div>
+              <small class="text-muted">输入</small>
+              <pre class="bg-light p-2">${c.input}</pre>
+              <small class="text-muted">输出</small>
+              <pre class="bg-light p-2">${c.output}</pre>
+            </div>
+        </div>`).join('');
+
+        modal.querySelector('#addCaseBtn').onclick = ()=>addTestCase(levelId);
+        new bootstrap.Modal(modal).show();
+    }
+
+    // 显示新增/编辑测试用例模态框
+    function addTestCase(levelId) {
+        let modal = document.getElementById('addCaseModal');
+        if (!modal) {
+            const html = `
+            <div class="modal fade" id="addCaseModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">新增测试用例</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label">输入数据 (Input)</label>
+                      <textarea class="form-control" id="caseInput" rows="4" placeholder="支持多行"></textarea>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">期望输出 (Output)</label>
+                      <textarea class="form-control" id="caseOutput" rows="4" placeholder="支持多行"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                      <input class="form-check-input" type="checkbox" id="caseIsSample">
+                      <label class="form-check-label" for="caseIsSample">设为样例</label>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="saveCaseBtn">保存</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            modal = document.getElementById('addCaseModal');
+        }
+
+        // 清空旧值
+        modal.querySelector('#caseInput').value = '';
+        modal.querySelector('#caseOutput').value = '';
+        modal.querySelector('#caseIsSample').checked = false;
+
+        // 绑定保存事件
+        modal.querySelector('#saveCaseBtn').onclick = ()=>{
+            const input = modal.querySelector('#caseInput').value.trim();
+            const output = modal.querySelector('#caseOutput').value.trim();
+            const isSample = modal.querySelector('#caseIsSample').checked;
+            if(!input && !output){ showAlert('请输入内容','warning'); return; }
+            axios.post(`/api/interview-island/level/${levelId}/testcases`, {input, output, is_sample: isSample, order: 0})
+                .then(()=>{ showAlert('已添加用例','success'); bootstrap.Modal.getInstance(modal).hide(); manageTestCases(levelId); })
+                .catch(err=>{ showAlert(err.response?.data?.error||'添加失败','danger'); });
+        };
+
+        new bootstrap.Modal(modal).show();
+    }
+
+    function deleteTestCase(id, levelId) {
+        if(!confirm('确定删除此用例?')) return;
+        axios.delete(`/api/interview-island/testcases/${id}`) // placeholder route, yet to implement
+            .then(()=>{ showAlert('已删除','success'); manageTestCases(levelId); })
+            .catch(err=>{ showAlert(err.response?.data?.error||'删除失败','danger'); });
+    }
+
+    // ------------- 新增：世界地图视图 ------------- //
+    let unlockedIslandCount = 0; // 后端应提供
+
+    function renderWorldMap() {
+        const world = document.getElementById('worldMap');
+        world.innerHTML = '';
+        islandsData.forEach((islandInfo, index) => {
+            const island = islandInfo.island;
+            const locked = index > unlockedIslandCount; // 简易逻辑
+            let adminHtml = '';
+            if (isAdmin) {
+                adminHtml = `
+                    <div class="island-admin-controls">
+                        <button class="btn btn-light btn-sm" title="编辑岛屿" onclick="editIsland(event, ${island.id}, '${island.name.replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-light btn-sm" title="删除岛屿" onclick="deleteIsland(event, ${island.id})"><i class="fas fa-trash"></i></button>
+                    </div>`;
+            }
+            const node = document.createElement('div');
+            node.className = `island-node ${locked ? 'locked' : ''}`;
+            node.innerHTML = `${adminHtml}<h4>${island.name}</h4>`;
+            if (!locked) {
+                node.onclick = () => showIslandDetail(index);
+            }
+            world.appendChild(node);
+        });
+        // 管理按钮显隐
+        document.getElementById('createIslandBtn').classList.toggle('d-none', !isAdmin);
+        document.getElementById('backToWorldBtn').classList.add('d-none');
+        document.getElementById('islandDetail').style.display = 'none';
+        document.getElementById('worldMap').style.display = 'flex';
+    }
+
+    function showIslandDetail(index) {
+        currentIslandIndex = index;
+        renderCurrentIsland();
+        document.getElementById('worldMap').style.display = 'none';
+        document.getElementById('islandDetail').style.display = 'flex';
+        document.getElementById('backToWorldBtn').classList.remove('d-none');
+    }
+
+    function showWorldMap() {
+        renderWorldMap();
+    }
+
+    // 创建岛屿（管理员）
+    function createIsland() {
+        const name = prompt('岛屿名称：');
+        if (!name) return;
+        const description = prompt('描述：', '');
+        axios.post('/api/interview-island/create', { name, description })
+            .then(() => { showAlert('已创建岛屿', 'success'); loadIslandMap(); })
+            .catch(err => { showAlert(err.response?.data?.error || '创建失败', 'danger'); });
+    }
+
+    function editIsland(event, islandId, currentName) {
+        event.stopPropagation();
+        const name = prompt('岛屿名称：', currentName);
+        if (!name) return;
+        const description = prompt('描述：');
+        axios.post(`/api/interview-island/${islandId}/edit`, { name, description })
+            .then(() => { showAlert('已更新岛屿', 'success'); loadIslandMap(); })
+            .catch(err => { showAlert(err.response?.data?.error || '更新失败', 'danger'); });
+    }
+
+    function deleteIsland(event, islandId) {
+        event.stopPropagation();
+        if (!confirm('确定要删除该岛屿？')) return;
+        axios.post(`/api/interview-island/${islandId}/delete`)
+            .then(() => { showAlert('已删除岛屿', 'success'); loadIslandMap(); })
+            .catch(err => { showAlert(err.response?.data?.error || '删除失败', 'danger'); });
+    }
+
+    // load marked script once
+    document.addEventListener('DOMContentLoaded',()=>{
+        const m=document.createElement('script');m.src='https://cdn.jsdelivr.net/npm/marked/marked.min.js';document.head.appendChild(m);
+    });
 </script>
 {{end}} 

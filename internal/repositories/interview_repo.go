@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // InterviewRepository 面试岛仓库接口
@@ -13,6 +14,8 @@ type InterviewRepository interface {
 	GetAllIslands() ([]models.InterviewIsland, error)
 	GetIslandByID(id uint) (*models.InterviewIsland, error)
 	CreateIsland(island *models.InterviewIsland) error
+	UpdateIsland(island *models.InterviewIsland) error
+	DeleteIsland(id uint) error
 
 	// 关卡管理
 	GetLevelsByIslandID(islandID uint) ([]models.InterviewLevel, error)
@@ -34,6 +37,10 @@ type InterviewRepository interface {
 	GetTestCasesByLevelID(levelID uint) ([]models.InterviewTestCase, error)
 	GetSampleTestCases(levelID uint) ([]models.InterviewTestCase, error)
 	CreateTestCase(testCase *models.InterviewTestCase) error
+	GetTestCase(id uint) (*models.InterviewTestCase, error)
+	UpdateTestCase(testCase *models.InterviewTestCase) error
+	DeleteTestCase(id uint) error
+	AddUserUnlockedTag(userID, tagID uint) error
 }
 
 // IslandProgressInfo 岛屿进度信息
@@ -77,6 +84,16 @@ func (r *interviewRepository) CreateIsland(island *models.InterviewIsland) error
 	return r.db.Create(island).Error
 }
 
+// UpdateIsland 更新面试岛信息
+func (r *interviewRepository) UpdateIsland(island *models.InterviewIsland) error {
+	return r.db.Save(island).Error
+}
+
+// DeleteIsland 删除面试岛
+func (r *interviewRepository) DeleteIsland(id uint) error {
+	return r.db.Delete(&models.InterviewIsland{}, id).Error
+}
+
 // GetLevelsByIslandID 获取指定岛屿的所有关卡
 func (r *interviewRepository) GetLevelsByIslandID(islandID uint) ([]models.InterviewLevel, error) {
 	var levels []models.InterviewLevel
@@ -93,6 +110,7 @@ func (r *interviewRepository) GetLevelByID(id uint) (*models.InterviewLevel, err
 	var level models.InterviewLevel
 	err := r.db.Where("id = ?", id).
 		Preload("Question").
+		Preload("Question.Tags").
 		Preload("Island").
 		First(&level).Error
 	if err != nil {
@@ -331,4 +349,32 @@ func (r *interviewRepository) GetSampleTestCases(levelID uint) ([]models.Intervi
 // CreateTestCase 创建测试用例
 func (r *interviewRepository) CreateTestCase(testCase *models.InterviewTestCase) error {
 	return r.db.Create(testCase).Error
+}
+
+// GetTestCase 获取单个测试用例
+func (r *interviewRepository) GetTestCase(id uint) (*models.InterviewTestCase, error) {
+	var tc models.InterviewTestCase
+	if err := r.db.First(&tc, id).Error; err != nil {
+		return nil, err
+	}
+	return &tc, nil
+}
+
+// UpdateTestCase 更新测试用例
+func (r *interviewRepository) UpdateTestCase(tc *models.InterviewTestCase) error {
+	return r.db.Save(tc).Error
+}
+
+// DeleteTestCase 删除测试用例
+func (r *interviewRepository) DeleteTestCase(id uint) error {
+	return r.db.Delete(&models.InterviewTestCase{}, id).Error
+}
+
+// AddUserUnlockedTag 写入用户已解锁知识点 (忽略已存在)
+func (r *interviewRepository) AddUserUnlockedTag(userID, tagID uint) error {
+	record := models.UserUnlockedTag{
+		UserID:    userID,
+		AlgoTagID: tagID,
+	}
+	return r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&record).Error
 }

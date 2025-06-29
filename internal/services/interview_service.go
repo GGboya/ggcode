@@ -20,12 +20,26 @@ type InterviewService interface {
 	GetIslandMap(userID uint) ([]repositories.IslandProgressInfo, error)
 	GetLevelDetail(userID, levelID uint) (*LevelDetailResponse, error)
 
+	// 岛屿管理（管理员）
+	CreateIsland(name, description string) (*models.InterviewIsland, error)
+	UpdateIsland(id uint, name, description string) error
+	DeleteIsland(id uint) error
+
 	// 代码执行和判题
 	TestCode(userID, levelID uint, code, language string) (*TestResult, error)
 	SubmitCode(userID, levelID uint, code, language string, submitTime int) (*SubmissionResult, error)
 
 	// 进度管理
 	GetUserProgress(userID uint) (*UserProgressSummary, error)
+
+	// 知识点
+	UnlockTags(userID, levelID uint) error
+
+	// 测试用例 CRUD
+	GetTestCases(levelID uint) ([]models.InterviewTestCase, error)
+	CreateTestCase(levelID uint, input, output string, isSample bool, order int) (*models.InterviewTestCase, error)
+	UpdateTestCase(id uint, input, output string, isSample bool, order int) error
+	DeleteTestCase(id uint) error
 }
 
 // LevelDetailResponse 关卡详情响应
@@ -245,6 +259,13 @@ func (s *interviewService) SubmitCode(userID, levelID uint, code, language strin
 			err = s.repo.UnlockNextLevel(userID, levelID)
 			if err == nil {
 				nextUnlocked = true
+			}
+		}
+
+		// 知识点解锁：获取题目标签并写入 user_unlocked_tags
+		if level, _ := s.repo.GetLevelByID(levelID); level != nil {
+			for _, tag := range level.Question.Tags {
+				_ = s.repo.AddUserUnlockedTag(userID, tag.ID) // 忽略错误即可
 			}
 		}
 	}
@@ -473,4 +494,80 @@ func (s *interviewService) GetUserProgress(userID uint) (*UserProgressSummary, e
 	}
 
 	return summary, nil
+}
+
+func (s *interviewService) DeleteIsland(id uint) error {
+	return s.repo.DeleteIsland(id)
+}
+
+func (s *interviewService) CreateIsland(name, description string) (*models.InterviewIsland, error) {
+	island := &models.InterviewIsland{
+		Name:        name,
+		Description: description,
+		Difficulty:  "Easy",
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if err := s.repo.CreateIsland(island); err != nil {
+		return nil, err
+	}
+	return island, nil
+}
+
+func (s *interviewService) UpdateIsland(id uint, name, description string) error {
+	island, err := s.repo.GetIslandByID(id)
+	if err != nil {
+		return err
+	}
+	if name != "" {
+		island.Name = name
+	}
+	island.Description = description
+	island.UpdatedAt = time.Now()
+	return s.repo.UpdateIsland(island)
+}
+
+// UnlockTags 根据关卡题目标签为用户解锁知识点
+func (s *interviewService) UnlockTags(userID, levelID uint) error {
+	level, err := s.repo.GetLevelByID(levelID)
+	if err != nil {
+		return err
+	}
+	for _, tag := range level.Question.Tags {
+		_ = s.repo.AddUserUnlockedTag(userID, tag.ID)
+	}
+	return nil
+}
+
+// GetTestCases 获取测试用例
+func (s *interviewService) GetTestCases(levelID uint) ([]models.InterviewTestCase, error) {
+	return s.repo.GetTestCasesByLevelID(levelID)
+}
+
+// CreateTestCase 创建测试用例
+func (s *interviewService) CreateTestCase(levelID uint, input, output string, isSample bool, order int) (*models.InterviewTestCase, error) {
+	tc := &models.InterviewTestCase{LevelID: levelID, Input: input, Output: output, IsSample: isSample, Order: order}
+	if err := s.repo.CreateTestCase(tc); err != nil {
+		return nil, err
+	}
+	return tc, nil
+}
+
+// UpdateTestCase 更新测试用例
+func (s *interviewService) UpdateTestCase(id uint, input, output string, isSample bool, order int) error {
+	tc, err := s.repo.GetTestCase(id)
+	if err != nil {
+		return err
+	}
+	tc.Input = input
+	tc.Output = output
+	tc.IsSample = isSample
+	tc.Order = order
+	return s.repo.UpdateTestCase(tc)
+}
+
+// DeleteTestCase 删除测试用例
+func (s *interviewService) DeleteTestCase(id uint) error {
+	return s.repo.DeleteTestCase(id)
 }

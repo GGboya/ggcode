@@ -41,6 +41,9 @@ func Init() (*gorm.DB, error) {
 		&models.UserLevelProgress{},
 		&models.UserLevelSubmission{},
 		&models.InterviewTestCase{},
+		&models.AlgoTag{},
+		&models.QuestionTag{},
+		&models.UserUnlockedTag{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %v", err)

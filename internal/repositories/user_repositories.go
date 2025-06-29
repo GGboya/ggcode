@@ -10,6 +10,7 @@ type UserRepository interface {
 	Create(user *models.User) error
 	GetByUsername(username string) (*models.User, error)
 	GetByUsernameOrEmail(username, email string) (*models.User, error)
+	IsAdmin(userID uint) (bool, error)
 }
 
 type userRepository struct {
@@ -34,6 +35,14 @@ func (r *userRepository) GetByUsernameOrEmail(username, email string) (*models.U
 		return nil, err
 	}
 	return user, nil
+}
+
+func (r *userRepository) IsAdmin(userID uint) (bool, error) {
+	var user models.User
+	if err := r.db.Select("is_admin").Where("id = ?", userID).First(&user).Error; err != nil {
+		return false, err
+	}
+	return user.IsAdmin, nil
 }
 
 func NewUserRepository(db *gorm.DB) UserRepository {

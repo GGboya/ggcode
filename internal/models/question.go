@@ -11,8 +11,10 @@ type Question struct {
 	QuestionBankID uint         `json:"question_bank_id"`
 	QuestionBank   QuestionBank `json:"question_bank" gorm:"foreignKey:QuestionBankID"`
 	TestCases      []TestCase   `json:"test_cases" gorm:"foreignKey:QuestionID"` // 关联的测试用例
-	CreatedAt      time.Time    `json:"created_at"`
-	UpdatedAt      time.Time    `json:"updated_at"`
+	// 与算法知识点的多对多关系
+	Tags      []AlgoTag `json:"tags" gorm:"many2many:question_tags;"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // TestCase 测试用例模型

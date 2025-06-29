@@ -25,7 +25,7 @@ func NewControllers(services *services.Services) *Controllers {
 		Progress:     NewProgressController(services),
 		Share:        NewShareController(services),
 		Page:         NewPageController(),
-		Interview:    NewInterviewController(services.Interview),
+		Interview:    NewInterviewController(services),
 		GoJudge:      NewGoJudgeController(services.GoJudge, services.Interview),
 	}
 }

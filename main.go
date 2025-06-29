@@ -45,7 +45,7 @@ func main() {
 
 	// 创建HTTP服务器
 	var httpSrv *http.Server
-	
+
 	// 在goroutine中启动服务器
 	go func() {
 		if enableTLS == "true" && tlsCert != "" && tlsKey != "" {
@@ -63,7 +63,6 @@ func main() {
 			log.Printf("HTTP Server starting on :%s", port)
 			log.Printf("Database: MySQL")
 			log.Printf("Visit: http://localhost:%s", port)
-			log.Printf("容器池正在启动，请稍候...")
 
 			httpSrv = &http.Server{
 				Addr:    ":" + port,
@@ -79,9 +78,9 @@ func main() {
 	// 创建信号通道监听退出信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	
+
 	log.Printf("服务器已启动，按 Ctrl+C 优雅退出")
-	
+
 	// 等待退出信号
 	<-quit
 	log.Printf("收到退出信号，正在优雅关闭...")

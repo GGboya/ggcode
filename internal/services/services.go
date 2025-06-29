@@ -8,17 +8,15 @@ import (
 
 // Services 包含所有业务服务
 type Services struct {
-	User          *UserService
-	QuestionBank  *QuestionBankService
-	Question      *QuestionService
-	StudyPlan     *StudyPlanService
-	Share         *ShareService
-	Progress      *ProgressService
-	Ebbinghaus    *EbbinghausService
-	Interview     InterviewService
-	DockerJudge   *DockerJudgeService
-	ContainerPool *SimpleContainerPool
-	GoJudge       *GoJudgeService
+	User         *UserService
+	QuestionBank *QuestionBankService
+	Question     *QuestionService
+	StudyPlan    *StudyPlanService
+	Share        *ShareService
+	Progress     *ProgressService
+	Ebbinghaus   *EbbinghausService
+	Interview    InterviewService
+	GoJudge      *GoJudgeService
 	// CheckIn      *CheckInService
 }
 
@@ -27,28 +25,18 @@ func NewServices(repos *repositories.Repositories, db *gorm.DB) *Services {
 	// 首先创建EbbinghausService
 	ebbinghausService := NewEbbinghausService(db)
 
-	// 创建Hydro评测服务
-
-	// 创建容器池（这里会自动启动！）
-	containerPool := NewSimpleContainerPool()
-
-	// 创建Docker评测服务，并传入容器池
-	dockerJudgeService := NewDockerJudgeServiceWithPool(containerPool)
-
 	// 创建 go-judge 服务
 	goJudgeService := NewGoJudgeService("")
 
 	return &Services{
-		User:          NewUserService(repos),
-		QuestionBank:  NewQuestionBankService(repos),
-		Question:      NewQuestionService(repos),
-		StudyPlan:     NewStudyPlanService(repos, ebbinghausService),
-		Share:         NewShareService(repos),
-		Progress:      NewProgressService(repos, ebbinghausService),
-		Ebbinghaus:    ebbinghausService,
-		Interview:     NewInterviewService(repos.Interview),
-		DockerJudge:   dockerJudgeService,
-		ContainerPool: containerPool,
-		GoJudge:       goJudgeService,
+		User:         NewUserService(repos),
+		QuestionBank: NewQuestionBankService(repos),
+		Question:     NewQuestionService(repos),
+		StudyPlan:    NewStudyPlanService(repos, ebbinghausService),
+		Share:        NewShareService(repos),
+		Progress:     NewProgressService(repos, ebbinghausService),
+		Ebbinghaus:   ebbinghausService,
+		Interview:    NewInterviewService(repos.Interview),
+		GoJudge:      goJudgeService,
 	}
 }

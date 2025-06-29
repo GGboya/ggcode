@@ -77,6 +77,11 @@ func (s *UserService) Login(username, password string) (*models.User, string, er
 	return user, token, nil
 }
 
+// IsAdmin 判断用户是否为管理员
+func (s *UserService) IsAdmin(userID uint) (bool, error) {
+	return s.userRepo.IsAdmin(userID)
+}
+
 // // GetUserByID 通过ID获取用户信息
 // func (s *UserService) GetUserByID(id uint) (*models.User, error) {
 // 	return s.userRepo.GetByID(id)
