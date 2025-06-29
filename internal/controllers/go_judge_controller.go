@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -280,47 +281,83 @@ func (c *GoJudgeController) SubmitCode(ctx *gin.Context) {
 
 	log.Printf("[GoJudge] 提交代码 - 用户ID: %v, 关卡ID: %d, 语言: %s, 提交时间: %d秒", userID, levelID, req.Language, req.SubmitTime)
 
-	// 使用面试岛服务获取关卡详情和所有测试用例
-	levelDetail, err := c.interviewService.GetLevelDetail(userID.(uint), uint(levelID))
+	// 使用面试岛服务获取所有测试用例
+	testCases, err := c.interviewService.GetTestCases(uint(levelID))
 	if err != nil {
-		log.Printf("[GoJudge] 获取关卡详情失败: %v", err)
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "关卡不存在或未解锁: " + err.Error()})
+		log.Printf("[GoJudge] 获取关卡 %d 的测试用例失败: %v", levelID, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "获取测试用例失败: " + err.Error()})
 		return
 	}
 
-	// 对于提交，我们需要运行所有测试用例，但目前先使用样例测试用例
-	// TODO: 扩展为运行所有测试用例
-	if len(levelDetail.SampleCases) == 0 {
-		log.Printf("[GoJudge] 关卡 %d 没有测试用例", levelID)
+	if len(testCases) == 0 {
+		log.Printf("[GoJudge] 关卡 %d 没有配置测试用例", levelID)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "关卡没有配置测试用例"})
 		return
 	}
 
-	// 使用第一个测试用例（样例）
-	testCase := levelDetail.SampleCases[0]
-	log.Printf("[GoJudge] 使用测试用例 - 输入: %q, 期望输出: %q", testCase.Input, testCase.Output)
+	var finalEnhancedResult map[string]interface{}
+	var maxTime int64
+	var maxMemory int64
+	allPassed := true
 
-	judgeReq := &services.GoJudgeRequest{
-		Language:    req.Language,
-		Code:        req.Code,
-		Input:       testCase.Input,
-		TimeLimit:   5000,
-		MemoryLimit: 128 * 1024,
+	for i, testCase := range testCases {
+		log.Printf("[GoJudge] 运行测试用例 %d/%d", i+1, len(testCases))
+		judgeReq := &services.GoJudgeRequest{
+			Language:    req.Language,
+			Code:        req.Code,
+			Input:       testCase.Input,
+			TimeLimit:   5000,
+			MemoryLimit: 128 * 1024,
+		}
+
+		result, err := c.goJudgeService.ExecuteCode(judgeReq)
+		if err != nil {
+			log.Printf("[GoJudge] 执行代码失败: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "提交失败: " + err.Error()})
+			return
+		}
+
+		enhancedResult := c.enhanceGoJudgeResult(result, testCase.Input, testCase.Output, true)
+		log.Printf("[GoJudge] 测试用例 %d/%d 结果: %s", i+1, len(testCases), enhancedResult["status"])
+
+		// 记录最大耗时和内存
+		if t, ok := enhancedResult["time"].(int64); ok && t > maxTime {
+			maxTime = t
+		}
+		if m, ok := enhancedResult["memory"].(int64); ok && m > maxMemory {
+			maxMemory = m
+		}
+
+		if status, ok := enhancedResult["status"].(string); !ok || status != "Accepted" {
+			finalEnhancedResult = enhancedResult
+			finalEnhancedResult["message"] = fmt.Sprintf("测试用例 %d 未通过", i+1)
+			allPassed = false
+			break // 遇到第一个错误即停止
+		}
 	}
 
-	result, err := c.goJudgeService.ExecuteCode(judgeReq)
-	if err != nil {
-		log.Printf("[GoJudge] 执行代码失败: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "提交失败: " + err.Error()})
-		return
+	if allPassed {
+		finalEnhancedResult = map[string]interface{}{
+			"status":     "Accepted",
+			"score":      100,
+			"max_score":  100,
+			"stars":      3,
+			"time":       maxTime,
+			"memory":     maxMemory,
+			"stdout":     "所有测试用例通过",
+			"stderr":     "",
+			"error":      "",
+			"input":      "-",
+			"expected":   "-",
+			"exitStatus": 0,
+			"message":    "恭喜你，所有测试用例均已通过！",
+		}
 	}
 
-	// 增强结果处理 - 添加输出比较
-	enhancedResult := c.enhanceGoJudgeResult(result, testCase.Input, testCase.Output, true)
-	log.Printf("[GoJudge] 提交结果: %+v", enhancedResult)
+	log.Printf("[GoJudge] 提交结果: %+v", finalEnhancedResult)
 
 	// 如果通过则解锁知识点
-	if status, ok := enhancedResult["status"].(string); ok && status == "Accepted" {
+	if status, ok := finalEnhancedResult["status"].(string); ok && status == "Accepted" {
 		_ = c.interviewService.UnlockTags(userID.(uint), uint(levelID))
 	}
 
@@ -328,7 +365,7 @@ func (c *GoJudgeController) SubmitCode(ctx *gin.Context) {
 		"message":    "提交完成",
 		"levelId":    levelID,
 		"submitTime": req.SubmitTime,
-		"result":     enhancedResult,
+		"result":     finalEnhancedResult,
 	})
 }
 
