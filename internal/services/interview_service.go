@@ -24,6 +24,7 @@ type InterviewService interface {
 	CreateIsland(name, description string) (*models.InterviewIsland, error)
 	UpdateIsland(id uint, name, description string) error
 	DeleteIsland(id uint) error
+	CreateLevel(islandID, questionID uint, name, difficulty string) (*models.InterviewLevel, error)
 
 	// 代码执行和判题
 	TestCode(userID, levelID uint, code, language string) (*TestResult, error)
@@ -526,6 +527,30 @@ func (s *interviewService) UpdateIsland(id uint, name, description string) error
 	island.Description = description
 	island.UpdatedAt = time.Now()
 	return s.repo.UpdateIsland(island)
+}
+
+// CreateLevel 创建新关卡
+func (s *interviewService) CreateLevel(islandID, questionID uint, name, difficulty string) (*models.InterviewLevel, error) {
+	// 获取当前岛屿的最大关卡号
+	maxLevelNum, err := s.repo.GetMaxLevelNum(islandID)
+	if err != nil {
+		return nil, err
+	}
+
+	level := &models.InterviewLevel{
+		IslandID:   islandID,
+		QuestionID: questionID,
+		Name:       name,
+		Difficulty: difficulty,
+		LevelNum:   maxLevelNum + 1,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+
+	if err := s.repo.CreateLevel(level); err != nil {
+		return nil, err
+	}
+	return level, nil
 }
 
 // UnlockTags 根据关卡题目标签为用户解锁知识点

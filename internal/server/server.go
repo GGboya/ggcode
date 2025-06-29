@@ -105,6 +105,7 @@ func (s *Server) setupRoutes() {
 			// 题库题目相关
 			api.GET("/questionbanks/:id/questions", ctrl.Question.GetQuestions)
 			api.POST("/questionbanks/:id/questions", ctrl.Question.CreateQuestion)
+			api.GET("/questions", ctrl.Question.GetAllQuestions)
 			api.GET("/questions/:id", ctrl.Question.GetQuestion)
 			api.PUT("/questions/:id", ctrl.Question.UpdateQuestion)
 			api.DELETE("/questions/:id", ctrl.Question.DeleteQuestion)
@@ -151,6 +152,7 @@ func (s *Server) setupRoutes() {
 			api.POST("/interview-island/create", ctrl.Interview.CreateIsland)
 			api.POST("/interview-island/:id/edit", ctrl.Interview.EditIsland)
 			api.POST("/interview-island/:id/delete", ctrl.Interview.DeleteIsland)
+			api.POST("/interview-island/level/create", ctrl.Interview.CreateLevel)
 
 			// 测试用例接口
 			api.GET("/interview-island/level/:levelId/testcases", ctrl.Interview.GetLevelTestCases)

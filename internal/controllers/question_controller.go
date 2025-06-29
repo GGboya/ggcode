@@ -48,6 +48,16 @@ func (ctrl *QuestionController) GetQuestions(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetAllQuestions 获取所有题目，用于搜索
+func (ctrl *QuestionController) GetAllQuestions(c *gin.Context) {
+	questions, err := ctrl.questionService.GetAllQuestions()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取题目列表失败"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": questions})
+}
+
 // CreateQuestion 在题库中创建题目
 func (ctrl *QuestionController) CreateQuestion(c *gin.Context) {
 	userID := c.GetUint("user_id")

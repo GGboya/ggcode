@@ -21,6 +21,7 @@ type InterviewRepository interface {
 	GetLevelsByIslandID(islandID uint) ([]models.InterviewLevel, error)
 	GetLevelByID(id uint) (*models.InterviewLevel, error)
 	CreateLevel(level *models.InterviewLevel) error
+	GetMaxLevelNum(islandID uint) (int, error)
 
 	// 用户进度管理
 	GetUserIslandProgress(userID uint) ([]IslandProgressInfo, error)
@@ -122,6 +123,16 @@ func (r *interviewRepository) GetLevelByID(id uint) (*models.InterviewLevel, err
 // CreateLevel 创建关卡
 func (r *interviewRepository) CreateLevel(level *models.InterviewLevel) error {
 	return r.db.Create(level).Error
+}
+
+// GetMaxLevelNum 获取岛屿的最大关卡数
+func (r *interviewRepository) GetMaxLevelNum(islandID uint) (int, error) {
+	var maxLevelNum int
+	err := r.db.Model(&models.InterviewLevel{}).Where("island_id = ?", islandID).Select("COALESCE(MAX(level_num), 0)").Row().Scan(&maxLevelNum)
+	if err != nil {
+		return 0, err
+	}
+	return maxLevelNum, nil
 }
 
 // GetUserIslandProgress 获取用户所有岛屿的进度

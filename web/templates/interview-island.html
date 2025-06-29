@@ -263,6 +263,15 @@
         display: flex;
         gap: 4px;
     }
+
+    /* Style for search results in modal */
+    .search-result-item {
+        cursor: pointer;
+        padding: 8px 12px;
+    }
+    .search-result-item:hover {
+        background-color: #f0f0f0;
+    }
 </style>
 
 <!-- 加载状态 -->
@@ -305,6 +314,52 @@
         <!-- 地图区域 -->
         <div class="island-map flex-grow-1">
             <div id="levelPath" class="level-path"></div>
+            <!-- 新增关卡按钮（仅管理员）-->
+            <div id="addLevelContainer" class="mt-4" style="display: none;">
+                <button class="btn btn-primary" onclick="openCreateLevelModal()">
+                    <i class="fas fa-plus"></i> 新增关卡
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增：创建关卡模态框 -->
+<div class="modal fade" id="createLevelModal" tabindex="-1" aria-labelledby="createLevelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createLevelModalLabel">新增关卡</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createLevelForm">
+                    <input type="hidden" id="islandIdInput">
+                    <div class="mb-3">
+                        <label for="levelNameInput" class="form-label">关卡名称</label>
+                        <input type="text" class="form-control" id="levelNameInput" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="levelDifficultyInput" class="form-label">难度</label>
+                        <select class="form-select" id="levelDifficultyInput" required>
+                            <option value="Easy">简单</option>
+                            <option value="Medium">中等</option>
+                            <option value="Hard">困难</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="questionSearchInput" class="form-label">关联题目</label>
+                        <input type="text" class="form-control" id="questionSearchInput" placeholder="搜索题目...">
+                        <div id="questionSearchResults" class="list-group mt-2" style="max-height: 200px; overflow-y: auto;"></div>
+                        <input type="hidden" id="selectedQuestionId" required>
+                        <p id="selectedQuestionText" class="mt-2 text-success"></p>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitCreateLevel()">创建</button>
+            </div>
         </div>
     </div>
 </div>
@@ -503,6 +558,9 @@
         });
         
         console.log('关卡路径渲染完成，容器子元素数量:', pathContainer.children.length);
+
+        // 控制新增关卡按钮的显示
+        document.getElementById('addLevelContainer').style.display = isAdmin ? 'block' : 'none';
     }
 
     // 生成星级显示
@@ -534,6 +592,93 @@
     }
 
     /* ------------------ 管理员相关功能 ------------------ */
+    let allQuestions = []; // 缓存所有问题
+    let createLevelModal; // 模态框实例
+
+    // 打开创建关卡模态框
+    async function openCreateLevelModal() {
+        if (!createLevelModal) {
+            createLevelModal = new bootstrap.Modal(document.getElementById('createLevelModal'));
+        }
+
+        // 重置表单
+        document.getElementById('createLevelForm').reset();
+        document.getElementById('selectedQuestionId').value = '';
+        document.getElementById('selectedQuestionText').textContent = '';
+        document.getElementById('questionSearchResults').innerHTML = '';
+        
+        // 设置岛屿ID
+        const currentIslandId = islandsData[currentIslandIndex].island.id;
+        document.getElementById('islandIdInput').value = currentIslandId;
+
+        // 加载所有问题
+        if (allQuestions.length === 0) {
+            try {
+                const response = await axios.get('/api/questions'); // 假设这是获取所有问题的端点
+                allQuestions = response.data.data;
+            } catch (error) {
+                showAlert('加载问题列表失败', 'danger');
+                return;
+            }
+        }
+
+        createLevelModal.show();
+    }
+
+    // 搜索问题
+    document.getElementById('questionSearchInput').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const resultsContainer = document.getElementById('questionSearchResults');
+        resultsContainer.innerHTML = '';
+        if (!searchTerm) {
+            return;
+        }
+
+        const filtered = allQuestions.filter(q => q.title.toLowerCase().includes(searchTerm));
+        
+        filtered.slice(0, 10).forEach(q => { // 最多显示10个结果
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action search-result-item';
+            item.textContent = `${q.title} (${q.difficulty})`;
+            item.onclick = (event) => {
+                event.preventDefault();
+                document.getElementById('selectedQuestionId').value = q.id;
+                document.getElementById('selectedQuestionText').textContent = `已选择: ${q.title}`;
+                resultsContainer.innerHTML = '';
+                document.getElementById('questionSearchInput').value = '';
+            };
+            resultsContainer.appendChild(item);
+        });
+    });
+
+    // 提交创建关卡表单
+    async function submitCreateLevel() {
+        const islandId = document.getElementById('islandIdInput').value;
+        const name = document.getElementById('levelNameInput').value;
+        const difficulty = document.getElementById('levelDifficultyInput').value;
+        const questionId = document.getElementById('selectedQuestionId').value;
+
+        if (!name || !difficulty || !questionId) {
+            showAlert('请填写所有字段', 'warning');
+            return;
+        }
+        
+        try {
+            await axios.post('/api/interview-island/level/create', {
+                island_id: parseInt(islandId),
+                question_id: parseInt(questionId),
+                name: name,
+                difficulty: difficulty
+            });
+            showAlert('关卡创建成功', 'success');
+            createLevelModal.hide();
+            loadIslandMap(); // 重新加载以显示新关卡
+        } catch (error) {
+            showAlert(error.response?.data?.error || '创建失败', 'danger');
+        }
+    }
+
     // 编辑关卡名称
     async function editLevel(levelId, currentName) {
         const newName = prompt('请输入新的关卡名称：', currentName || '');

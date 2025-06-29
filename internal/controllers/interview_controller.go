@@ -258,19 +258,48 @@ func (ctrl *InterviewController) DeleteIsland(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
 }
 
-// ensureAdmin 检查管理员权限
+// ----------------- 管理员关卡/题目/测试用例 CRUD -----------------
+
+// CreateLevel 创建关卡 (管理员)
+func (ctrl *InterviewController) CreateLevel(c *gin.Context) {
+	if !ctrl.ensureAdmin(c) {
+		return
+	}
+	var req struct {
+		IslandID   uint   `json:"island_id" binding:"required"`
+		QuestionID uint   `json:"question_id" binding:"required"`
+		Name       string `json:"name" binding:"required"`
+		Difficulty string `json:"difficulty" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
+		return
+	}
+
+	level, err := ctrl.interviewService.CreateLevel(req.IslandID, req.QuestionID, req.Name, req.Difficulty)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建关卡失败", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": level})
+}
+
+// ensureAdmin 确保是管理员
 func (ctrl *InterviewController) ensureAdmin(c *gin.Context) bool {
 	userID := c.GetUint("user_id")
-	ok, _ := ctrl.userService.IsAdmin(userID)
-	if !ok {
+	isAdmin, err := ctrl.userService.IsAdmin(userID)
+	if err != nil || !isAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "管理员权限不足"})
 		return false
 	}
 	return true
 }
 
-// GetLevelTestCases 获取关卡所有测试用例
+// GetLevelTestCases 获取关卡的所有测试用例 (管理员)
 func (ctrl *InterviewController) GetLevelTestCases(c *gin.Context) {
+	if !ctrl.ensureAdmin(c) {
+		return
+	}
 	levelID, _ := strconv.ParseUint(c.Param("levelId"), 10, 32)
 	cases, err := ctrl.interviewService.GetTestCases(uint(levelID))
 	if err != nil {
@@ -280,25 +309,27 @@ func (ctrl *InterviewController) GetLevelTestCases(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": cases})
 }
 
-// AddTestCase 新建测试用例 (管理员)
+// AddTestCase 为关卡新增测试用例 (管理员)
 func (ctrl *InterviewController) AddTestCase(c *gin.Context) {
 	if !ctrl.ensureAdmin(c) {
 		return
 	}
 	levelID, _ := strconv.ParseUint(c.Param("levelId"), 10, 32)
+
 	var req struct {
-		Input    string `json:"input" binding:"required"`
-		Output   string `json:"output" binding:"required"`
+		Input    string `json:"input"`
+		Output   string `json:"output"`
 		IsSample bool   `json:"is_sample"`
 		Order    int    `json:"order"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
 		return
 	}
+
 	tc, err := ctrl.interviewService.CreateTestCase(uint(levelID), req.Input, req.Output, req.IsSample, req.Order)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建测试用例失败", "details": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": tc})
@@ -309,13 +340,9 @@ func (ctrl *InterviewController) DeleteTestCase(c *gin.Context) {
 	if !ctrl.ensureAdmin(c) {
 		return
 	}
-	caseID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效ID"})
-		return
-	}
+	caseID, _ := strconv.ParseUint(c.Param("caseId"), 10, 32)
 	if err := ctrl.interviewService.DeleteTestCase(uint(caseID)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败", "details": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})

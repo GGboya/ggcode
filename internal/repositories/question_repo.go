@@ -16,6 +16,7 @@ type QuestionListResult struct {
 
 type QuestionRepository interface {
 	GetQuestions(bankID uint, page, limit int) (*QuestionListResult, error)
+	GetAllQuestions() ([]models.Question, error)
 	CreateQuestion(userID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error)
 	GetQuestion(questionID uint) (*models.Question, error)
 	UpdateQuestion(userID, questionID uint, title, leetcodeURL, difficulty string) (*models.Question, error)
@@ -56,6 +57,15 @@ func (r *questionRepository) GetQuestions(bankID uint, page, limit int) (*Questi
 		Total:      total,
 		TotalPages: totalPages,
 	}, nil
+}
+
+// GetAllQuestions gets all questions from the database.
+func (r *questionRepository) GetAllQuestions() ([]models.Question, error) {
+	var questions []models.Question
+	if err := r.db.Find(&questions).Error; err != nil {
+		return nil, err
+	}
+	return questions, nil
 }
 
 // CreateQuestion 在题库中创建题目

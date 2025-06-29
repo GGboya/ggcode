@@ -43,6 +43,11 @@ func (s *QuestionService) GetQuestions(bankID uint, page, limit int) (*QuestionL
 	return response, nil
 }
 
+// GetAllQuestions 获取所有题目
+func (s *QuestionService) GetAllQuestions() ([]models.Question, error) {
+	return s.questionRepo.GetAllQuestions()
+}
+
 // CreateQuestion 在题库中创建题目
 func (s *QuestionService) CreateQuestion(userID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error) {
 	return s.questionRepo.CreateQuestion(userID, bankID, title, leetcodeURL, difficulty)
