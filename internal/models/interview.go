@@ -20,16 +20,20 @@ type InterviewLevel struct {
 	ID         uint            `json:"id" gorm:"primaryKey"`
 	IslandID   uint            `json:"island_id"`
 	Island     InterviewIsland `json:"island" gorm:"foreignKey:IslandID"`
-	QuestionID uint            `json:"question_id"`
-	Question   Question        `json:"question" gorm:"foreignKey:QuestionID"`
 	LevelNum   int             `json:"level_num" gorm:"not null"`        // 关卡序号
 	Name       string          `json:"name" gorm:"not null"`             // 关卡名称
 	Difficulty string          `json:"difficulty" gorm:"not null"`       // Easy, Medium, Hard
 	TimeLimit  int             `json:"time_limit" gorm:"default:900"`    // 时间限制（秒），默认15分钟
 	IsUnlocked bool            `json:"is_unlocked" gorm:"default:false"` // 是否解锁
 	Position   string          `json:"position"`                         // 地图上的位置坐标 "x,y"
-	CreatedAt  time.Time       `json:"created_at"`
-	UpdatedAt  time.Time       `json:"updated_at"`
+
+	// 题目内容（直接在关卡中存储）
+	QuestionTitle       string `json:"question_title" gorm:"not null"`        // 题目标题
+	QuestionDescription string `json:"question_description" gorm:"type:text"` // 题目描述
+	QuestionLeetcodeURL string `json:"question_leetcode_url"`                 // LeetCode链接（可选）
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // UserLevelProgress 用户关卡进度

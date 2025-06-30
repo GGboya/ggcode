@@ -67,19 +67,34 @@ func (ctrl *InterviewController) GetLevelDetail(c *gin.Context) {
 		return
 	}
 
+	// 检查是否为管理员
+	isAdmin, _ := ctrl.userService.IsAdmin(userID)
+
 	detail, err := ctrl.interviewService.GetLevelDetail(userID, uint(levelID))
 	if err != nil {
-		if err.Error() == "关卡未解锁" {
+		if err.Error() == "关卡未解锁" && !isAdmin {
+			// 只对非管理员用户返回未解锁错误
 			c.JSON(http.StatusForbidden, gin.H{
 				"error": "关卡未解锁",
 			})
 			return
+		} else if err.Error() == "关卡未解锁" && isAdmin {
+			// 管理员可以访问锁定的关卡，尝试获取关卡基础信息
+			detail, err = ctrl.interviewService.GetLevelDetailForAdmin(userID, uint(levelID))
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error":   "获取关卡详情失败",
+					"details": err.Error(),
+				})
+				return
+			}
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "获取关卡详情失败",
+				"details": err.Error(),
+			})
+			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "获取关卡详情失败",
-			"details": err.Error(),
-		})
-		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -266,17 +281,34 @@ func (ctrl *InterviewController) CreateLevel(c *gin.Context) {
 		return
 	}
 	var req struct {
-		IslandID   uint   `json:"island_id" binding:"required"`
-		QuestionID uint   `json:"question_id" binding:"required"`
-		Name       string `json:"name" binding:"required"`
-		Difficulty string `json:"difficulty" binding:"required"`
+		IslandID            uint   `json:"island_id" binding:"required"`
+		Name                string `json:"name" binding:"required"`
+		Difficulty          string `json:"difficulty" binding:"required"`
+		QuestionTitle       string `json:"question_title"`
+		QuestionDescription string `json:"question_description"`
+		QuestionLeetcodeURL string `json:"question_leetcode_url"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
 		return
 	}
 
-	level, err := ctrl.interviewService.CreateLevel(req.IslandID, req.QuestionID, req.Name, req.Difficulty)
+	// 如果没有提供题目信息，使用默认值
+	if req.QuestionTitle == "" {
+		req.QuestionTitle = req.Name + " 题目"
+	}
+	if req.QuestionDescription == "" {
+		req.QuestionDescription = "请在此处编写代码解决问题"
+	}
+
+	level, err := ctrl.interviewService.CreateLevel(
+		req.IslandID,
+		req.Name,
+		req.Difficulty,
+		req.QuestionTitle,
+		req.QuestionDescription,
+		req.QuestionLeetcodeURL,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建关卡失败", "details": err.Error()})
 		return
@@ -284,15 +316,45 @@ func (ctrl *InterviewController) CreateLevel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": level})
 }
 
-// ensureAdmin 确保是管理员
-func (ctrl *InterviewController) ensureAdmin(c *gin.Context) bool {
-	userID := c.GetUint("user_id")
-	isAdmin, err := ctrl.userService.IsAdmin(userID)
-	if err != nil || !isAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "管理员权限不足"})
-		return false
+// EditLevel 编辑关卡 (管理员)
+func (ctrl *InterviewController) EditLevel(c *gin.Context) {
+	if !ctrl.ensureAdmin(c) {
+		return
 	}
-	return true
+	levelID, err := strconv.ParseUint(c.Param("levelId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的关卡ID"})
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+	if err := ctrl.interviewService.UpdateLevel(uint(levelID), req.Name); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "关卡更新成功"})
+}
+
+// DeleteLevel 删除关卡 (管理员)
+func (ctrl *InterviewController) DeleteLevel(c *gin.Context) {
+	if !ctrl.ensureAdmin(c) {
+		return
+	}
+	levelID, err := strconv.ParseUint(c.Param("levelId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的关卡ID"})
+		return
+	}
+	if err := ctrl.interviewService.DeleteLevel(uint(levelID)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "关卡删除成功"})
 }
 
 // GetLevelTestCases 获取关卡的所有测试用例 (管理员)
@@ -340,10 +402,25 @@ func (ctrl *InterviewController) DeleteTestCase(c *gin.Context) {
 	if !ctrl.ensureAdmin(c) {
 		return
 	}
-	caseID, _ := strconv.ParseUint(c.Param("caseId"), 10, 32)
+	caseID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的测试用例ID"})
+		return
+	}
 	if err := ctrl.interviewService.DeleteTestCase(uint(caseID)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败", "details": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+}
+
+// ensureAdmin 确保是管理员
+func (ctrl *InterviewController) ensureAdmin(c *gin.Context) bool {
+	userID := c.GetUint("user_id")
+	isAdmin, err := ctrl.userService.IsAdmin(userID)
+	if err != nil || !isAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "管理员权限不足"})
+		return false
+	}
+	return true
 }

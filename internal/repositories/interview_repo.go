@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"ggcode/internal/models"
 	"time"
 
@@ -21,6 +22,8 @@ type InterviewRepository interface {
 	GetLevelsByIslandID(islandID uint) ([]models.InterviewLevel, error)
 	GetLevelByID(id uint) (*models.InterviewLevel, error)
 	CreateLevel(level *models.InterviewLevel) error
+	UpdateLevel(level *models.InterviewLevel) error
+	DeleteLevel(id uint) error
 	GetMaxLevelNum(islandID uint) (int, error)
 
 	// 用户进度管理
@@ -99,7 +102,6 @@ func (r *interviewRepository) DeleteIsland(id uint) error {
 func (r *interviewRepository) GetLevelsByIslandID(islandID uint) ([]models.InterviewLevel, error) {
 	var levels []models.InterviewLevel
 	err := r.db.Where("island_id = ?", islandID).
-		Preload("Question").
 		Preload("Island").
 		Order("level_num ASC").
 		Find(&levels).Error
@@ -110,8 +112,6 @@ func (r *interviewRepository) GetLevelsByIslandID(islandID uint) ([]models.Inter
 func (r *interviewRepository) GetLevelByID(id uint) (*models.InterviewLevel, error) {
 	var level models.InterviewLevel
 	err := r.db.Where("id = ?", id).
-		Preload("Question").
-		Preload("Question.Tags").
 		Preload("Island").
 		First(&level).Error
 	if err != nil {
@@ -123,6 +123,16 @@ func (r *interviewRepository) GetLevelByID(id uint) (*models.InterviewLevel, err
 // CreateLevel 创建关卡
 func (r *interviewRepository) CreateLevel(level *models.InterviewLevel) error {
 	return r.db.Create(level).Error
+}
+
+// UpdateLevel 更新关卡
+func (r *interviewRepository) UpdateLevel(level *models.InterviewLevel) error {
+	return r.db.Save(level).Error
+}
+
+// DeleteLevel 删除关卡
+func (r *interviewRepository) DeleteLevel(id uint) error {
+	return r.db.Delete(&models.InterviewLevel{}, id).Error
 }
 
 // GetMaxLevelNum 获取岛屿的最大关卡数
@@ -205,7 +215,6 @@ func (r *interviewRepository) GetUserLevelProgress(userID, levelID uint) (*model
 	var progress models.UserLevelProgress
 	err := r.db.Where("user_id = ? AND level_id = ?", userID, levelID).
 		Preload("Level").
-		Preload("Level.Question").
 		First(&progress).Error
 
 	if err == gorm.ErrRecordNotFound {
@@ -378,7 +387,14 @@ func (r *interviewRepository) UpdateTestCase(tc *models.InterviewTestCase) error
 
 // DeleteTestCase 删除测试用例
 func (r *interviewRepository) DeleteTestCase(id uint) error {
-	return r.db.Delete(&models.InterviewTestCase{}, id).Error
+	result := r.db.Delete(&models.InterviewTestCase{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("测试用例不存在或已被删除")
+	}
+	return nil
 }
 
 // AddUserUnlockedTag 写入用户已解锁知识点 (忽略已存在)

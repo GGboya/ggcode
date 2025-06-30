@@ -20,6 +20,7 @@ type QuestionRepository interface {
 	CreateQuestion(userID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error)
 	GetQuestion(questionID uint) (*models.Question, error)
 	UpdateQuestion(userID, questionID uint, title, leetcodeURL, difficulty string) (*models.Question, error)
+	UpdateQuestionWithDescription(userID, questionID uint, title, leetcodeURL, difficulty, description string) (*models.Question, error)
 	DeleteQuestion(userID, questionID uint) error
 }
 
@@ -109,24 +110,41 @@ func (r *questionRepository) GetQuestion(questionID uint) (*models.Question, err
 
 // UpdateQuestion 更新题目信息
 func (r *questionRepository) UpdateQuestion(userID, questionID uint, title, leetcodeURL, difficulty string) (*models.Question, error) {
-	// 检查题目是否存在且属于用户创建的题库
 	var question models.Question
-	if err := r.db.Preload("QuestionBank").Where("id = ?", questionID).First(&question).Error; err != nil {
+	if err := r.db.Where("id = ?", questionID).First(&question).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.New("题目不存在")
 		}
 		return nil, errors.New("查询题目失败")
 	}
 
-	// 检查权限：只能编辑自己创建的题库中的题目
-	if question.QuestionBank.CreatedBy == nil || *question.QuestionBank.CreatedBy != userID {
-		return nil, errors.New("无权限修改此题目")
-	}
-
-	// 更新题目信息
+	// 更新题目字段
 	question.Title = title
 	question.LeetcodeURL = leetcodeURL
 	question.Difficulty = difficulty
+
+	if err := r.db.Save(&question).Error; err != nil {
+		return nil, errors.New("更新题目失败")
+	}
+
+	return &question, nil
+}
+
+// UpdateQuestionWithDescription 更新题目信息（包含描述）
+func (r *questionRepository) UpdateQuestionWithDescription(userID, questionID uint, title, leetcodeURL, difficulty, description string) (*models.Question, error) {
+	var question models.Question
+	if err := r.db.Where("id = ?", questionID).First(&question).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("题目不存在")
+		}
+		return nil, errors.New("查询题目失败")
+	}
+
+	// 更新题目字段
+	question.Title = title
+	question.LeetcodeURL = leetcodeURL
+	question.Difficulty = difficulty
+	question.Description = description
 
 	if err := r.db.Save(&question).Error; err != nil {
 		return nil, errors.New("更新题目失败")

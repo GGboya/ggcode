@@ -326,7 +326,7 @@
 
 <!-- 新增：创建关卡模态框 -->
 <div class="modal fade" id="createLevelModal" tabindex="-1" aria-labelledby="createLevelModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="createLevelModalLabel">新增关卡</h5>
@@ -340,25 +340,32 @@
                         <input type="text" class="form-control" id="levelNameInput" required>
                     </div>
                     <div class="mb-3">
-                        <label for="levelDifficultyInput" class="form-label">难度</label>
-                        <select class="form-select" id="levelDifficultyInput" required>
-                            <option value="Easy">简单</option>
-                            <option value="Medium">中等</option>
-                            <option value="Hard">困难</option>
+                        <label for="levelDifficultySelect" class="form-label">关卡难度</label>
+                        <select class="form-select" id="levelDifficultySelect" required>
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
                         </select>
                     </div>
+                    
+                    <!-- 题目信息部分 -->
                     <div class="mb-3">
-                        <label for="questionSearchInput" class="form-label">关联题目</label>
-                        <input type="text" class="form-control" id="questionSearchInput" placeholder="搜索题目...">
-                        <div id="questionSearchResults" class="list-group mt-2" style="max-height: 200px; overflow-y: auto;"></div>
-                        <input type="hidden" id="selectedQuestionId" required>
-                        <p id="selectedQuestionText" class="mt-2 text-success"></p>
+                        <label for="questionTitleInput" class="form-label">题目标题</label>
+                        <input type="text" class="form-control" id="questionTitleInput" placeholder="如果不填写，将使用关卡名称作为题目标题">
+                    </div>
+                    <div class="mb-3">
+                        <label for="questionDescriptionInput" class="form-label">题目描述</label>
+                        <textarea class="form-control" id="questionDescriptionInput" rows="6" placeholder="请在此处描述题目要求和解题思路..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="questionLeetcodeInput" class="form-label">LeetCode链接（可选）</label>
+                        <input type="url" class="form-control" id="questionLeetcodeInput" placeholder="https://leetcode.com/problems/...">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="submitCreateLevel()">创建</button>
+                <button type="button" class="btn btn-primary" onclick="createLevel()">创建关卡</button>
             </div>
         </div>
     </div>
@@ -381,11 +388,15 @@
             console.log('开始加载面试岛数据...');
             const response = await axios.get('/api/interview-island/map');
             islandsData = response.data.data;
-            // 从接口获取管理员标识（如果后端返回）
+            // 从接口获取管理员标识和解锁岛屿数量
             if (typeof response.data.is_admin !== 'undefined') {
                 isAdmin = !!response.data.is_admin;
             }
+            if (typeof response.data.unlocked_island_count !== 'undefined') {
+                unlockedIslandCount = response.data.unlocked_island_count;
+            }
             console.log('是否管理员:', isAdmin);
+            console.log('解锁岛屿数量:', unlockedIslandCount);
             console.log('面试岛数据加载成功:', islandsData);
             
             if (islandsData && islandsData.length > 0) {
@@ -490,6 +501,16 @@
 
         levels.forEach((level, index) => {
             const progress = progressMap[level.id] || { status: 'locked', stars: 0 };
+            
+            // 改进解锁逻辑：管理员可以看到所有关卡，第一个关卡自动解锁
+            if (isAdmin) {
+                if (progress.status === 'locked') {
+                    progress.status = 'unlocked'; // 管理员可以看到所有关卡
+                }
+            } else if (index === 0 && progress.status === 'locked') {
+                progress.status = 'unlocked'; // 第一个关卡自动解锁
+            }
+            
             console.log(`渲染关卡 ${level.level_num}:`, level, '进度:', progress);
             
             // 创建关卡节点
@@ -509,6 +530,9 @@
                         </button>
                         <button class="btn btn-light manage-cases-btn" title="测试用例" onclick="manageTestCases(${level.id})">
                             <i class="fas fa-vial"></i>
+                        </button>
+                        <button class="btn btn-light delete-level-btn" title="删除关卡" onclick="deleteLevel(${level.id})">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>`;
             }
@@ -603,79 +627,49 @@
 
         // 重置表单
         document.getElementById('createLevelForm').reset();
-        document.getElementById('selectedQuestionId').value = '';
-        document.getElementById('selectedQuestionText').textContent = '';
-        document.getElementById('questionSearchResults').innerHTML = '';
         
         // 设置岛屿ID
         const currentIslandId = islandsData[currentIslandIndex].island.id;
         document.getElementById('islandIdInput').value = currentIslandId;
 
-        // 加载所有问题
-        if (allQuestions.length === 0) {
-            try {
-                const response = await axios.get('/api/questions'); // 假设这是获取所有问题的端点
-                allQuestions = response.data.data;
-            } catch (error) {
-                showAlert('加载问题列表失败', 'danger');
-                return;
-            }
-        }
-
         createLevelModal.show();
     }
 
-    // 搜索问题
-    document.getElementById('questionSearchInput').addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const resultsContainer = document.getElementById('questionSearchResults');
-        resultsContainer.innerHTML = '';
-        if (!searchTerm) {
-            return;
-        }
-
-        const filtered = allQuestions.filter(q => q.title.toLowerCase().includes(searchTerm));
-        
-        filtered.slice(0, 10).forEach(q => { // 最多显示10个结果
-            const item = document.createElement('a');
-            item.href = '#';
-            item.className = 'list-group-item list-group-item-action search-result-item';
-            item.textContent = `${q.title} (${q.difficulty})`;
-            item.onclick = (event) => {
-                event.preventDefault();
-                document.getElementById('selectedQuestionId').value = q.id;
-                document.getElementById('selectedQuestionText').textContent = `已选择: ${q.title}`;
-                resultsContainer.innerHTML = '';
-                document.getElementById('questionSearchInput').value = '';
-            };
-            resultsContainer.appendChild(item);
-        });
-    });
-
-    // 提交创建关卡表单
-    async function submitCreateLevel() {
+    // 创建关卡
+    async function createLevel() {
         const islandId = document.getElementById('islandIdInput').value;
-        const name = document.getElementById('levelNameInput').value;
-        const difficulty = document.getElementById('levelDifficultyInput').value;
-        const questionId = document.getElementById('selectedQuestionId').value;
+        const name = document.getElementById('levelNameInput').value.trim();
+        const difficulty = document.getElementById('levelDifficultySelect').value;
+        const questionTitle = document.getElementById('questionTitleInput').value.trim();
+        const questionDescription = document.getElementById('questionDescriptionInput').value.trim();
+        const questionLeetcodeURL = document.getElementById('questionLeetcodeInput').value.trim();
 
-        if (!name || !difficulty || !questionId) {
-            showAlert('请填写所有字段', 'warning');
+        if (!name) {
+            alert('请输入关卡名称');
             return;
         }
-        
+
         try {
-            await axios.post('/api/interview-island/level/create', {
+            const response = await axios.post('/api/interview-island/level/create', {
                 island_id: parseInt(islandId),
-                question_id: parseInt(questionId),
                 name: name,
-                difficulty: difficulty
+                difficulty: difficulty,
+                question_title: questionTitle || name + ' 题目',
+                question_description: questionDescription || '请在此处编写代码解决问题',
+                question_leetcode_url: questionLeetcodeURL
             });
-            showAlert('关卡创建成功', 'success');
-            createLevelModal.hide();
-            loadIslandMap(); // 重新加载以显示新关卡
+
+            if (response.data) {
+                alert('关卡创建成功！');
+                createLevelModal.hide();
+                // 重新加载数据
+                await loadIslandMap();
+                renderIslands();
+            }
         } catch (error) {
-            showAlert(error.response?.data?.error || '创建失败', 'danger');
+            console.error('创建关卡失败:', error);
+            const errorMsg = error.response?.data?.error || '创建关卡失败';
+            alert('创建关卡失败: ' + errorMsg);
         }
     }
 
@@ -692,6 +686,21 @@
             loadIslandMap();
         } catch (error) {
             const msg = error.response?.data?.error || '更新失败';
+            showAlert(msg, 'danger');
+        }
+    }
+
+    // 删除关卡
+    async function deleteLevel(levelId) {
+        if (!confirm('确定要删除这个关卡吗？此操作不可撤销！')) {
+            return;
+        }
+        try {
+            await axios.delete(`/api/interview-island/level/${levelId}`);
+            showAlert('关卡已删除', 'success');
+            loadIslandMap();
+        } catch (error) {
+            const msg = error.response?.data?.error || '删除失败';
             showAlert(msg, 'danger');
         }
     }
@@ -791,34 +800,113 @@
     // 编辑题目
     async function editQuestion(questionId, currentTitle, currentDifficulty, currentURL) {
         // 先获取当前描述
-        const {data:{data:questionDetail}} = await axios.get(`/api/questions/${questionId}`);
-        const currentDesc = questionDetail?.description || '';
+        try {
+            const response = await axios.get(`/api/questions/${questionId}`);
+            const questionDetail = response.data;
+            const currentDesc = questionDetail?.description || '';
 
-        const title = prompt('题目标题：', currentTitle);
-        if (title===null) return;
-        const leetcodeURL = prompt('LeetCode 链接：', currentURL);
-        if (leetcodeURL===null) return;
-        const difficulty = prompt('难度（Easy/Medium/Hard）：', currentDifficulty);
-        if (difficulty===null) return;
-
-        // markdown 编辑简单实现：prompt 多行
-        const description = prompt('题目描述 (Markdown)：', currentDesc);
-        if (description===null) return;
-
-        axios.put(`/api/questions/${questionId}`, { title, leetcode_url: leetcodeURL, difficulty, description })
-            .then(() => {
-                showAlert('题目已更新', 'success');
-                // 重新加载当前模态框中的数据
-                const modal = bootstrap.Modal.getInstance(document.getElementById('questionManagementModal'));
-                if (modal) {
-                    const levelId = modal._element.querySelector('.modal-title').textContent.match(/\d+/)[0];
-                    manageQuestions(levelId);
-                }
-            })
-            .catch(err => {
-                const msg = err.response?.data?.error || '更新失败';
-                showAlert(msg, 'danger');
+            // 创建编辑模态框
+            const modalHtml = `
+            <div class="modal fade" id="editQuestionModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">编辑题目</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editQuestionForm">
+                                <div class="mb-3">
+                                    <label for="editTitle" class="form-label">题目标题</label>
+                                    <input type="text" class="form-control" id="editTitle" value="${currentTitle}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editURL" class="form-label">LeetCode链接</label>
+                                    <input type="url" class="form-control" id="editURL" value="${currentURL || ''}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editDifficulty" class="form-label">难度</label>
+                                    <select class="form-select" id="editDifficulty" required>
+                                        <option value="Easy" ${currentDifficulty === 'Easy' ? 'selected' : ''}>简单</option>
+                                        <option value="Medium" ${currentDifficulty === 'Medium' ? 'selected' : ''}>中等</option>
+                                        <option value="Hard" ${currentDifficulty === 'Hard' ? 'selected' : ''}>困难</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editDescription" class="form-label">题目描述</label>
+                                    <textarea class="form-control" id="editDescription" rows="5" placeholder="支持Markdown格式">${currentDesc}</textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="button" class="btn btn-primary" onclick="submitEditQuestion(${questionId})">保存</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            
+            // 移除已存在的模态框
+            const existingModal = document.getElementById('editQuestionModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // 添加新模态框
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+            modal.show();
+            
+            // 模态框关闭后移除DOM
+            document.getElementById('editQuestionModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
             });
+            
+        } catch (error) {
+            console.error('获取题目详情失败:', error);
+            showAlert('获取题目详情失败', 'danger');
+        }
+    }
+
+    // 提交编辑题目
+    async function submitEditQuestion(questionId) {
+        const title = document.getElementById('editTitle').value;
+        const leetcodeURL = document.getElementById('editURL').value;
+        const difficulty = document.getElementById('editDifficulty').value;
+        const description = document.getElementById('editDescription').value;
+
+        if (!title || !difficulty) {
+            showAlert('请填写题目标题和难度', 'warning');
+            return;
+        }
+
+        try {
+            await axios.put(`/api/questions/${questionId}`, { 
+                title, 
+                leetcode_url: leetcodeURL, 
+                difficulty, 
+                description 
+            });
+            showAlert('题目已更新', 'success');
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editQuestionModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // 重新加载当前模态框中的数据
+            const questionModal = bootstrap.Modal.getInstance(document.getElementById('questionManagementModal'));
+            if (questionModal) {
+                const levelId = questionModal._element.querySelector('.modal-title').textContent.match(/\d+/)[0];
+                manageQuestions(levelId);
+            }
+        } catch (error) {
+            const msg = error.response?.data?.error || '更新失败';
+            showAlert(msg, 'danger');
+        }
     }
 
     // 删除题目
@@ -958,7 +1046,8 @@
         world.innerHTML = '';
         islandsData.forEach((islandInfo, index) => {
             const island = islandInfo.island;
-            const locked = index > unlockedIslandCount; // 简易逻辑
+            // 改进解锁逻辑：管理员可以看到所有岛屿，或根据解锁数量判断
+            const locked = !isAdmin && index >= unlockedIslandCount;
             let adminHtml = '';
             if (isAdmin) {
                 adminHtml = `
@@ -969,7 +1058,7 @@
             }
             const node = document.createElement('div');
             node.className = `island-node ${locked ? 'locked' : ''}`;
-            node.innerHTML = `${adminHtml}<h4>${island.name}</h4>`;
+            node.innerHTML = `${adminHtml}<h4>${island.name}</h4><p>${island.description || ''}</p>`;
             if (!locked) {
                 node.onclick = () => showIslandDetail(index);
             }

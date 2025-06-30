@@ -19,12 +19,18 @@ type InterviewService interface {
 	// 岛屿和关卡
 	GetIslandMap(userID uint) ([]repositories.IslandProgressInfo, error)
 	GetLevelDetail(userID, levelID uint) (*LevelDetailResponse, error)
+	GetLevelDetailForAdmin(userID, levelID uint) (*LevelDetailResponse, error)
 
 	// 岛屿管理（管理员）
 	CreateIsland(name, description string) (*models.InterviewIsland, error)
 	UpdateIsland(id uint, name, description string) error
 	DeleteIsland(id uint) error
-	CreateLevel(islandID, questionID uint, name, difficulty string) (*models.InterviewLevel, error)
+
+	// 关卡管理（管理员）
+	CreateLevel(islandID uint, name, difficulty, questionTitle, questionDescription, questionLeetcodeURL string) (*models.InterviewLevel, error)
+	UpdateLevel(levelID uint, name string) error
+	UpdateLevelQuestion(levelID uint, questionTitle, questionDescription, questionLeetcodeURL string) error
+	DeleteLevel(levelID uint) error
 
 	// 代码执行和判题
 	TestCode(userID, levelID uint, code, language string) (*TestResult, error)
@@ -175,9 +181,57 @@ func (s *interviewService) GetLevelDetail(userID, levelID uint) (*LevelDetailRes
 
 	bestSubmission, _ := s.repo.GetBestSubmission(userID, levelID)
 
+	// 构造题目信息
+	question := models.Question{
+		ID:          level.ID, // 使用关卡ID作为题目ID
+		Title:       level.QuestionTitle,
+		Description: level.QuestionDescription,
+		LeetcodeURL: level.QuestionLeetcodeURL,
+		Difficulty:  level.Difficulty,
+	}
+
 	return &LevelDetailResponse{
 		Level:          *level,
-		Question:       level.Question,
+		Question:       question,
+		SampleCases:    sampleCases,
+		UserProgress:   *userProgress,
+		BestSubmission: bestSubmission,
+	}, nil
+}
+
+// GetLevelDetailForAdmin 获取关卡详情（管理员专用，跳过解锁检查）
+func (s *interviewService) GetLevelDetailForAdmin(userID, levelID uint) (*LevelDetailResponse, error) {
+	level, err := s.repo.GetLevelByID(levelID)
+	if err != nil {
+		return nil, err
+	}
+
+	userProgress, err := s.repo.GetUserLevelProgress(userID, levelID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 管理员不检查解锁状态，直接返回关卡信息
+
+	sampleCases, err := s.repo.GetSampleTestCases(levelID)
+	if err != nil {
+		return nil, err
+	}
+
+	bestSubmission, _ := s.repo.GetBestSubmission(userID, levelID)
+
+	// 构造题目信息
+	question := models.Question{
+		ID:          level.ID, // 使用关卡ID作为题目ID
+		Title:       level.QuestionTitle,
+		Description: level.QuestionDescription,
+		LeetcodeURL: level.QuestionLeetcodeURL,
+		Difficulty:  level.Difficulty,
+	}
+
+	return &LevelDetailResponse{
+		Level:          *level,
+		Question:       question,
 		SampleCases:    sampleCases,
 		UserProgress:   *userProgress,
 		BestSubmission: bestSubmission,
@@ -264,11 +318,14 @@ func (s *interviewService) SubmitCode(userID, levelID uint, code, language strin
 		}
 
 		// 知识点解锁：获取题目标签并写入 user_unlocked_tags
-		if level, _ := s.repo.GetLevelByID(levelID); level != nil {
-			for _, tag := range level.Question.Tags {
-				_ = s.repo.AddUserUnlockedTag(userID, tag.ID) // 忽略错误即可
+		// TODO: 重新实现标签功能，因为关卡不再关联Question对象
+		/*
+			if level, _ := s.repo.GetLevelByID(levelID); level != nil {
+				for _, tag := range level.Question.Tags {
+					_ = s.repo.AddUserUnlockedTag(userID, tag.ID) // 忽略错误即可
+				}
 			}
-		}
+		*/
 	}
 
 	return &SubmissionResult{
@@ -530,7 +587,7 @@ func (s *interviewService) UpdateIsland(id uint, name, description string) error
 }
 
 // CreateLevel 创建新关卡
-func (s *interviewService) CreateLevel(islandID, questionID uint, name, difficulty string) (*models.InterviewLevel, error) {
+func (s *interviewService) CreateLevel(islandID uint, name, difficulty, questionTitle, questionDescription, questionLeetcodeURL string) (*models.InterviewLevel, error) {
 	// 获取当前岛屿的最大关卡号
 	maxLevelNum, err := s.repo.GetMaxLevelNum(islandID)
 	if err != nil {
@@ -538,30 +595,35 @@ func (s *interviewService) CreateLevel(islandID, questionID uint, name, difficul
 	}
 
 	level := &models.InterviewLevel{
-		IslandID:   islandID,
-		QuestionID: questionID,
-		Name:       name,
-		Difficulty: difficulty,
-		LevelNum:   maxLevelNum + 1,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		IslandID:            islandID,
+		Name:                name,
+		Difficulty:          difficulty,
+		LevelNum:            maxLevelNum + 1,
+		QuestionTitle:       questionTitle,
+		QuestionDescription: questionDescription,
+		QuestionLeetcodeURL: questionLeetcodeURL,
+		IsUnlocked:          false,
 	}
 
 	if err := s.repo.CreateLevel(level); err != nil {
 		return nil, err
 	}
+
 	return level, nil
 }
 
 // UnlockTags 根据关卡题目标签为用户解锁知识点
 func (s *interviewService) UnlockTags(userID, levelID uint) error {
-	level, err := s.repo.GetLevelByID(levelID)
-	if err != nil {
-		return err
-	}
-	for _, tag := range level.Question.Tags {
-		_ = s.repo.AddUserUnlockedTag(userID, tag.ID)
-	}
+	// TODO: 重新实现标签功能，因为关卡不再关联Question对象
+	/*
+		level, err := s.repo.GetLevelByID(levelID)
+		if err != nil {
+			return err
+		}
+		for _, tag := range level.Question.Tags {
+			_ = s.repo.AddUserUnlockedTag(userID, tag.ID)
+		}
+	*/
 	return nil
 }
 
@@ -595,4 +657,31 @@ func (s *interviewService) UpdateTestCase(id uint, input, output string, isSampl
 // DeleteTestCase 删除测试用例
 func (s *interviewService) DeleteTestCase(id uint) error {
 	return s.repo.DeleteTestCase(id)
+}
+
+// UpdateLevel 更新关卡
+func (s *interviewService) UpdateLevel(levelID uint, name string) error {
+	level, err := s.repo.GetLevelByID(levelID)
+	if err != nil {
+		return err
+	}
+	level.Name = name
+	return s.repo.UpdateLevel(level)
+}
+
+// DeleteLevel 删除关卡
+func (s *interviewService) DeleteLevel(levelID uint) error {
+	return s.repo.DeleteLevel(levelID)
+}
+
+// UpdateLevelQuestion 更新关卡题目
+func (s *interviewService) UpdateLevelQuestion(levelID uint, questionTitle, questionDescription, questionLeetcodeURL string) error {
+	level, err := s.repo.GetLevelByID(levelID)
+	if err != nil {
+		return err
+	}
+	level.QuestionTitle = questionTitle
+	level.QuestionDescription = questionDescription
+	level.QuestionLeetcodeURL = questionLeetcodeURL
+	return s.repo.UpdateLevel(level)
 }

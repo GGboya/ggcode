@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"ggcode/internal/models"
 	"ggcode/internal/services"
 	"net/http"
 	"strconv"
@@ -129,6 +130,7 @@ func (ctrl *QuestionController) UpdateQuestion(c *gin.Context) {
 		Title       string `json:"title" binding:"required"`
 		LeetcodeURL string `json:"leetcode_url" binding:"required"`
 		Difficulty  string `json:"difficulty" binding:"required"`
+		Description string `json:"description"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -136,8 +138,14 @@ func (ctrl *QuestionController) UpdateQuestion(c *gin.Context) {
 		return
 	}
 
-	// 调用服务层更新题目
-	question, err := ctrl.questionService.UpdateQuestion(userID, uint(questionID), req.Title, req.LeetcodeURL, req.Difficulty)
+	var question *models.Question
+	// 如果包含描述字段，使用包含描述的更新方法
+	if req.Description != "" {
+		question, err = ctrl.questionService.UpdateQuestionWithDescription(userID, uint(questionID), req.Title, req.LeetcodeURL, req.Difficulty, req.Description)
+	} else {
+		question, err = ctrl.questionService.UpdateQuestion(userID, uint(questionID), req.Title, req.LeetcodeURL, req.Difficulty)
+	}
+
 	if err != nil {
 		switch err.Error() {
 		case "题目不存在":
