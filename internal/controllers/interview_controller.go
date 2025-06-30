@@ -340,6 +340,45 @@ func (ctrl *InterviewController) EditLevel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "关卡更新成功"})
 }
 
+// UpdateLevelDetail 更新关卡详情 (管理员)
+func (ctrl *InterviewController) UpdateLevelDetail(c *gin.Context) {
+	if !ctrl.ensureAdmin(c) {
+		return
+	}
+	levelID, err := strconv.ParseUint(c.Param("levelId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的关卡ID"})
+		return
+	}
+	var req struct {
+		Name                string `json:"name"`
+		Difficulty          string `json:"difficulty"`
+		QuestionTitle       string `json:"question_title"`
+		QuestionDescription string `json:"question_description"`
+		QuestionLeetcodeURL string `json:"question_leetcode_url"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+
+	// 如果提供了名称和难度，更新关卡基本信息
+	if req.Name != "" || req.Difficulty != "" {
+		if err := ctrl.interviewService.UpdateLevelBasic(uint(levelID), req.Name, req.Difficulty); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新关卡基本信息失败", "details": err.Error()})
+			return
+		}
+	}
+
+	// 更新题目信息
+	if err := ctrl.interviewService.UpdateLevelQuestion(uint(levelID), req.QuestionTitle, req.QuestionDescription, req.QuestionLeetcodeURL); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新题目信息失败", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "关卡详情更新成功"})
+}
+
 // DeleteLevel 删除关卡 (管理员)
 func (ctrl *InterviewController) DeleteLevel(c *gin.Context) {
 	if !ctrl.ensureAdmin(c) {

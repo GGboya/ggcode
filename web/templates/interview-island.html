@@ -47,18 +47,8 @@
     }
 
     .level-path {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: center;
-        gap: 20px;
-        max-width: 1200px;
-        position: relative;
-        padding: 40px 20px;
-        min-height: 200px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        margin: 20px 0;
+        /* 这个类现在被 #levelPath 替代，保留以防兼容性问题 */
+        display: block;
     }
 
     .level-node {
@@ -108,63 +98,7 @@
         100% { box-shadow: 0 0 0 0 rgba(32, 201, 151, 0); }
     }
 
-    .level-number {
-        font-size: 24px;
-        font-weight: bold;
-        color: white;
-        margin-bottom: 5px;
-    }
 
-    .level-stars {
-        display: flex;
-        gap: 2px;
-    }
-
-    .star {
-        font-size: 16px;
-        color: #ffc107;
-    }
-
-    .star.empty {
-        color: #dee2e6;
-    }
-
-    .level-title {
-        position: absolute;
-        bottom: -35px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(255, 255, 255, 0.9);
-        padding: 5px 10px;
-        border-radius: 10px;
-        font-size: 12px;
-        font-weight: bold;
-        white-space: nowrap;
-        backdrop-filter: blur(10px);
-    }
-
-    .connecting-line {
-        position: absolute;
-        height: 4px;
-        background: linear-gradient(90deg, #28a745, #20c997);
-        border-radius: 2px;
-        z-index: -1;
-    }
-
-    .difficulty-badge {
-        position: absolute;
-        top: -10px;
-        right: -10px;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-size: 10px;
-        font-weight: bold;
-        color: white;
-    }
-
-    .difficulty-easy { background: #28a745; }
-    .difficulty-medium { background: #ffc107; color: #000; }
-    .difficulty-hard { background: #dc3545; }
 
     .island-selector {
         display: flex;
@@ -203,24 +137,7 @@
         height: 300px;
     }
 
-    /* 新增：管理员控制按钮区域 */
-    .admin-controls {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        display: flex;
-        gap: 4px;
-        visibility: hidden;
-        z-index: 20;
-    }
-    .level-node:hover .admin-controls {
-        visibility: visible;
-    }
-    .admin-controls .btn {
-        --bs-btn-padding-y: 0.15rem;
-        --bs-btn-padding-x: 0.25rem;
-        --bs-btn-font-size: 0.65rem;
-    }
+
 
     .world-map {
         display: flex;
@@ -272,6 +189,202 @@
     .search-result-item:hover {
         background-color: #f0f0f0;
     }
+
+    /* 关卡路径容器 */
+    #levelPath {
+        display: grid;
+        grid-template-columns: repeat(4, 140px); /* 每行4个关卡，固定宽度 */
+        gap: 30px 40px; /* 行间距和列间距 */
+        padding: 40px;
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+        justify-content: center;
+    }
+
+    /* 关卡节点基础样式 */
+    .level-node {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        transition: all 0.3s ease;
+        border: 4px solid #ddd;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        justify-self: center; /* 在Grid中居中 */
+    }
+
+    /* 已完成关卡 */
+    .level-node.completed {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border-color: #11998e;
+        color: white;
+        transform: scale(1.05);
+    }
+
+    /* 当前可进行关卡 */
+    .level-node.unlocked {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+        animation: pulse 2s infinite;
+    }
+
+    /* 锁定关卡 */
+    .level-node.locked {
+        background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+        border-color: #95a5a6;
+        color: #7f8c8d;
+        opacity: 0.6;
+    }
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+    }
+
+    /* 关卡编号 */
+    .level-number {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    /* 星级显示 */
+    .level-stars {
+        display: flex;
+        gap: 2px;
+        margin-bottom: 5px;
+    }
+
+    .level-stars .star {
+        color: #ffd700;
+        font-size: 12px;
+    }
+
+    .level-stars .star.empty {
+        color: #ddd;
+    }
+
+    /* 关卡名称 */
+    .level-title {
+        font-size: 10px;
+        text-align: center;
+        max-width: 90px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* 难度标识 */
+    .difficulty-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        font-size: 8px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        border: 2px solid white;
+        font-weight: bold;
+    }
+
+    .difficulty-easy { background: #27ae60; color: white; }
+    .difficulty-medium { background: #f39c12; color: white; }
+    .difficulty-hard { background: #e74c3c; color: white; }
+
+    /* 管理员控制按钮 */
+    .admin-controls {
+        position: absolute;
+        top: -15px;
+        left: -15px;
+        display: flex;
+        gap: 5px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .level-node:hover .admin-controls {
+        opacity: 1;
+    }
+
+    .admin-controls .btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border: 2px solid white;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+            /* 路径连接线 - 使用伪元素实现 */
+        .level-node::after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: -1;
+            display: none; /* 默认隐藏，按需显示 */
+        }
+
+        /* 奇数行（左到右）显示右向箭头，除了最后一个 */
+        .level-node.odd-row:not(.row-end)::after {
+            display: block;
+            right: -70px;
+        }
+
+        /* 偶数行（右到左）显示左向箭头，除了最后一个 */
+        .level-node.even-row:not(.row-end)::after {
+            display: block;
+            left: -70px;
+        }
+
+            /* 行末转弯的垂直连接线 */
+        .level-node.row-end::before {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 80px;
+            background: linear-gradient(180deg, #667eea, #764ba2);
+            border-radius: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: -1;
+        }
+
+        /* 向下的转弯 */
+        .level-node.turn-down::before {
+            bottom: -90px;
+        }
+
+        /* 向上的转弯 */
+        .level-node.turn-up::before {
+            top: -90px;
+        }
+
+    /* 悬停效果 */
+    .level-node:not(.locked):hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+    }
+
+    .level-node.locked:hover {
+        cursor: not-allowed;
+    }
 </style>
 
 <!-- 加载状态 -->
@@ -315,10 +428,13 @@
         <div class="island-map flex-grow-1">
             <div id="levelPath" class="level-path"></div>
             <!-- 新增关卡按钮（仅管理员）-->
-            <div id="addLevelContainer" class="mt-4" style="display: none;">
-                <button class="btn btn-primary" onclick="openCreateLevelModal()">
-                    <i class="fas fa-plus"></i> 新增关卡
+            <div id="addLevelContainer" class="text-center mt-4" style="display: none;">
+                <button class="btn btn-success btn-lg" onclick="openCreateLevelModal()" style="border-radius: 50px; padding: 12px 30px; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);">
+                    <i class="fas fa-plus-circle me-2"></i> 新增关卡
                 </button>
+                <div class="text-muted mt-2" style="font-size: 0.9em;">
+                    <i class="fas fa-info-circle me-1"></i>点击添加新的挑战关卡
+                </div>
             </div>
         </div>
     </div>
@@ -407,21 +523,24 @@
                 console.log('面试岛界面渲染完成');
                 renderWorldMap();
             } else {
-                console.error('没有可用的面试岛数据');
-                alert('没有可用的面试岛数据');
+                console.log('暂无面试岛数据，但不显示错误提示');
+                // 移除了 alert，避免创建成功后出现错误提示
             }
             
             document.getElementById('loading').style.display = 'none';
             document.getElementById('islandContainer').style.display = 'block';
         } catch (error) {
             console.error('加载面试岛数据失败:', error);
-            document.getElementById('loading').innerHTML = `
-                <div class="alert alert-danger">
-                    <h5>加载失败</h5>
-                    <p>错误信息: ${error.message}</p>
-                    <button class="btn btn-primary" onclick="loadIslandMap()">重新加载</button>
-                </div>
-            `;
+            // 只在真正的网络错误时才显示错误
+            if (error.response && error.response.status !== 200) {
+                document.getElementById('loading').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>加载失败</h5>
+                        <p>错误信息: ${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadIslandMap()">重新加载</button>
+                    </div>
+                `;
+            }
         }
     }
 
@@ -480,11 +599,11 @@
                 </div>`;
         }
 
-        // 渲染关卡路径使用原函数
+        // 渲染关卡路径 - S型蛇形布局
         renderLevelPath(islandInfo.levels||[], islandInfo.user_progress||[]);
     }
 
-    // 渲染关卡路径
+    // 渲染关卡路径 - S型蛇形布局
     function renderLevelPath(levels, userProgress) {
         const pathContainer = document.getElementById('levelPath');
         console.log('开始渲染关卡路径，容器:', pathContainer);
@@ -499,6 +618,8 @@
         }
         console.log('进度映射:', progressMap);
 
+        const LEVELS_PER_ROW = 4;
+        
         levels.forEach((level, index) => {
             const progress = progressMap[level.id] || { status: 'locked', stars: 0 };
             
@@ -513,9 +634,40 @@
             
             console.log(`渲染关卡 ${level.level_num}:`, level, '进度:', progress);
             
+            // 计算当前关卡在S型路径中的位置
+            const rowIndex = Math.floor(index / LEVELS_PER_ROW);
+            const colIndex = index % LEVELS_PER_ROW;
+            const isEvenRow = rowIndex % 2 === 0;
+            
+            // 对于偶数行（第2、4、6行等），需要反转列的顺序实现S型
+            const actualColIndex = isEvenRow ? colIndex : (LEVELS_PER_ROW - 1 - colIndex);
+            
             // 创建关卡节点
             const node = document.createElement('div');
             node.className = `level-node ${progress.status}`;
+            
+            // 添加S型路径相关的CSS类
+            const isLastInRow = colIndex === LEVELS_PER_ROW - 1;
+            const isLastInLevel = index === levels.length - 1;
+            const hasNextRow = index + 1 < levels.length;
+            
+            // 奇数行（从0开始，所以第1,3,5行等）从左到右
+            if (rowIndex % 2 === 0) {
+                node.classList.add('odd-row');
+                if (isLastInRow && hasNextRow && !isLastInLevel) {
+                    node.classList.add('row-end', 'turn-down');
+                }
+            } else {
+                // 偶数行（第2,4,6行等）从右到左
+                node.classList.add('even-row');
+                if (colIndex === 0 && hasNextRow && !isLastInLevel) {
+                    node.classList.add('row-end', 'turn-down');
+                }
+            }
+
+            // 设置Grid位置
+            node.style.gridColumnStart = actualColIndex + 1;
+            node.style.gridRowStart = rowIndex + 1;
             
             // 新增：管理员控制按钮
             let adminHtml = '';
@@ -525,8 +677,8 @@
                         <button class="btn btn-light edit-level-btn" title="编辑关卡" onclick="editLevel(${level.id}, '${level.name.replace(/'/g, "\\'")}')">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-light manage-questions-btn" title="题目管理" onclick="manageQuestions(${level.id})">
-                            <i class="fas fa-list"></i>
+                        <button class="btn btn-light edit-level-detail-btn" title="编辑关卡详情" onclick="editLevelDetail(${level.id})">
+                            <i class="fas fa-cog"></i>
                         </button>
                         <button class="btn btn-light manage-cases-btn" title="测试用例" onclick="manageTestCases(${level.id})">
                             <i class="fas fa-vial"></i>
@@ -566,25 +718,15 @@
 
             console.log('添加关卡节点:', node);
             pathContainer.appendChild(node);
-
-            // 添加连接线（除了最后一个节点）
-            if (index < levels.length - 1) {
-                const line = document.createElement('div');
-                line.className = 'connecting-line';
-                line.style.width = '80px';
-                line.style.height = '4px';
-                line.style.background = 'linear-gradient(90deg, #28a745, #20c997)';
-                line.style.borderRadius = '2px';
-                line.style.position = 'relative';
-                line.style.margin = '0 20px';
-                pathContainer.appendChild(line);
-            }
         });
         
         console.log('关卡路径渲染完成，容器子元素数量:', pathContainer.children.length);
-
+        
         // 控制新增关卡按钮的显示
-        document.getElementById('addLevelContainer').style.display = isAdmin ? 'block' : 'none';
+        const addLevelContainer = document.getElementById('addLevelContainer');
+        if (addLevelContainer) {
+            addLevelContainer.style.display = isAdmin ? 'block' : 'none';
+        }
     }
 
     // 生成星级显示
@@ -664,7 +806,7 @@
                 createLevelModal.hide();
                 // 重新加载数据
                 await loadIslandMap();
-                renderIslands();
+                renderCurrentIsland();
             }
         } catch (error) {
             console.error('创建关卡失败:', error);
@@ -705,149 +847,67 @@
         }
     }
 
-    // 管理题目
-    async function manageQuestions(levelId) {
+    // 编辑关卡详情 (题目内容)
+    async function editLevelDetail(levelId) {
         try {
-            // 获取题目数据
-            const res = await axios.get(`/api/interview-island/level/${levelId}/questions`);
-            const questions = res.data.data || [];
-            renderQuestionManagementModal(levelId, questions);
-        } catch (err) {
-            const msg = err.response?.data?.error || '加载题目失败';
-            showAlert(msg, 'danger');
-        }
-    }
-
-    // 渲染题目管理模态框
-    function renderQuestionManagementModal(levelId, questions) {
-        let modal = document.getElementById('questionManagementModal');
-        if (!modal) {
-            // 创建模态框骨架
-            const modalHtml = `
-            <div class="modal fade" id="questionManagementModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">题目管理 - 关卡 ${levelId}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="d-flex justify-content-end mb-2">
-                                <button class="btn btn-sm btn-primary" id="addQuestionBtn"><i class="fas fa-plus"></i> 新增题目</button>
-                            </div>
-                            <div id="questionListContainer"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            modal = document.getElementById('questionManagementModal');
-        }
-
-        const listContainer = modal.querySelector('#questionListContainer');
-        if (questions.length === 0) {
-            listContainer.innerHTML = '<p class="text-muted">暂无题目</p>';
-        } else {
-            listContainer.innerHTML = questions.map(q => `
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div class="flex-grow-1">
-                        <strong>${q.title}</strong>
-                        <span class="badge ms-2 ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
-                    </div>
-                    <div class="btn-group btn-group-sm">
-                        <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary" title="打开 LeetCode"><i class="fas fa-external-link-alt"></i></a>
-                        <button class="btn btn-outline-warning" onclick="editQuestion(${q.id}, '${q.title.replace(/'/g, "\\'")}', '${q.difficulty}', '${q.leetcode_url}')"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-outline-danger" onclick="deleteQuestion(${q.id}, ${levelId})"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // 绑定新增按钮
-        modal.querySelector('#addQuestionBtn').onclick = () => addQuestion(levelId);
-
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-    }
-
-    // 工具：根据难度获取样式
-    function getDifficultyClass(difficulty) {
-        switch (difficulty?.toLowerCase()) {
-            case 'easy': return 'bg-success';
-            case 'medium': return 'bg-warning text-dark';
-            case 'hard': return 'bg-danger';
-            default: return 'bg-secondary';
-        }
-    }
-
-    // 新增题目
-    function addQuestion(levelId) {
-        const title = prompt('题目标题：');
-        if (!title) return;
-        const leetcodeURL = prompt('LeetCode 链接：');
-        const difficulty = prompt('难度（Easy/Medium/Hard）：', 'Easy');
-        axios.post(`/api/interview-island/level/${levelId}/question/add`, { title, leetcode_url: leetcodeURL, difficulty })
-            .then(() => {
-                showAlert('题目已添加', 'success');
-                manageQuestions(levelId); // 刷新列表
-            })
-            .catch(err => {
-                const msg = err.response?.data?.error || '添加失败';
-                showAlert(msg, 'danger');
-            });
-    }
-
-    // 编辑题目
-    async function editQuestion(questionId, currentTitle, currentDifficulty, currentURL) {
-        // 先获取当前描述
-        try {
-            const response = await axios.get(`/api/questions/${questionId}`);
-            const questionDetail = response.data;
-            const currentDesc = questionDetail?.description || '';
+            // 获取关卡详情
+            const response = await axios.get(`/api/interview-island/level/${levelId}`);
+            const levelData = response.data.data;
 
             // 创建编辑模态框
             const modalHtml = `
-            <div class="modal fade" id="editQuestionModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
+            <div class="modal fade" id="editLevelDetailModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">编辑题目</h5>
+                            <h5 class="modal-title">编辑关卡详情 - ${levelData.level.name}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <form id="editQuestionForm">
-                                <div class="mb-3">
-                                    <label for="editTitle" class="form-label">题目标题</label>
-                                    <input type="text" class="form-control" id="editTitle" value="${currentTitle}" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="editURL" class="form-label">LeetCode链接</label>
-                                    <input type="url" class="form-control" id="editURL" value="${currentURL || ''}" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="editDifficulty" class="form-label">难度</label>
-                                    <select class="form-select" id="editDifficulty" required>
-                                        <option value="Easy" ${currentDifficulty === 'Easy' ? 'selected' : ''}>简单</option>
-                                        <option value="Medium" ${currentDifficulty === 'Medium' ? 'selected' : ''}>中等</option>
-                                        <option value="Hard" ${currentDifficulty === 'Hard' ? 'selected' : ''}>困难</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="editDescription" class="form-label">题目描述</label>
-                                    <textarea class="form-control" id="editDescription" rows="5" placeholder="支持Markdown格式">${currentDesc}</textarea>
+                            <form id="editLevelDetailForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editLevelName" class="form-label">关卡名称</label>
+                                            <input type="text" class="form-control" id="editLevelName" value="${levelData.level.name}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editLevelDifficulty" class="form-label">难度</label>
+                                            <select class="form-select" id="editLevelDifficulty" required>
+                                                <option value="Easy" ${levelData.level.difficulty === 'Easy' ? 'selected' : ''}>简单</option>
+                                                <option value="Medium" ${levelData.level.difficulty === 'Medium' ? 'selected' : ''}>中等</option>
+                                                <option value="Hard" ${levelData.level.difficulty === 'Hard' ? 'selected' : ''}>困难</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editQuestionTitle" class="form-label">题目标题</label>
+                                            <input type="text" class="form-control" id="editQuestionTitle" value="${levelData.question.title || ''}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editQuestionLeetcode" class="form-label">LeetCode 链接</label>
+                                            <input type="url" class="form-control" id="editQuestionLeetcode" value="${levelData.question.leetcode_url || ''}" placeholder="https://leetcode.com/problems/...">
+                                            <small class="form-text text-muted">仅供展示，不提供跳转</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editQuestionDescription" class="form-label">题目描述 (支持 Markdown)</label>
+                                            <textarea class="form-control" id="editQuestionDescription" rows="15" placeholder="支持 Markdown 格式，如: ## 题目描述 给定一个数组 nums，返回...">${levelData.question.description || ''}</textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                            <button type="button" class="btn btn-primary" onclick="submitEditQuestion(${questionId})">保存</button>
+                            <button type="button" class="btn btn-primary" onclick="submitEditLevelDetail(${levelId})">保存</button>
                         </div>
                     </div>
                 </div>
             </div>`;
             
             // 移除已存在的模态框
-            const existingModal = document.getElementById('editQuestionModal');
+            const existingModal = document.getElementById('editLevelDetailModal');
             if (existingModal) {
                 existingModal.remove();
             }
@@ -856,71 +916,60 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             
             // 显示模态框
-            const modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+            const modal = new bootstrap.Modal(document.getElementById('editLevelDetailModal'));
             modal.show();
             
             // 模态框关闭后移除DOM
-            document.getElementById('editQuestionModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('editLevelDetailModal').addEventListener('hidden.bs.modal', function() {
                 this.remove();
             });
             
         } catch (error) {
-            console.error('获取题目详情失败:', error);
-            showAlert('获取题目详情失败', 'danger');
-        }
-    }
-
-    // 提交编辑题目
-    async function submitEditQuestion(questionId) {
-        const title = document.getElementById('editTitle').value;
-        const leetcodeURL = document.getElementById('editURL').value;
-        const difficulty = document.getElementById('editDifficulty').value;
-        const description = document.getElementById('editDescription').value;
-
-        if (!title || !difficulty) {
-            showAlert('请填写题目标题和难度', 'warning');
-            return;
-        }
-
-        try {
-            await axios.put(`/api/questions/${questionId}`, { 
-                title, 
-                leetcode_url: leetcodeURL, 
-                difficulty, 
-                description 
-            });
-            showAlert('题目已更新', 'success');
-            
-            // 关闭模态框
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editQuestionModal'));
-            if (modal) {
-                modal.hide();
-            }
-            
-            // 重新加载当前模态框中的数据
-            const questionModal = bootstrap.Modal.getInstance(document.getElementById('questionManagementModal'));
-            if (questionModal) {
-                const levelId = questionModal._element.querySelector('.modal-title').textContent.match(/\d+/)[0];
-                manageQuestions(levelId);
-            }
-        } catch (error) {
-            const msg = error.response?.data?.error || '更新失败';
+            console.error('获取关卡详情失败:', error);
+            const msg = error.response?.data?.error || '获取关卡详情失败';
             showAlert(msg, 'danger');
         }
     }
 
-    // 删除题目
-    function deleteQuestion(questionId, levelId) {
-        if (!confirm('确定要删除此题目吗？')) return;
-        axios.post(`/api/interview-island/question/${questionId}/delete`)
-            .then(() => {
-                showAlert('题目已删除', 'success');
-                manageQuestions(levelId);
-            })
-            .catch(err => {
-                const msg = err.response?.data?.error || '删除失败';
-                showAlert(msg, 'danger');
+    // 提交编辑关卡详情
+    async function submitEditLevelDetail(levelId) {
+        const name = document.getElementById('editLevelName').value.trim();
+        const difficulty = document.getElementById('editLevelDifficulty').value;
+        const questionTitle = document.getElementById('editQuestionTitle').value.trim();
+        const questionDescription = document.getElementById('editQuestionDescription').value.trim();
+        const questionLeetcodeUrl = document.getElementById('editQuestionLeetcode').value.trim();
+
+        if (!name || !questionTitle) {
+            showAlert('请填写关卡名称和题目标题', 'warning');
+            return;
+        }
+
+        try {
+            await axios.put(`/api/interview-island/level/${levelId}`, {
+                name: name,
+                difficulty: difficulty,
+                question_title: questionTitle,
+                question_description: questionDescription,
+                question_leetcode_url: questionLeetcodeUrl
             });
+            
+            showAlert('关卡详情已更新', 'success');
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editLevelDetailModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // 重新加载数据
+            await loadIslandMap();
+            renderCurrentIsland();
+            
+        } catch (error) {
+            console.error('更新关卡详情失败:', error);
+            const msg = error.response?.data?.error || '更新关卡详情失败';
+            showAlert(msg, 'danger');
+        }
     }
 
     // ------------------ 测试用例管理 ------------------

@@ -668,13 +668,28 @@
             problemHtml += '<span class="badge bg-primary">' + level.difficulty + '</span>';
             problemHtml += '</div>';
             
-            problemHtml += '<div class="problem-description mt-3">';
-            problemHtml += '<h6>题目链接</h6>';
-            problemHtml += '<p><a href="' + question.leetcode_url + '" target="_blank" class="text-decoration-none">';
-            problemHtml += '<i class="fas fa-external-link-alt me-1"></i>';
-            problemHtml += question.title;
-            problemHtml += '</a></p>';
-            problemHtml += '</div>';
+            // 添加题目描述部分
+            if (question.description) {
+                problemHtml += '<div class="problem-description mt-3">';
+                problemHtml += '<h6>题目描述</h6>';
+                problemHtml += '<div class="description-content">';
+                // 简单的 markdown 渲染
+                problemHtml += parseMarkdown(question.description);
+                problemHtml += '</div>';
+                problemHtml += '</div>';
+            }
+            
+            // 题目链接部分（仅显示，不可跳转）
+            if (question.leetcode_url) {
+                problemHtml += '<div class="problem-link mt-3">';
+                problemHtml += '<h6>LeetCode 链接</h6>';
+                problemHtml += '<p class="text-muted">';
+                problemHtml += '<i class="fas fa-link me-1"></i>';
+                problemHtml += '<span class="text-decoration-none">' + question.leetcode_url + '</span>';
+                problemHtml += '<small class="text-muted ms-2">(仅供参考，不可跳转)</small>';
+                problemHtml += '</p>';
+                problemHtml += '</div>';
+            }
 
             problemHtml += '<div class="sample-cases mt-4">';
             problemHtml += '<h6>样例测试用例</h6>';
@@ -1909,5 +1924,38 @@
                 }
             });
         })();
+
+        // 简单的 Markdown 解析器
+        function parseMarkdown(markdown) {
+            if (!markdown) return '';
+            
+            let html = markdown;
+            
+            // 转换标题
+            html = html.replace(/^### (.+)$/gm, '<h5>$1</h5>');
+            html = html.replace(/^## (.+)$/gm, '<h4>$1</h4>');
+            html = html.replace(/^# (.+)$/gm, '<h3>$1</h3>');
+            
+            // 转换粗体和斜体
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            
+            // 转换代码块
+            html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-light p-3 rounded"><code>$1</code></pre>');
+            
+            // 转换行内代码
+            html = html.replace(/`([^`]+)`/g, '<code class="bg-light px-1 rounded">$1</code>');
+            
+            // 转换换行
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = html.replace(/\n/g, '<br>');
+            
+            // 包装段落
+            if (html && !html.startsWith('<h') && !html.startsWith('<pre')) {
+                html = '<p>' + html + '</p>';
+            }
+            
+            return html;
+        }
     </script>
 {{end}} 

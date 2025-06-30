@@ -29,6 +29,7 @@ type InterviewService interface {
 	// 关卡管理（管理员）
 	CreateLevel(islandID uint, name, difficulty, questionTitle, questionDescription, questionLeetcodeURL string) (*models.InterviewLevel, error)
 	UpdateLevel(levelID uint, name string) error
+	UpdateLevelBasic(levelID uint, name, difficulty string) error
 	UpdateLevelQuestion(levelID uint, questionTitle, questionDescription, questionLeetcodeURL string) error
 	DeleteLevel(levelID uint) error
 
@@ -683,5 +684,16 @@ func (s *interviewService) UpdateLevelQuestion(levelID uint, questionTitle, ques
 	level.QuestionTitle = questionTitle
 	level.QuestionDescription = questionDescription
 	level.QuestionLeetcodeURL = questionLeetcodeURL
+	return s.repo.UpdateLevel(level)
+}
+
+// UpdateLevelBasic 更新关卡基本信息
+func (s *interviewService) UpdateLevelBasic(levelID uint, name, difficulty string) error {
+	level, err := s.repo.GetLevelByID(levelID)
+	if err != nil {
+		return err
+	}
+	level.Name = name
+	level.Difficulty = difficulty
 	return s.repo.UpdateLevel(level)
 }

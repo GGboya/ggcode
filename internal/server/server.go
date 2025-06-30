@@ -154,6 +154,7 @@ func (s *Server) setupRoutes() {
 			api.POST("/interview-island/:id/delete", ctrl.Interview.DeleteIsland)
 			api.POST("/interview-island/level/create", ctrl.Interview.CreateLevel)
 			api.POST("/interview-island/level/:levelId/edit", ctrl.Interview.EditLevel)
+			api.PUT("/interview-island/level/:levelId", ctrl.Interview.UpdateLevelDetail)
 			api.DELETE("/interview-island/level/:levelId", ctrl.Interview.DeleteLevel)
 
 			// 测试用例接口
