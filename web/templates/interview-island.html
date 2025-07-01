@@ -1047,7 +1047,7 @@
     </div>
 
     <!-- 世界地图视图：展示所有岛屿 -->
-    <div id="worldMapContainer" style="display: none;">
+    <div id="worldMapContainer">
         <div class="text-center mb-4" style="padding: 20px;">
             <h2 style="color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.3); margin-bottom: 10px;">
                 <i class="fas fa-map me-3"></i>探索岛屿世界
@@ -1062,7 +1062,7 @@
     </div>
 
     <!-- 岛屿详情视图（原有内容） -->
-    <div id="islandDetail" style="display:none;" class="flex-grow-1 d-flex flex-column">
+    <div id="islandDetail" class="flex-grow-1 d-flex flex-column d-none">
         <!-- 保留原有 info & progress -->
         <div class="d-flex justify-content-between align-items-start mb-4">
             <div class="island-info" id="detailInfo"></div>
@@ -1141,6 +1141,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         loadIslandMap();
         checkAndRefreshData();
+        // 初始只显示世界地图，隐藏关卡详情 (使用Bootstrap类避免display冲突)
+        document.getElementById('worldMapContainer').classList.remove('d-none');
+        document.getElementById('islandDetail').classList.add('d-none');
     });
     
     // 检查并刷新数据（从关卡页面返回后）
@@ -1186,16 +1189,18 @@
             if (islandsData && islandsData.length > 0) {
                 console.log('渲染面试岛界面...');
                 renderIslandSelector();
-                renderWorldMap(); // 直接显示世界地图
+                renderWorldMap(); // 只显示世界地图，不自动进入关卡详情
                 console.log('面试岛界面渲染完成');
             } else {
                 console.log('暂无面试岛数据，但不显示错误提示');
-                // 移除了 alert，避免创建成功后出现错误提示
                 renderWorldMap(); // 即使没有数据也显示空的世界地图
             }
             
             document.getElementById('loading').style.display = 'none';
             document.getElementById('islandContainer').style.display = 'block';
+            // 强制隐藏关卡详情 (使用class)
+            document.getElementById('islandDetail').classList.add('d-none');
+            document.getElementById('worldMapContainer').classList.remove('d-none');
         } catch (error) {
             console.error('加载面试岛数据失败:', error);
             // 只在真正的网络错误时才显示错误
@@ -1234,7 +1239,11 @@
     function switchIsland(index) {
         currentIslandIndex = index;
         renderIslandSelector();
-        renderCurrentIsland();
+        // 不自动进入关卡详情
+        // renderCurrentIsland();
+        // 强制隐藏关卡详情
+        document.getElementById('islandDetail').classList.add('d-none');
+        document.getElementById('worldMapContainer').classList.remove('d-none');
     }
 
     // 渲染当前岛屿 (更新到新视图容器)
@@ -1875,20 +1884,22 @@
         // 管理按钮显隐
         document.getElementById('createIslandBtn').classList.toggle('d-none', !isAdmin);
         document.getElementById('backToWorldBtn').classList.add('d-none');
-        document.getElementById('islandDetail').style.display = 'none';
-        document.getElementById('worldMapContainer').style.display = 'block';
+        document.getElementById('islandDetail').classList.add('d-none');
+        document.getElementById('worldMapContainer').classList.remove('d-none');
     }
 
     function showIslandDetail(index) {
         currentIslandIndex = index;
         renderCurrentIsland();
-        document.getElementById('worldMapContainer').style.display = 'none';
-        document.getElementById('islandDetail').style.display = 'flex';
+        document.getElementById('worldMapContainer').classList.add('d-none');
+        document.getElementById('islandDetail').classList.remove('d-none');
         document.getElementById('backToWorldBtn').classList.remove('d-none');
     }
 
     function showWorldMap() {
         renderWorldMap();
+        document.getElementById('islandDetail').classList.add('d-none');
+        document.getElementById('worldMapContainer').classList.remove('d-none');
     }
 
     // 创建岛屿（管理员）
