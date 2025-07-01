@@ -15,11 +15,52 @@
         flex-direction: column;
     }
 
-    /* 岛屿详情视图的背景 */
+    /* 岛屿详情视图的背景 - 海洋主题 */
     #islandDetail {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: 
+            linear-gradient(135deg, #4FC3F7 0%, #29B6F6 30%, #03A9F4 60%, #0288D1 100%);
         border-radius: 20px;
         padding: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* 岛屿详情页面的海浪效果 */
+    #islandDetail::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 200%;
+        height: 60px;
+        background: 
+            linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.15) 25%, 
+                rgba(255,255,255,0.3) 50%, 
+                rgba(255,255,255,0.15) 75%, 
+                transparent 100%);
+        border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        animation: detail-wave 10s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    @keyframes detail-wave {
+        0%, 100% { 
+            transform: translateX(-30%) rotate(-1deg); 
+            opacity: 0.5; 
+        }
+        50% { 
+            transform: translateX(-20%) rotate(1deg); 
+            opacity: 0.7; 
+        }
+    }
+
+    /* 确保岛屿详情内容在海浪之上 */
+    #islandDetail > * {
+        position: relative;
+        z-index: 2;
     }
 
     .island-map {
@@ -551,110 +592,304 @@
     /* 关卡路径容器 */
     #levelPath {
         display: grid;
-        grid-template-columns: repeat(4, 140px); /* 每行4个关卡，固定宽度 */
-        gap: 30px 40px; /* 行间距和列间距 */
-        padding: 40px;
-        max-width: 800px;
+        grid-template-columns: repeat(4, 150px); /* 每行4个关卡，固定宽度 */
+        gap: 40px 50px; /* 行间距和列间距 */
+        padding: 50px;
+        max-width: 900px;
         margin: 0 auto;
         position: relative;
         justify-content: center;
     }
 
-    /* 关卡节点基础样式 */
+    /* 关卡节点基础样式 - 超可爱设计 */
     .level-node {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
+        width: 130px;
+        height: 130px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         position: relative;
-        transition: all 0.3s ease;
-        border: 4px solid #ddd;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        justify-self: center; /* 在Grid中居中 */
+        transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        justify-self: center;
+        cursor: pointer;
+        background: none;
+        border: none;
     }
 
-    /* 已完成关卡 */
+    /* 关卡主体 - 可爱的不规则圆形 */
+    .level-node::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 45% 55% 52% 48% / 48% 62% 38% 52%;
+        transition: all 0.5s ease;
+        z-index: 1;
+    }
+
+    /* 关卡阴影效果 */
+    .level-node::after {
+        content: '';
+        position: absolute;
+        width: 85%;
+        height: 20px;
+        background: rgba(0,0,0,0.15);
+        border-radius: 50%;
+        bottom: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        filter: blur(8px);
+        transition: all 0.5s ease;
+        z-index: 0;
+    }
+
+    /* 已完成关卡 - 绿色可爱风格 */
+    .level-node.completed::before {
+        background: 
+            radial-gradient(circle at 25% 25%, #C8E6C9 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, #A5D6A7 0%, transparent 40%),
+            linear-gradient(135deg, #66BB6A 0%, #4CAF50 30%, #43A047 60%, #388E3C 100%);
+        box-shadow: 
+            0 12px 35px rgba(76,175,80,0.3),
+            0 6px 20px rgba(0,0,0,0.15),
+            inset 0 8px 16px rgba(255,255,255,0.3),
+            inset 0 -4px 12px rgba(0,0,0,0.1);
+        border: 3px solid #C8E6C9;
+    }
+
     .level-node.completed {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        border-color: #11998e;
         color: white;
-        transform: scale(1.05);
+        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        animation: completed-float 3s ease-in-out infinite;
     }
 
-    /* 当前可进行关卡 */
+    @keyframes completed-float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-8px) rotate(2deg); }
+    }
+
+    /* 当前可进行关卡 - 蓝紫色发光效果 */
+    .level-node.unlocked::before {
+        background: 
+            radial-gradient(circle at 30% 20%, #E1BEE7 0%, transparent 50%),
+            radial-gradient(circle at 70% 80%, #D1C4E9 0%, transparent 40%),
+            linear-gradient(135deg, #9C27B0 0%, #673AB7 30%, #3F51B5 60%, #2196F3 100%);
+        box-shadow: 
+            0 15px 40px rgba(156,39,176,0.4),
+            0 8px 25px rgba(0,0,0,0.2),
+            inset 0 8px 16px rgba(255,255,255,0.3),
+            inset 0 -4px 12px rgba(0,0,0,0.1);
+        border: 3px solid #E1BEE7;
+        animation: unlocked-glow 2s ease-in-out infinite alternate;
+    }
+
     .level-node.unlocked {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-color: #667eea;
         color: white;
-        animation: pulse 2s infinite;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        animation: unlocked-bounce 2s ease-in-out infinite;
     }
 
-    /* 锁定关卡 */
+    @keyframes unlocked-glow {
+        0% { 
+            box-shadow: 
+                0 15px 40px rgba(156,39,176,0.4),
+                0 8px 25px rgba(0,0,0,0.2),
+                inset 0 8px 16px rgba(255,255,255,0.3),
+                inset 0 -4px 12px rgba(0,0,0,0.1);
+        }
+        100% { 
+            box-shadow: 
+                0 20px 50px rgba(156,39,176,0.6),
+                0 12px 35px rgba(33,150,243,0.3),
+                0 8px 25px rgba(0,0,0,0.2),
+                inset 0 10px 20px rgba(255,255,255,0.4),
+                inset 0 -6px 16px rgba(0,0,0,0.15);
+        }
+    }
+
+    @keyframes unlocked-bounce {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-12px) scale(1.05); }
+    }
+
+    /* 锁定关卡 - 无色彩灰色风格 */
+    .level-node.locked::before {
+        background: 
+            linear-gradient(135deg, #F5F5F5 0%, #E0E0E0 30%, #BDBDBD 70%, #9E9E9E 100%);
+        box-shadow: 
+            0 8px 20px rgba(0,0,0,0.1),
+            inset 0 4px 8px rgba(255,255,255,0.3),
+            inset 0 -2px 6px rgba(0,0,0,0.1);
+        border: 2px solid #E0E0E0;
+        filter: grayscale(100%) brightness(0.9);
+    }
+
     .level-node.locked {
-        background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
-        border-color: #95a5a6;
-        color: #7f8c8d;
-        opacity: 0.6;
+        color: #9E9E9E;
+        cursor: not-allowed;
+        opacity: 0.7;
+        text-shadow: none;
+        position: relative;
     }
 
-    @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
-        70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+    /* 锁定遮罩 */
+    .level-node.locked .level-content {
+        opacity: 0.5;
+        filter: blur(1px);
     }
 
-    /* 关卡编号 */
+    .level-node.locked::after {
+        background: rgba(0,0,0,0.08);
+    }
+
+    /* 锁定图标 - 可爱的锁头 */
+    .level-lock-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 24px;
+        color: #9E9E9E;
+        z-index: 3;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        animation: lock-shake 3s ease-in-out infinite;
+    }
+
+    @keyframes lock-shake {
+        0%, 90%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+        95% { transform: translate(-50%, -50%) rotate(-3deg); }
+        97% { transform: translate(-50%, -50%) rotate(3deg); }
+    }
+
+    /* 关卡内容容器 */
+    .level-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    /* 关卡编号 - 超可爱字体 */
     .level-number {
-        font-size: 28px;
-        font-weight: bold;
-        margin-bottom: 5px;
+        font-size: 32px;
+        font-weight: 900;
+        margin-bottom: 6px;
+        line-height: 1;
+        text-shadow: 
+            0 3px 6px rgba(0,0,0,0.3),
+            0 0 20px rgba(255,255,255,0.3);
+        font-family: 'Comic Sans MS', cursive, sans-serif;
     }
 
-    /* 星级显示 */
+    /* 星级显示 - 更可爱的样式 */
     .level-stars {
         display: flex;
-        gap: 2px;
-        margin-bottom: 5px;
+        gap: 3px;
+        margin-bottom: 6px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
     }
 
     .level-stars .star {
-        color: #ffd700;
-        font-size: 12px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .level-stars .star:not(.empty) {
+        color: #FFD700;
+        text-shadow: 0 0 8px rgba(255,215,0,0.6);
+        animation: star-twinkle 2s ease-in-out infinite alternate;
+    }
+
+    .level-stars .star:not(.empty):nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .level-stars .star:not(.empty):nth-child(2) {
+        animation-delay: 0.3s;
+    }
+
+    .level-stars .star:not(.empty):nth-child(3) {
+        animation-delay: 0.6s;
     }
 
     .level-stars .star.empty {
-        color: #ddd;
+        color: rgba(255,255,255,0.3);
     }
 
-    /* 关卡名称 */
+    .level-node.locked .level-stars .star:not(.empty) {
+        color: #BDBDBD;
+        text-shadow: none;
+        animation: none;
+    }
+
+    @keyframes star-twinkle {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(1.1); opacity: 1; }
+    }
+
+    /* 关卡名称 - 可爱字体 */
     .level-title {
-        font-size: 10px;
+        font-size: 11px;
         text-align: center;
-        max-width: 90px;
+        max-width: 100px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        line-height: 1.2;
     }
 
-    /* 难度标识 */
+    /* 难度标识 - 可爱小徽章 */
     .difficulty-badge {
         position: absolute;
-        top: -8px;
-        right: -8px;
-        font-size: 8px;
-        padding: 2px 6px;
-        border-radius: 10px;
-        border: 2px solid white;
+        top: -12px;
+        right: -12px;
+        font-size: 9px;
+        padding: 4px 8px;
+        border-radius: 15px;
+        border: 3px solid white;
         font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 
+            0 4px 12px rgba(0,0,0,0.2),
+            inset 0 2px 4px rgba(255,255,255,0.3);
+        z-index: 3;
+        font-family: 'Comic Sans MS', cursive, sans-serif;
     }
 
-    .difficulty-easy { background: #27ae60; color: white; }
-    .difficulty-medium { background: #f39c12; color: white; }
-    .difficulty-hard { background: #e74c3c; color: white; }
+    .difficulty-easy { 
+        background: linear-gradient(135deg, #4CAF50, #81C784);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    
+    .difficulty-medium { 
+        background: linear-gradient(135deg, #FF9800, #FFB74D);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    
+    .difficulty-hard { 
+        background: linear-gradient(135deg, #F44336, #EF5350);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    /* 锁定状态的难度标识 */
+    .level-node.locked .difficulty-badge {
+        background: linear-gradient(135deg, #BDBDBD, #9E9E9E) !important;
+        color: #757575 !important;
+        text-shadow: none !important;
+    }
 
     /* 管理员控制按钮 */
     .admin-controls {
@@ -684,64 +919,105 @@
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
-            /* 路径连接线 - 使用伪元素实现 */
-        .level-node::after {
-            content: '';
+            /* 路径连接线 - 可爱的彩虹连接线 */
+        .level-path-line {
             position: absolute;
-            width: 60px;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            border-radius: 2px;
+            background: linear-gradient(90deg, 
+                #FF6B6B 0%, 
+                #4ECDC4 25%, 
+                #45B7D1 50%, 
+                #96CEB4 75%, 
+                #FECA57 100%);
+            border-radius: 3px;
+            z-index: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            opacity: 0.8;
+        }
+
+        /* 水平连接线 */
+        .level-path-line.horizontal {
+            width: 70px;
+            height: 6px;
             top: 50%;
             transform: translateY(-50%);
-            z-index: -1;
-            display: none; /* 默认隐藏，按需显示 */
         }
 
-        /* 奇数行（左到右）显示右向箭头，除了最后一个 */
-        .level-node.odd-row:not(.row-end)::after {
-            display: block;
-            right: -70px;
-        }
-
-        /* 偶数行（右到左）显示左向箭头，除了最后一个 */
-        .level-node.even-row:not(.row-end)::after {
-            display: block;
-            left: -70px;
-        }
-
-            /* 行末转弯的垂直连接线 */
-        .level-node.row-end::before {
-            content: '';
-            position: absolute;
-            width: 4px;
-            height: 80px;
-            background: linear-gradient(180deg, #667eea, #764ba2);
-            border-radius: 2px;
+        /* 垂直连接线 */  
+        .level-path-line.vertical {
+            width: 6px;
+            height: 90px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: -1;
+            background: linear-gradient(180deg, 
+                #FF6B6B 0%, 
+                #4ECDC4 25%, 
+                #45B7D1 50%, 
+                #96CEB4 75%, 
+                #FECA57 100%);
         }
 
-        /* 向下的转弯 */
-        .level-node.turn-down::before {
-            bottom: -90px;
+        /* 右向连接线 */
+        .level-path-line.right {
+            right: -85px;
         }
 
-        /* 向上的转弯 */
-        .level-node.turn-up::before {
-            top: -90px;
+        /* 左向连接线 */
+        .level-path-line.left {
+            left: -85px;
         }
 
-    /* 悬停效果 */
+        /* 向下连接线 */
+        .level-path-line.down {
+            bottom: -105px;
+        }
+
+        /* 向上连接线 */
+        .level-path-line.up {
+            top: -105px;
+        }
+
+    /* 悬停效果 - 超可爱弹跳 */
     .level-node:not(.locked):hover {
-        transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        cursor: pointer;
+        transform: translateY(-8px) scale(1.15) rotate(3deg);
+        filter: brightness(1.2) saturate(1.3);
+    }
+
+    .level-node:not(.locked):hover::before {
+        transform: scale(1.05);
+        filter: brightness(1.3) saturate(1.4);
+    }
+
+    .level-node:not(.locked):hover::after {
+        width: 95%;
+        bottom: -20px;
+        opacity: 0.4;
+        background: rgba(0,0,0,0.25);
+    }
+
+    .level-node:not(.locked):hover .level-content {
+        animation: content-bounce 0.6s ease-out;
+    }
+
+    @keyframes content-bounce {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1.05); }
+    }
+
+    .level-node:not(.locked):hover .level-stars .star:not(.empty) {
+        animation: star-sparkle 0.8s ease-out infinite;
+    }
+
+    @keyframes star-sparkle {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        25% { transform: scale(1.3) rotate(10deg); }
+        75% { transform: scale(1.2) rotate(-5deg); }
     }
 
     .level-node.locked:hover {
         cursor: not-allowed;
+        transform: none;
+        filter: none;
     }
 </style>
 
@@ -1016,22 +1292,42 @@
             const node = document.createElement('div');
             node.className = `level-node ${progress.status}`;
             
-            // 添加S型路径相关的CSS类
+            // 创建可爱的彩虹连接线
             const isLastInRow = colIndex === LEVELS_PER_ROW - 1;
-            const isLastInLevel = index === levels.length - 1;
-            const hasNextRow = index + 1 < levels.length;
+            const isFirstInRow = colIndex === 0; 
+            const isLastLevel = index === levels.length - 1;
+            const hasNextLevel = index + 1 < levels.length;
             
-            // 奇数行（从0开始，所以第1,3,5行等）从左到右
-            if (rowIndex % 2 === 0) {
-                node.classList.add('odd-row');
-                if (isLastInRow && hasNextRow && !isLastInLevel) {
-                    node.classList.add('row-end', 'turn-down');
+            // 水平连接线（连接同行相邻关卡）
+            if (!isLastLevel && hasNextLevel) {
+                const nextRowIndex = Math.floor((index + 1) / LEVELS_PER_ROW);
+                const isSameRow = rowIndex === nextRowIndex;
+                
+                if (isSameRow) {
+                    const horizontalLine = document.createElement('div');
+                    horizontalLine.className = 'level-path-line horizontal';
+                    
+                    if (isEvenRow) {
+                        // 奇数行：从左到右
+                        horizontalLine.classList.add('right');
+                    } else {
+                        // 偶数行：从右到左  
+                        horizontalLine.classList.add('left');
+                    }
+                    
+                    node.appendChild(horizontalLine);
                 }
-            } else {
-                // 偶数行（第2,4,6行等）从右到左
-                node.classList.add('even-row');
-                if (colIndex === 0 && hasNextRow && !isLastInLevel) {
-                    node.classList.add('row-end', 'turn-down');
+            }
+            
+            // 垂直连接线（行末转弯）
+            if (!isLastLevel && hasNextLevel) {
+                const nextRowIndex = Math.floor((index + 1) / LEVELS_PER_ROW);
+                const isDifferentRow = rowIndex !== nextRowIndex;
+                
+                if (isDifferentRow) {
+                    const verticalLine = document.createElement('div');
+                    verticalLine.className = 'level-path-line vertical down';
+                    node.appendChild(verticalLine);
                 }
             }
 
@@ -1064,14 +1360,17 @@
             
             node.innerHTML = `
                 ${adminHtml}
-                <div class="level-number">${level.level_num}</div>
-                <div class="level-stars">
-                    ${generateStars(progress.stars || 0)}
+                <div class="level-content">
+                    <div class="level-number">${level.level_num}</div>
+                    <div class="level-stars">
+                        ${generateStars(progress.stars || 0)}
+                    </div>
+                    <div class="level-title">${level.name}</div>
                 </div>
-                <div class="level-title">${level.name}</div>
                 <div class="difficulty-badge ${difficultyClass}">
                     ${level.difficulty}
                 </div>
+                ${progress.status === 'locked' ? '<div class="level-lock-icon"><i class="fas fa-lock"></i></div>' : ''}
             `;
 
             // 保持原有点击逻辑
