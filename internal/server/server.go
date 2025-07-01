@@ -67,6 +67,7 @@ func (s *Server) setupRoutes() {
 		{
 			api.POST("/login", h.Login)
 			api.POST("/register", h.Register)
+			api.POST("/logout", h.Logout)
 		}
 	}
 

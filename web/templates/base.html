@@ -661,10 +661,16 @@
                     error => {
                         console.error('API请求失败:', error.config?.url, error.response?.status);
                         if (error.response && error.response.status === 401) {
-                            console.log('认证失败，清除token并跳转登录');
+                            console.log('认证失败，清除token');
                             localStorage.removeItem('token');
                             document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-                            window.location.href = '/login';
+                            delete axios.defaults.headers.common['Authorization'];
+                            
+                            // 只有在不是登录页面时才跳转到登录页
+                            if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+                                console.log('重定向到登录页面');
+                                window.location.href = '/login';
+                            }
                         }
                         return Promise.reject(error);
                     }
@@ -756,7 +762,9 @@
                     console.log('需要认证的页面但没有token，重定向到登录');
                     showAlert('请先登录', 'warning');
                     setTimeout(() => {
-                        window.location.href = '/login';
+                        if (window.location.pathname !== '/login') {
+                            window.location.href = '/login';
+                        }
                     }, 1500);
                 }
             }

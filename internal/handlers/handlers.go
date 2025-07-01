@@ -130,6 +130,15 @@ func (h *Handler) Login(c *gin.Context) {
 	})
 }
 
+func (h *Handler) Logout(c *gin.Context) {
+	// 清除cookie
+	c.SetCookie("token", "", -1, "/", "", false, true)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "退出登录成功",
+	})
+}
+
 func (h *Handler) Register(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`

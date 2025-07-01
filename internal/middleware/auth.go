@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -59,9 +60,29 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
+			// 清除无效的cookie
+			c.SetCookie("token", "", -1, "/", "", false, true)
+
 			// 对于API请求，返回JSON错误
 			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+				c.Abort()
+				return
+			}
+			// 对于页面请求，重定向到登录页
+			c.Redirect(http.StatusFound, "/login")
+			c.Abort()
+			return
+		}
+
+		// 检查token是否过期
+		if claims.ExpiresAt != nil && time.Now().After(claims.ExpiresAt.Time) {
+			// 清除过期的cookie
+			c.SetCookie("token", "", -1, "/", "", false, true)
+
+			// 对于API请求，返回JSON错误
+			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
 				c.Abort()
 				return
 			}
@@ -83,11 +104,16 @@ func AuthMiddleware() gin.HandlerFunc {
 }
 
 func GenerateToken(userID uint, username string) (string, error) {
+	// 设置token过期时间为7天
+	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer: "ggcode",
+			Issuer:    "ggcode",
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 

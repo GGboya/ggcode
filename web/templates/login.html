@@ -135,6 +135,72 @@
 <script>
 console.log('登录页面脚本已加载');
 
+// 检查用户是否已经登录
+async function checkIfAlreadyLoggedIn() {
+    console.log('检查是否已经登录');
+    
+    // 防止重复检查
+    if (window.alreadyCheckedLogin) {
+        console.log('已经检查过登录状态，跳过');
+        return;
+    }
+    window.alreadyCheckedLogin = true;
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.log('没有token，显示登录表单');
+        return;
+    }
+    
+    try {
+        // 尝试验证token的有效性
+        const response = await axios.get('/api/study-stats', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            timeout: 5000
+        });
+        
+        console.log('Token有效，用户已登录');
+        showAlert('检测到您已登录，正在跳转到仪表盘...', 'info');
+        
+        // 隐藏登录表单，显示跳转提示
+        const loginCard = document.querySelector('.login-card');
+        if (loginCard) {
+            loginCard.innerHTML = `
+                <div class="card-body p-5 text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h4 class="text-success mb-3">您已登录</h4>
+                    <p class="text-muted mb-4">检测到您已登录，正在跳转到仪表盘...</p>
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 延迟跳转，避免太快
+        setTimeout(() => {
+            window.location.href = '/dashboard';
+        }, 2000);
+        
+    } catch (error) {
+        console.log('Token无效或过期，清除token并显示登录表单');
+        console.error('Token验证失败:', error);
+        
+        // 清除无效的token
+        localStorage.removeItem('token');
+        document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        
+        // 清除axios默认header
+        if (typeof axios !== 'undefined') {
+            delete axios.defaults.headers.common['Authorization'];
+        }
+    }
+}
+
 // 密码显示/隐藏切换
 function togglePassword() {
     const passwordInput = document.getElementById('password');
@@ -276,6 +342,10 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 // 页面加载动画
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM内容已加载，开始初始化登录页面');
+    
+    // 检查用户是否已经登录
+    checkIfAlreadyLoggedIn();
+    
     // 登录卡片淡入动画
     const loginCard = document.querySelector('.login-card');
     const welcomePanel = document.querySelector('.welcome-panel');
