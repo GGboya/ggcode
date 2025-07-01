@@ -1060,17 +1060,19 @@
                     score = 100;
                     maxScore = 100;
                 }
-                // 只有使用Hydro评测时才需要提交关卡进度，其他评测系统在后端处理
-                submitLevelProgress(timeUsed, score, maxScore);
+                // Go-Judge 系统已在后端处理进度提交，无需额外提交
             } else if (judgeType === 'hydro') {
                 score = result.score || 0;
                 maxScore = result.max_score || 100;
-                submitLevelProgress(timeUsed, score, maxScore);
+                // Hydro 系统已在后端处理进度提交，无需额外提交
             } else {
                 // Docker评测已经在后端处理了进度提交
                 score = result.score || 0;
                 maxScore = result.max_score || 100;
             }
+            
+            // 设置标志，通知面试岛页面刷新数据
+            localStorage.setItem('interviewIslandNeedsRefresh', 'true');
             
             // 显示通关消息
             setTimeout(() => {
@@ -1295,24 +1297,7 @@
             return classMap[status] || 'bg-secondary';
         }
 
-        // 提交关卡进度
-        async function submitLevelProgress(timeUsed, score, maxScore) {
-            try {
-                const response = await axios.post('/api/interview-island/level/' + currentLevelId + '/submit', {
-                    code: editor.getValue(),
-                    language: document.getElementById('languageSelector').value,
-                    submit_time: timeUsed,
-                    status: 'AC',
-                    score: score,
-                    max_score: maxScore
-                });
-                
-                console.log('关卡进度已提交:', response.data);
-            } catch (error) {
-                console.error('提交关卡进度失败:', error);
-                // 不影响用户体验，只记录错误
-            }
-        }
+
 
         // 生成Docker结果HTML
         function generateDockerResultHTML(result, isSubmit) {
@@ -1698,8 +1683,10 @@
                                 // 计算用时和得分
                                 const timeUsed = Math.floor((Date.now() - startTime) / 1000);
                                 
-                                // 提交关卡进度
-                                submitLevelProgress(timeUsed, result.score, result.max_score);
+                                // Go-Judge 系统已在后端处理进度提交，无需额外提交
+                                
+                                // 设置标志，通知面试岛页面刷新数据
+                                localStorage.setItem('interviewIslandNeedsRefresh', 'true');
                                 
                                 // 显示通关消息
                                 setTimeout(() => {

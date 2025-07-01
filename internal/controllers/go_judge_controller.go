@@ -356,8 +356,20 @@ func (c *GoJudgeController) SubmitCode(ctx *gin.Context) {
 
 	log.Printf("[GoJudge] 提交结果: %+v", finalEnhancedResult)
 
-	// 如果通过则解锁知识点
+	// 调用面试岛服务更新用户进度（关键修复！）
 	if status, ok := finalEnhancedResult["status"].(string); ok && status == "Accepted" {
+		log.Printf("[GoJudge] AC成功，开始更新用户进度...")
+
+		// 调用面试岛服务的SubmitCode方法来更新用户进度、计算星级、解锁下一关
+		_, err := c.interviewService.SubmitCode(userID.(uint), uint(levelID), req.Code, req.Language, req.SubmitTime)
+		if err != nil {
+			log.Printf("[GoJudge] 更新用户进度失败: %v", err)
+			// 不影响前端显示，只记录错误
+		} else {
+			log.Printf("[GoJudge] 用户进度更新成功")
+		}
+
+		// 解锁知识点
 		_ = c.interviewService.UnlockTags(userID.(uint), uint(levelID))
 	}
 

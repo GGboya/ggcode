@@ -1140,7 +1140,31 @@
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', function() {
         loadIslandMap();
+        checkAndRefreshData();
     });
+    
+    // 检查并刷新数据（从关卡页面返回后）
+    function checkAndRefreshData() {
+        if (localStorage.getItem('interviewIslandNeedsRefresh') === 'true') {
+            console.log('🎉 检测到关卡完成，正在刷新岛屿数据...');
+            localStorage.removeItem('interviewIslandNeedsRefresh');
+            
+            // 延迟一点再刷新，确保后端数据已更新
+            setTimeout(async () => {
+                await loadIslandMap();
+                
+                // 判断当前在哪个视图并刷新对应视图
+                if (document.getElementById('islandDetail').style.display !== 'none') {
+                    renderCurrentIsland(); // 岛屿详情视图
+                } else {
+                    renderWorldMap(); // 世界地图视图
+                }
+                
+                // 显示提示消息
+                showAlert('恭喜！关卡进度已更新 🎉', 'success');
+            }, 800);
+        }
+    }
 
     // 加载面试岛地图数据
     async function loadIslandMap() {
@@ -1153,7 +1177,7 @@
                 isAdmin = !!response.data.is_admin;
             }
             if (typeof response.data.unlocked_island_count !== 'undefined') {
-                unlockedIslandCount = response.data.unlocked_island_count;
+                unlockedIslandCount = Math.max(1, response.data.unlocked_island_count); // 确保至少解锁第一个岛屿
             }
             console.log('是否管理员:', isAdmin);
             console.log('解锁岛屿数量:', unlockedIslandCount);
@@ -1765,7 +1789,7 @@
     }
 
     // ------------- 新增：世界地图视图 ------------- //
-    let unlockedIslandCount = 0; // 后端应提供
+    let unlockedIslandCount = 1; // 默认至少解锁第一个岛屿
 
     function renderWorldMap() {
         const world = document.getElementById('worldMap');
@@ -1784,8 +1808,19 @@
         
         islandsData.forEach((islandInfo, index) => {
             const island = islandInfo.island;
-            // 改进解锁逻辑：管理员可以看到所有岛屿，或根据解锁数量判断
-            const locked = !isAdmin && index >= unlockedIslandCount;
+            // 解锁逻辑：
+            // 1. 管理员：所有岛屿都解锁
+            // 2. 普通用户：第一个岛屿（index 0）总是解锁，其他岛屿根据解锁数量判断
+            let locked = false;
+            if (!isAdmin) {
+                if (index === 0) {
+                    locked = false; // 第一个岛屿总是解锁
+                } else {
+                    locked = index >= unlockedIslandCount; // 其他岛屿根据解锁数量判断
+                }
+            }
+            
+            console.log(`岛屿 ${index} (${island.name}): 管理员=${isAdmin}, 解锁数量=${unlockedIslandCount}, 锁定=${locked}`);
             
             // 计算完成百分比
             const completionRate = islandInfo.total_count > 0 ? 
@@ -1826,6 +1861,7 @@
                     <p>${island.description || '踏上这座神秘的岛屿，开始你的挑战之旅'}</p>
                     ${!locked ? `<div class="mt-2 small">
                         <i class="fas fa-trophy text-warning me-1"></i>${islandInfo.completed_count}/${islandInfo.total_count} 关卡
+                        ${index === 0 ? '<span class="badge bg-success ms-1" style="font-size: 8px;">起始岛</span>' : ''}
                     </div>` : '<div class="mt-2 small"><i class="fas fa-lock me-1"></i>暂未解锁</div>'}
                 </div>
             `;

@@ -310,12 +310,10 @@ func (s *interviewService) SubmitCode(userID, levelID uint, code, language strin
 			return nil, err
 		}
 
-		// 如果获得2星以上，解锁下一关
-		if stars >= 2 {
-			err = s.repo.UnlockNextLevel(userID, levelID)
-			if err == nil {
-				nextUnlocked = true
-			}
+		// AC成功就解锁下一关（不管几星）
+		err = s.repo.UnlockNextLevel(userID, levelID)
+		if err == nil {
+			nextUnlocked = true
 		}
 
 		// 知识点解锁：获取题目标签并写入 user_unlocked_tags
@@ -502,12 +500,8 @@ func (s *interviewService) calculateStars(status string, submitTime int) int {
 	if submitTime <= 600 {
 		return 2
 	}
-	// 15分钟内完成 = 1星
-	if submitTime <= 900 {
-		return 1
-	}
-	// 超过15分钟 = 0星
-	return 0
+	// 其他AC情况 = 1星（只要AC就至少给1星）
+	return 1
 }
 
 // getTotalRuntime 获取总运行时间
