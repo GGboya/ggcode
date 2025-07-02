@@ -95,6 +95,7 @@ func (s *Server) setupRoutes() {
 		{
 			// 用户相关
 			api.POST("/logout", ctrl.User.Logout)
+			api.GET("/auth/verify", ctrl.User.VerifyToken)
 
 			// 题库相关
 			api.GET("/questionbanks", ctrl.QuestionBank.GetQuestionBanks)

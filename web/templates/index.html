@@ -28,37 +28,60 @@
             
             <!-- 认证检查和跳转逻辑 -->
             <script>
-                // 检查认证状态并跳转
-                function checkAuthAndRedirect() {
-                    console.log('检查认证状态...');
-                    
-                    // 获取token
-                    let token = localStorage.getItem('token');
-                    
-                    // 如果localStorage中没有token，尝试从cookie获取
-                    if (!token) {
-                        const cookies = document.cookie.split(';');
-                        for (let cookie of cookies) {
-                            const [name, value] = cookie.trim().split('=');
-                            if (name === 'token' && value) {
-                                token = value;
-                                localStorage.setItem('token', token);
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (token) {
-                        console.log('找到token，跳转到仪表盘');
-                        // 有token，跳转到仪表盘
-                        window.location.replace('/dashboard');
-                    } else {
-                        console.log('没有token，跳转到登录页面');
-                        // 没有token，跳转到登录页面
-                        window.location.replace('/login');
+                // ========== JWT 工具 ==========
+                function parseJwt(token) {
+                    try {
+                        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                        return JSON.parse(jsonPayload);
+                    } catch (_) {
+                        return null;
                     }
                 }
-                
+
+                function isTokenExpired(token) {
+                    const payload = parseJwt(token);
+                    if (!payload || !payload.exp) return true;
+                    return (Date.now() / 1000) >= payload.exp;
+                }
+
+                function getCookie(name) {
+                    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                    return match ? match[2] : null;
+                }
+
+                function clearToken() {
+                    localStorage.removeItem('token');
+                    document.cookie = 'token=; Max-Age=0; path=/';
+                }
+
+                function checkAuthAndRedirect() {
+                    console.log('检查认证状态...');
+
+                    let token = localStorage.getItem('token') || getCookie('token');
+
+                    if (!token || isTokenExpired(token)) {
+                        clearToken();
+                        // 无 token 跳登录
+                        window.location.replace('/login');
+                        return;
+                    }
+
+                    if (typeof axios !== 'undefined') {
+                        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                    }
+
+                    axios.get('/api/auth/verify', { timeout: 3000 })
+                        .then(() => {
+                            console.log('token 验证通过，跳转仪表盘');
+                            window.location.replace('/dashboard');
+                        })
+                        .catch(() => {
+                            clearToken();
+                            window.location.replace('/login');
+                        });
+                }
+
                 // 页面加载完成后立即检查
                 document.addEventListener('DOMContentLoaded', function() {
                     checkAuthAndRedirect();

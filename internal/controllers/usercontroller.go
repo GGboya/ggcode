@@ -82,3 +82,14 @@ func (ctrl *UserController) Logout(c *gin.Context) {
 		"message": "退出登录成功",
 	})
 }
+
+// VerifyToken 校验当前 token 是否有效，并返回基础用户信息
+func (ctrl *UserController) VerifyToken(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	username, _ := c.Get("username")
+
+	c.JSON(http.StatusOK, gin.H{
+		"user_id":  userID,
+		"username": username,
+	})
+}
