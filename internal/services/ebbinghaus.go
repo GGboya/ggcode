@@ -19,9 +19,6 @@ func NewEbbinghausService(db *gorm.DB) *EbbinghausService {
 // 艾宾浩斯遗忘曲线复习间隔（天数）
 var reviewIntervals = []int{1, 2, 4, 7, 15, 30, 60}
 
-// 独立AC的复习间隔（3次即可掌握）
-var acReviewIntervals = []int{1, 4, 15}
-
 // GetDailyQuestions 获取指定学习计划的当天需要学习的题目
 func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]QuestionWithProgress, error) {
 	// 获取指定的学习计划
@@ -180,8 +177,8 @@ func (s *EbbinghausService) CompleteQuestion(userID, questionID uint, resultType
 			// 不会做：重新开始学习流程，使用完整的复习间隔
 			progress.NextReviewDate = now.AddDate(0, 0, reviewIntervals[0]) // 1天后复习
 		} else {
-			// 独立AC：使用简化的复习间隔
-			progress.NextReviewDate = now.AddDate(0, 0, acReviewIntervals[0]) // 1天后复习
+			// 独立AC：第一次就 AC，表示用户已经掌握了该题目，直接设置为已掌握
+			progress.IsCompleted = true
 		}
 
 		if err := s.db.Create(&progress).Error; err != nil {
@@ -194,21 +191,22 @@ func (s *EbbinghausService) CompleteQuestion(userID, questionID uint, resultType
 		progress.LastReviewDate = now
 
 		if resultType == "failed" {
-			// 不会做：重置学习进度，重新开始
-			progress.ReviewLevel = 0
-			progress.NextReviewDate = now.AddDate(0, 0, reviewIntervals[0])
+			// 不会做：缩短复习间隔
+			progress.ReviewLevel--
+			if progress.ReviewLevel < 0 {
+				progress.ReviewLevel = 0
+			}
+			progress.NextReviewDate = now.AddDate(0, 0, reviewIntervals[progress.ReviewLevel])
 			progress.IsCompleted = false
 		} else {
 			// 独立AC：正常推进复习
 			progress.ReviewLevel++
 
-			// 检查是否完成所有复习层级（AC只需要3次）
-			if progress.ReviewLevel >= len(acReviewIntervals) {
+			// 检查是否完成所有复习层级
+			if progress.ReviewLevel >= len(reviewIntervals) {
 				progress.IsCompleted = true
-				progress.NextReviewDate = now.AddDate(1, 0, 0) // 1年后（基本不会再复习）
 			} else {
-				// 计算下次复习时间（使用AC的复习间隔）
-				progress.NextReviewDate = now.AddDate(0, 0, acReviewIntervals[progress.ReviewLevel])
+				progress.NextReviewDate = now.AddDate(0, 0, reviewIntervals[progress.ReviewLevel])
 			}
 		}
 
