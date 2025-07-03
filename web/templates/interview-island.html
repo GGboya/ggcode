@@ -1804,6 +1804,20 @@
         const world = document.getElementById('worldMap');
         world.innerHTML = '';
         
+        // 检查数据是否为空
+        if (!islandsData || !Array.isArray(islandsData) || islandsData.length === 0) {
+            // 显示空状态
+            world.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-compass fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">暂无面试岛数据</h4>
+                    <p class="text-muted mb-4">管理员还没有创建任何面试岛</p>
+                    ${isAdmin ? '<button class="btn btn-primary" onclick="createIsland()"><i class="fas fa-plus me-2"></i>创建第一个岛屿</button>' : '<p class="text-muted small">请联系管理员创建面试岛</p>'}
+                </div>
+            `;
+            return;
+        }
+        
         // 添加海洋泡沫特效
         for (let i = 0; i < 12; i++) {
             const bubble = document.createElement('div');
