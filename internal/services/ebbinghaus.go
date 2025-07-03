@@ -21,27 +21,59 @@ var reviewIntervals = []int{1, 2, 4, 7, 15, 30, 60}
 
 // GetDailyQuestions 获取指定学习计划的当天需要学习的题目
 func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]QuestionWithProgress, error) {
+	// 先确保 Fork 题库在首次使用时完成写时复制（COW）。
+	// 如果学习计划关联的题库是 fork 且本地还没有题目，则把原题库的题目复制过来，
+	// 这样可以避免后续学习流程因为题库为空而报错。
+
 	// 获取指定的学习计划
 	var studyPlan models.UserStudyPlan
-	err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).
-		Preload("QuestionBank").First(&studyPlan).Error
-
-	if err != nil {
+	if err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).
+		Preload("QuestionBank").First(&studyPlan).Error; err != nil {
 		return nil, errors.New("学习计划不存在")
 	}
+
+	questionBank := studyPlan.QuestionBank
+	if questionBank.ForkedFrom != nil {
+		var localCount int64
+		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&localCount)
+		if localCount == 0 {
+			// 执行写时复制：把原题库题目复制到当前题库
+			var originalQuestions []models.Question
+			if err := s.db.Where("question_bank_id = ?", *questionBank.ForkedFrom).Find(&originalQuestions).Error; err != nil {
+				return nil, err
+			}
+			for _, q := range originalQuestions {
+				newQ := q
+				newQ.ID = 0 // 让 GORM 生成新主键
+				newQ.QuestionBankID = questionBank.ID
+				if err := s.db.Create(&newQ).Error; err != nil {
+					return nil, err
+				}
+			}
+			// 解除与原题库的 fork 关联，避免后续重复复制
+			_ = s.db.Model(&models.QuestionBank{}).
+				Where("id = ?", questionBank.ID).
+				Update("forked_from", nil).Error
+		}
+	}
+
+	// 下面的逻辑保持不变，但由于我们提前重新查询了 studyPlan，需调整变量引用
+	studyPlanID = studyPlan.ID // 保持原参数用途
+
+	// 重新定义 today、reviewQuestions 等变量之前，继续向下执行原有逻辑
 
 	today := time.Now().Truncate(24 * time.Hour)
 
 	// 1. 获取需要复习的题目（根据艾宾浩斯遗忘曲线）
 	var reviewQuestions []QuestionWithProgress
-	if err := s.getReviewQuestions(userID, studyPlan.QuestionBankID, today, &reviewQuestions); err != nil {
+	if err := s.getReviewQuestions(userID, questionBank.ID, today, &reviewQuestions); err != nil {
 		return nil, err
 	}
 
 	// 2. 如果复习题目不足每日学习量，添加新题目
 	remainingCount := studyPlan.DailyCount - len(reviewQuestions)
 	if remainingCount > 0 {
-		newQuestions, err := s.getNewQuestions(userID, studyPlan.QuestionBankID, remainingCount)
+		newQuestions, err := s.getNewQuestions(userID, questionBank.ID, remainingCount)
 		if err != nil {
 			return nil, err
 		}
@@ -51,7 +83,7 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 	// 3. 如果仍然没有足够的题目，提供已掌握的题目供重新学习
 	if len(reviewQuestions) < studyPlan.DailyCount {
 		remainingCount = studyPlan.DailyCount - len(reviewQuestions)
-		masteredQuestions, err := s.getMasteredQuestions(userID, studyPlan.QuestionBankID, remainingCount)
+		masteredQuestions, err := s.getMasteredQuestions(userID, questionBank.ID, remainingCount)
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +94,7 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 	if len(reviewQuestions) == 0 {
 		// 检查题库是否有题目
 		var questionCount int64
-		s.db.Model(&models.Question{}).Where("question_bank_id = ?", studyPlan.QuestionBankID).Count(&questionCount)
+		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&questionCount)
 		if questionCount == 0 {
 			return nil, errors.New("题库中没有题目，请先添加题目")
 		}
