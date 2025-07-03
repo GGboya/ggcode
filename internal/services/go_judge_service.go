@@ -227,7 +227,12 @@ func (s *GoJudgeService) buildCompileRequest(req *GoJudgeRequest) *GoJudgeAPIReq
 					map[string]interface{}{"name": "stdout", "max": 10240},
 					map[string]interface{}{"name": "stderr", "max": 10240},
 				},
-				CPULimit: 10000000000, // 10秒编译时间
+				CPULimit: func() int64 {
+					if language == "go" {
+						return 15000000000 // 15 秒
+					}
+					return 10000000000 // 其他语言保持 10 秒
+				}(),
 				MemoryLimit: func() int64 {
 					if language == "go" {
 						return 536870912 // 512MB for Go compilation
