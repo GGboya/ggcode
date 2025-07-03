@@ -66,9 +66,74 @@ func (r *shareRepository) ShareQuestionBank(bankID uint) error {
 }
 
 func (r *shareRepository) UnshareQuestionBank(bankID uint) error {
-	return r.db.Model(&models.QuestionBank{}).
+	// 开始事务
+	tx := r.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 1. 将题库设为非共享
+	if err := tx.Model(&models.QuestionBank{}).
 		Where("id = ?", bankID).
-		Update("is_shared", false).Error
+		Update("is_shared", false).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 2. 对所有 fork 自该题库且仍与原题库共享题目的题库执行写时复制
+	var forkedBanks []models.QuestionBank
+	if err := tx.Where("forked_from = ?", bankID).Find(&forkedBanks).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	for _, fb := range forkedBanks {
+		var localCount int64
+		if err := tx.Model(&models.Question{}).Where("question_bank_id = ?", fb.ID).Count(&localCount).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		// 仅当 fork 的题库尚未写时复制（本地题数为0）时，才进行复制
+		if localCount == 0 {
+			if err := duplicateQuestions(tx, bankID, fb.ID); err != nil {
+				tx.Rollback()
+				return err
+			}
+
+			// 与原题库解除关联，后续不再共享
+			if err := tx.Model(&models.QuestionBank{}).Where("id = ?", fb.ID).Update("forked_from", nil).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	return tx.Commit().Error
+}
+
+// duplicateQuestions 在写时复制触发时，将原题库的题目复制到目标题库
+func duplicateQuestions(tx *gorm.DB, fromBankID, toBankID uint) error {
+	var originalQuestions []models.Question
+	if err := tx.Where("question_bank_id = ?", fromBankID).Find(&originalQuestions).Error; err != nil {
+		return err
+	}
+
+	for _, q := range originalQuestions {
+		newQ := models.Question{
+			Title:          q.Title,
+			LeetcodeURL:    q.LeetcodeURL,
+			Difficulty:     q.Difficulty,
+			Description:    q.Description,
+			QuestionBankID: toBankID,
+		}
+		if err := tx.Create(&newQ).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *shareRepository) StarQuestionBank(bankID, userID uint) error {
@@ -144,9 +209,10 @@ func (r *shareRepository) ForkQuestionBank(bankID, userID uint) (*models.Questio
 		return nil, err
 	}
 
-	// 创建Fork的题库
+	// 创建 Fork 元题库记录（不复制题目）
+	fName := originalBank.Name + " (Fork)"
 	forkedBank := models.QuestionBank{
-		Name:        originalBank.Name + " (Fork)",
+		Name:        fName,
 		Description: originalBank.Description,
 		CreatedBy:   &userID,
 		ForkedFrom:  &originalBank.ID,
@@ -159,28 +225,7 @@ func (r *shareRepository) ForkQuestionBank(bankID, userID uint) (*models.Questio
 		return nil, err
 	}
 
-	// 复制原题库的所有题目
-	var originalQuestions []models.Question
-	if err := tx.Where("question_bank_id = ?", bankID).Find(&originalQuestions).Error; err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	// 批量插入题目
-	for _, question := range originalQuestions {
-		newQuestion := models.Question{
-			Title:          question.Title,
-			LeetcodeURL:    question.LeetcodeURL,
-			Difficulty:     question.Difficulty,
-			QuestionBankID: forkedBank.ID,
-		}
-		if err := tx.Create(&newQuestion).Error; err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-	}
-
-	// 更新原题库的Fork数量
+	// 更新原题库的 Fork 数量
 	if err := tx.Model(&originalBank).
 		Update("fork_count", gorm.Expr("fork_count + ?", 1)).Error; err != nil {
 		tx.Rollback()

@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"ggcode/internal/models"
 	"ggcode/internal/services"
 	"net/http"
 	"strconv"
@@ -127,10 +126,10 @@ func (ctrl *QuestionController) UpdateQuestion(c *gin.Context) {
 	}
 
 	var req struct {
-		Title       string `json:"title" binding:"required"`
-		LeetcodeURL string `json:"leetcode_url" binding:"required"`
-		Difficulty  string `json:"difficulty" binding:"required"`
-		Description string `json:"description"`
+		Title          string `json:"title" binding:"required"`
+		LeetcodeURL    string `json:"leetcode_url" binding:"required"`
+		Difficulty     string `json:"difficulty" binding:"required"`
+		QuestionBankID uint   `json:"question_bank_id"` // 添加题库ID字段
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -138,13 +137,8 @@ func (ctrl *QuestionController) UpdateQuestion(c *gin.Context) {
 		return
 	}
 
-	var question *models.Question
-	// 如果包含描述字段，使用包含描述的更新方法
-	if req.Description != "" {
-		question, err = ctrl.questionService.UpdateQuestionWithDescription(userID, uint(questionID), req.Title, req.LeetcodeURL, req.Difficulty, req.Description)
-	} else {
-		question, err = ctrl.questionService.UpdateQuestion(userID, uint(questionID), req.Title, req.LeetcodeURL, req.Difficulty)
-	}
+	// 更新题目信息
+	question, err := ctrl.questionService.UpdateQuestion(userID, uint(questionID), req.QuestionBankID, req.Title, req.LeetcodeURL, req.Difficulty)
 
 	if err != nil {
 		switch err.Error() {
@@ -170,13 +164,24 @@ func (ctrl *QuestionController) DeleteQuestion(c *gin.Context) {
 		return
 	}
 
+	// 从请求体中获取题库ID
+	var req struct {
+		QuestionBankID uint `json:"question_bank_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请提供题库ID"})
+		return
+	}
+
 	// 调用服务层删除题目
-	err = ctrl.questionService.DeleteQuestion(userID, uint(questionID))
+	err = ctrl.questionService.DeleteQuestion(userID, uint(questionID), req.QuestionBankID)
 	if err != nil {
 		switch err.Error() {
 		case "题目不存在":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case "无权限删除此题目":
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		case "题库不存在或无权限删除题目":
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

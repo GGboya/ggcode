@@ -1118,7 +1118,8 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
         const response = await axios.put(`/api/questions/${window.currentQuestionId}`, {
             title: title,
             leetcode_url: url,
-            difficulty: difficulty
+            difficulty: difficulty,
+            question_bank_id: currentViewingBankId  // 添加题库ID
         });
         
         showAlert('题目更新成功！', 'success');
@@ -1197,7 +1198,11 @@ function deleteQuestion(questionId) {
 // 确认删除题目
 async function deleteQuestionConfirmed(questionId) {
     try {
-        await axios.delete(`/api/questions/${questionId}`);
+        await axios.delete(`/api/questions/${questionId}`, {
+            data: {
+                question_bank_id: currentViewingBankId  // 添加题库ID
+            }
+        });
         
         showAlert('题目删除成功！', 'success');
         
