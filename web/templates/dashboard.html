@@ -18,16 +18,7 @@
                     </p>
                 </div>
                 <div class="col-lg-4 text-end">
-                    <div class="welcome-stats">
-                        <div class="stat-item d-inline-block me-4">
-                            <div class="stat-number" id="todayProgress">0</div>
-                            <div class="stat-label">今日进度</div>
-                        </div>
-                        <div class="stat-item d-inline-block">
-                            <div class="stat-number" id="streak">0</div>
-                            <div class="stat-label">连续天数</div>
-                        </div>
-                    </div>
+                    <!-- 预留空间，可以添加其他内容 -->
                 </div>
             </div>
         </div>
@@ -153,7 +144,7 @@
                     <i class="fas fa-clock fa-2x"></i>
                 </div>
                 <h4 class="stats-number" id="todayReview">-</h4>
-                <p class="stats-label">今日待复习</p>
+                <p class="stats-label">待复习</p>
                 <div class="stats-trend">
                     <i class="fas fa-bell text-warning"></i>
                     <span class="trend-text">待完成</span>
@@ -246,129 +237,54 @@
     </div>
 </div>
 
-<!-- 学习激励与提示 (横向布局) -->
+<!-- LeetCode 风格学习活动热力图 -->
 <div class="row">
-    <div class="col-lg-6 mb-4">
-        <div class="card modern-card h-100">
-            <div class="card-body text-center">
-                <div class="motivation-icon mb-3">
-                    <i class="fas fa-quote-left fa-2x" style="color: var(--primary-gradient);"></i>
+    <div class="col-12 mb-4">
+        <div class="card leetcode-heatmap-card">
+            <div class="card-body p-4">
+                <!-- LeetCode 风格顶部统计 -->
+                <div class="leetcode-header d-flex justify-content-between align-items-center mb-4">
+                    <div class="leetcode-stats-left" id="leetcodeStats">
+                        <span class="loading-text">加载中...</span>
+                    </div>
+                    <div class="leetcode-stats-right">
+                        <span class="period-selector">过去一年</span>
+                        <i class="fas fa-chevron-down ms-1"></i>
+                    </div>
                 </div>
-                <blockquote class="blockquote mb-3">
-                    <p class="mb-0" id="dailyQuote">加载中...</p>
-                </blockquote>
-                <footer class="blockquote-footer">
-                    <cite title="Source Title">每日励志</cite>
-                </footer>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-6 mb-4">
-        <div class="card modern-card h-100">
-            <div class="card-body">
-                <h6 class="mb-3">
-                    <i class="fas fa-lightbulb me-2 text-warning"></i>
-                    学习小贴士
-                </h6>
-                <div class="tip-card p-3" style="background: var(--light-bg); border-radius: 12px;">
-                    <p class="small mb-2" id="studyTip">加载中...</p>
-                    <small class="text-muted">💡 点击刷新获取新的建议</small>
+
+                <!-- 热力图主体 - 放大版本 -->
+                <div class="leetcode-heatmap-container-large" id="heatmapContainer">
+                    <div class="loading-state-leetcode text-center py-5">
+                        <div class="loading-spinner"></div>
+                        <p class="text-muted mt-2 small">正在加载学习活动数据...</p>
+                    </div>
                 </div>
                 
-                <!-- 快捷操作 -->
-                <div class="mt-4">
-                    <h6 class="mb-3">
-                        <i class="fas fa-rocket me-2"></i>
-                        快捷操作
-                    </h6>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary btn-sm" onclick="showRandomTip()">
-                            <i class="fas fa-dice me-1"></i>换个提示
-                        </button>
-                        <a href="/study-plans" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus me-1"></i>创建学习计划
-                        </a>
+                <!-- LeetCode 风格图例 -->
+                <div class="leetcode-legend mt-4 d-flex align-items-center justify-content-end">
+                    <span class="legend-label me-2">Less</span>
+                    <div class="legend-squares">
+                        <div class="legend-square level-0"></div>
+                        <div class="legend-square level-1"></div>
+                        <div class="legend-square level-2"></div>
+                        <div class="legend-square level-3"></div>
+                        <div class="legend-square level-4"></div>
                     </div>
+                    <span class="legend-label ms-2">More</span>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 快速统计概览 -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card modern-card">
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    学习进度概览
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-lg-4 mb-3">
-                        <div class="progress-section">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">总体进度</span>
-                                <span class="fw-bold" id="overallProgress">0%</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar" role="progressbar" style="width: 0%" id="overallProgressBar"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 mb-3">
-                        <div class="progress-section">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">本周目标</span>
-                                <span class="fw-bold" id="weeklyProgress">0%</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="weeklyProgressBar"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 mb-3">
-                        <div class="progress-section">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">月度目标</span>
-                                <span class="fw-bold" id="monthlyProgress">0%</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="monthlyProgressBar"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Dashboard页面脚本 -->
 <script>
 let checkInStats = {};
 
-// 励志名言和学习贴士
-const quotes = [
-    "每天进步一点点，坚持就是胜利！",
-    "算法是思维的体操，坚持练习必有收获。",
-    "不积跬步，无以至千里；不积小流，无以成江海。",
-    "成功不是终点，失败不是末日，勇气才是永恒。",
-    "学而时习之，不亦说乎？",
-    "今天的努力，是明天成功的基石。"
-];
-
-const studyTips = [
-    "建议每次学习1-2小时，保持专注度。",
-    "复习时要主动思考解题思路，而不是死记硬背。",
-    "遇到困难题目时，可以先看解析，再自己实现一遍。",
-    "定期回顾之前学过的题目，巩固记忆。",
-    "可以尝试用不同的方法解决同一个问题。",
-    "保持良好的学习节奏，避免过度疲劳。"
-];
+// 热力图相关常量
 
 // 页面加载时获取数据
 document.addEventListener('DOMContentLoaded', function() {
@@ -382,6 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadCheckInStats();
         loadMainStudyPlans();
         loadStudyProgressSummary();
+        loadStudyHeatmap();
     }, 200);
     
     // 设置定时刷新
@@ -405,7 +322,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // 初始化页面
 function initializePage() {
     setGreeting();
-    setMotivationalContent();
     
     // 页面加载动画
     animateCards();
@@ -432,13 +348,23 @@ function setGreeting() {
     }
 }
 
-// 设置励志内容
-function setMotivationalContent() {
-    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-    const randomTip = studyTips[Math.floor(Math.random() * studyTips.length)];
-    
-    document.getElementById('dailyQuote').textContent = randomQuote;
-    document.getElementById('studyTip').textContent = randomTip;
+// 加载学习活动热力图
+async function loadStudyHeatmap() {
+    try {
+        const response = await axios.get('/api/study-heatmap');
+        const heatmapData = response.data;
+        
+        renderHeatmap(heatmapData);
+        updateHeatmapStats(heatmapData);
+        
+    } catch (error) {
+        document.getElementById('heatmapContainer').innerHTML = `
+            <div class="alert alert-warning text-center">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                加载学习活动数据失败
+            </div>
+        `;
+    }
 }
 
 // 卡片动画
@@ -458,13 +384,8 @@ function animateCards() {
 
 // 加载统计信息
 async function loadStats() {
-    console.log('开始加载统计信息');
-    console.log('当前axios headers:', axios.defaults.headers.common);
-    
     try {
-        console.log('发送请求到 /api/study-stats');
         const response = await axios.get('/api/study-stats');
-        console.log('统计信息响应:', response.data);
         const stats = response.data;
         
         // 更新统计数字
@@ -476,11 +397,8 @@ async function loadStats() {
             Math.round((stats.completed / stats.total_studied) * 100) : 0;
         animateNumber('completionRate', completionRate, '%');
         
-        // 更新进度条
-        updateProgressBars(stats);
-        
+
     } catch (error) {
-        console.error('加载统计信息失败:', error);
         showAlert('加载统计信息失败', 'warning');
     }
 }
@@ -503,38 +421,17 @@ function animateNumber(elementId, targetValue, suffix = '') {
     }, 16);
 }
 
-// 更新进度条
-function updateProgressBars(stats) {
-    const overallProgress = stats.total_studied > 0 ? 
-        Math.round((stats.completed / stats.total_studied) * 100) : 0;
-    
-    document.getElementById('overallProgress').textContent = overallProgress + '%';
-    document.getElementById('overallProgressBar').style.width = overallProgress + '%';
-    
-    // 模拟周度和月度进度
-    const weeklyProgress = Math.min(overallProgress + 10, 100);
-    const monthlyProgress = Math.min(overallProgress + 5, 100);
-    
-    document.getElementById('weeklyProgress').textContent = weeklyProgress + '%';
-    document.getElementById('weeklyProgressBar').style.width = weeklyProgress + '%';
-    
-    document.getElementById('monthlyProgress').textContent = monthlyProgress + '%';
-    document.getElementById('monthlyProgressBar').style.width = monthlyProgress + '%';
-}
+
 
 // 加载打卡统计
 async function loadCheckInStats() {
-    console.log('开始加载打卡统计');
-    
     try {
-        console.log('发送请求到 /api/checkin-stats');
         const response = await axios.get('/api/checkin-stats');
-        console.log('打卡统计响应:', response.data);
         checkInStats = response.data;
         
         document.getElementById('totalCheckInDays').textContent = checkInStats.total_check_in_days || 0;
         document.getElementById('consecutiveDays').textContent = checkInStats.consecutive_days || 0;
-        document.getElementById('longestStreak').textContent = checkInStats.consecutive_days || 0; // 使用 consecutive_days 作为最长连续
+        document.getElementById('longestStreak').textContent = checkInStats.best_streak || 0; // 修复：使用 best_streak 作为最长连续
         
         // 更新今日状态
         const todayStatus = checkInStats.checked_in_today ? '已完成' : '待完成';
@@ -552,12 +449,8 @@ async function loadCheckInStats() {
         
         // 更新进度圆环
         updateCheckinProgress();
-        
-        // 更新欢迎区域的连续天数
-        document.getElementById('streak').textContent = checkInStats.consecutive_days || 0;
-        
     } catch (error) {
-        console.error('加载打卡统计失败:', error);
+        // 静默处理错误
     }
 }
 
@@ -577,12 +470,8 @@ function updateCheckinProgress() {
 
 // 加载主要学习计划列表
 async function loadMainStudyPlans() {
-    console.log('开始加载主要学习计划列表');
-    
     try {
-        console.log('发送请求获取学习计划');
         const plansResponse = await axios.get('/api/study-plans?limit=20');
-        console.log('学习计划响应:', plansResponse.data);
         
         // 处理分页格式的响应
         let studyPlans;
@@ -615,15 +504,11 @@ async function loadMainStudyPlans() {
         }
         
         renderMainStudyPlans(studyPlans);
-        
     } catch (error) {
-        console.error('加载学习计划失败:', error);
         document.getElementById('studyPlansMainList').innerHTML = `
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 加载学习计划失败，请稍后重试
-                <br>
-                <small class="text-muted">错误信息: ${error.response?.data?.error || error.message}</small>
             </div>
         `;
     }
@@ -693,8 +578,6 @@ function renderMainStudyPlans(studyPlans) {
 
 // 加载学习进度汇总
 async function loadStudyProgressSummary() {
-    console.log('开始加载学习进度汇总');
-    
     try {
         const [statsResponse, progressResponse] = await Promise.all([
             axios.get('/api/study-stats'),
@@ -705,9 +588,7 @@ async function loadStudyProgressSummary() {
         const progressList = progressResponse.data;
         
         renderStudyProgressSummary(stats, progressList);
-        
     } catch (error) {
-        console.error('加载学习进度汇总失败:', error);
         document.getElementById('studyProgressSummary').innerHTML = `
             <div class="alert alert-warning alert-sm">
                 <small>加载进度信息失败</small>
@@ -773,17 +654,216 @@ function renderStudyProgressSummary(stats, progressList) {
     document.getElementById('studyProgressSummary').innerHTML = html;
 }
 
-// 随机显示提示
-function showRandomTip() {
-    const randomTip = studyTips[Math.floor(Math.random() * studyTips.length)];
-    document.getElementById('studyTip').textContent = randomTip;
+// LeetCode 风格渲染热力图
+function renderHeatmap(heatmapData) {
+    const container = document.getElementById('heatmapContainer');
+    const data = heatmapData.data;
     
-    // 添加一个小动画效果
-    const tipElement = document.getElementById('studyTip');
-    tipElement.style.opacity = '0.5';
-    setTimeout(() => {
-        tipElement.style.opacity = '1';
-    }, 200);
+    if (!data || data.length === 0) {
+        container.innerHTML = `
+            <div class="empty-heatmap-leetcode text-center py-4">
+                <p class="text-muted">暂无学习记录</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // 创建 LeetCode 风格热力图网格 - 使用大尺寸版本
+    let html = '<div class="leetcode-grid-large">';
+    
+    // 按月份组织数据
+    const dataMap = {};
+    data.forEach(item => {
+        dataMap[item.date] = item;
+    });
+    
+
+    
+    // 计算起始日期（一年前的今天）
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    
+    // 按月份分组数据 - 只包含今天及之前的数据
+    const monthsData = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 设置为今天的开始时间
+    
+    // 过滤掉未来的数据，只保留今天及之前的
+    const filteredData = data.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate <= today;
+    });
+    
+    // 生成从起始日期到今天的所有月份
+    const monthsToGenerate = [];
+    let currentMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const todayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    while (currentMonth <= todayMonth) {
+        const monthKey = `${currentMonth.getFullYear()}-${currentMonth.getMonth()}`;
+        monthsToGenerate.push({
+            key: monthKey,
+            year: currentMonth.getFullYear(),
+            month: currentMonth.getMonth()
+        });
+        currentMonth.setMonth(currentMonth.getMonth() + 1);
+    }
+    
+
+    
+    monthsToGenerate.forEach(monthInfo => {
+        const year = monthInfo.year;
+        const month = monthInfo.month;
+        const monthDays = [];
+        
+        // 获取这个月的所有天数
+        const monthEnd = new Date(year, month + 1, 0);
+        
+        // 添加这个月的所有日期，但只显示到今天为止
+        for (let day = 1; day <= monthEnd.getDate(); day++) {
+            const d = new Date(year, month, day);
+            // 使用本地日期格式化，避免时区转换问题
+            const dateStr = d.getFullYear() + '-' + 
+                           String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(d.getDate()).padStart(2, '0');
+            
+
+            
+            // 只添加到今天为止的日期
+            if (d <= today) {
+                const dayData = dataMap[dateStr] || { date: dateStr, count: 0, level: 0 };
+                monthDays.push(dayData);
+            }
+        }
+
+        
+        if (monthDays.length > 0) {
+            monthsData.push({
+                key: monthInfo.key,
+                year: year,
+                month: month,
+                days: monthDays
+            });
+        }
+    });
+    
+    // 计算自适应尺寸
+    const containerWidth = container.clientWidth;
+    const totalWeeks = monthsData.reduce((total, monthData) => {
+        const firstDayOfWeek = new Date(monthData.year, monthData.month, 1).getDay();
+        const totalCells = firstDayOfWeek + monthData.days.length;
+        const weeksInMonth = Math.ceil(totalCells / 7);
+        return total + weeksInMonth;
+    }, 0);
+    
+    // 计算每周的宽度和方块大小（LeetCode风格）
+    const monthGaps = (monthsData.length - 1) * 6; // 紧凑的月份间隔
+    const availableWidth = containerWidth - 30 - monthGaps; // 紧凑的边距
+    const weekWidth = Math.floor(availableWidth / totalWeeks);
+    const daySize = Math.max(10, Math.min(12, weekWidth - 1)); // 小而精致的方块
+    const actualWeekWidth = daySize + 2; // LeetCode标准间距
+    
+
+    
+    // 渲染月份标签
+    html += '<div class="month-labels-leetcode">';
+    const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+    let currentX = 15; // LeetCode风格起始位置
+    
+    monthsData.forEach((monthData, monthIndex) => {
+        html += `<span class="month-label-leetcode" style="left: ${currentX}px;">${months[monthData.month]}</span>`;
+        
+        // 计算这个月需要的宽度
+        const firstDayOfWeek = new Date(monthData.year, monthData.month, 1).getDay();
+        const totalCells = firstDayOfWeek + monthData.days.length;
+        const weeksInMonth = Math.ceil(totalCells / 7);
+        currentX += weeksInMonth * actualWeekWidth + 6; // LeetCode紧凑间隔
+    });
+    html += '</div>';
+    
+    // 渲染热力图方块（按月份分组，按周排列）
+    html += '<div class="heatmap-days-leetcode">';
+    let globalX = 15; // LeetCode风格起始位置
+    
+    monthsData.forEach((monthData, monthIndex) => {
+        // 按周排列每个月的天数
+        const firstDayOfWeek = new Date(monthData.year, monthData.month, 1).getDay(); // 0=周日, 1=周一...
+        
+        monthData.days.forEach((day, dayIdx) => {
+            const date = new Date(day.date);
+            
+            const dateStr = date.toLocaleDateString('zh-CN', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            const title = `${dateStr}: ${day.count} 道题`;
+            
+            // 计算在当前月份中的位置
+            const totalDayIndex = dayIdx + firstDayOfWeek;
+            const currentWeek = Math.floor(totalDayIndex / 7);
+            const currentDayInWeek = totalDayIndex % 7;
+            
+            const leftPosition = globalX + currentWeek * actualWeekWidth;
+            const topPosition = currentDayInWeek * (daySize + 2) + 18; // LeetCode标准间距
+            
+            html += `<div class="heatmap-day-leetcode level-${day.level}" 
+                          title="${title}" 
+                          data-date="${day.date}" 
+                          data-count="${day.count}"
+                          onclick="showDayDetail('${day.date}', ${day.count})"
+                          style="left: ${leftPosition}px; top: ${topPosition}px; --day-size: ${daySize}px;"></div>`;
+        });
+        
+        // 移动到下一个月的起始位置
+        const totalCells = firstDayOfWeek + monthData.days.length;
+        const weeksInMonth = Math.ceil(totalCells / 7);
+        const nextGlobalX = globalX + weeksInMonth * actualWeekWidth + 6; // LeetCode紧凑间隔
+        globalX = nextGlobalX;
+    });
+    html += '</div>';
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// 更新 LeetCode 风格统计信息
+function updateHeatmapStats(heatmapData) {
+    const statsHtml = `
+        过去一年共学习 <strong>${heatmapData.this_year}</strong> 道题
+        <span class="ms-4">累计学习: <strong>${heatmapData.total_commits}</strong> 道题</span>
+        <span class="ms-4">连续学习: <strong>${heatmapData.current_streak}</strong> 天</span>
+    `;
+    
+    document.getElementById('leetcodeStats').innerHTML = statsHtml;
+}
+
+// 显示天详情
+function showDayDetail(date, count) {
+    const dateObj = new Date(date);
+    const dateStr = dateObj.toLocaleDateString('zh-CN', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        weekday: 'long'
+    });
+    
+    let message = `${dateStr}`;
+    if (count > 0) {
+        message += `\n学习了 ${count} 道题`;
+        if (count >= 10) {
+            message += ' 🔥 学习狂魔！';
+        } else if (count >= 5) {
+            message += ' 💪 努力学习！';
+        } else {
+            message += ' 👍 保持学习！';
+        }
+    } else {
+        message += '\n这天没有学习记录';
+    }
+    
+    showAlert(message, count > 0 ? 'success' : 'info');
 }
 
 // 加载学习计划进度详情
@@ -794,7 +874,6 @@ async function loadPlanProgress(planId) {
         
         showAlert(`学习进度：${progress.progress_rate}% | 掌握率：${progress.mastery_rate}%`, 'info');
     } catch (error) {
-        console.error('加载学习计划进度失败:', error);
         showAlert('加载进度信息失败', 'warning');
     }
 }
@@ -1123,6 +1202,263 @@ function updateTimeBasedContent() {
 .metric-label {
     font-size: 0.75rem;
     color: #6c757d;
+}
+
+/* LeetCode 风格热力图样式 */
+.leetcode-heatmap-card {
+    border: none;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.leetcode-header {
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #586069;
+}
+
+.leetcode-stats-left {
+    color: #24292e;
+}
+
+.leetcode-stats-left strong {
+    color: #0366d6;
+    font-weight: 600;
+}
+
+.leetcode-stats-right {
+    color: #586069;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    background: #fafbfc;
+    transition: all 0.2s ease;
+}
+
+.leetcode-stats-right:hover {
+    background: #f3f4f6;
+    border-color: #d1d5da;
+}
+
+.leetcode-heatmap-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px 0;
+}
+
+.leetcode-heatmap-container-large {
+    overflow-x: visible;
+    overflow-y: hidden;
+    padding: 10px 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 140px;
+    width: 100%;
+}
+
+.leetcode-grid {
+    position: relative;
+    display: inline-block;
+    margin-left: 20px;
+    margin-top: 10px;
+    min-width: 728px;
+}
+
+.leetcode-grid-large {
+    position: relative;
+    display: block;
+    margin: 5px auto 0;
+    width: 100%;
+    max-width: 100%;
+    transform: scale(1.0);
+    transform-origin: center;
+    white-space: nowrap;
+}
+
+.month-labels-leetcode {
+    position: relative;
+    height: 12px;
+    margin-bottom: 5px;
+}
+
+.month-label-leetcode {
+    position: absolute;
+    font-size: 10px;
+    color: #586069;
+    font-weight: 400;
+}
+
+.heatmap-days-leetcode {
+    position: relative;
+    height: 105px;
+    width: 100%;
+    overflow: visible;
+}
+
+.heatmap-day-leetcode {
+    position: absolute;
+    width: var(--day-size, 11px);
+    height: var(--day-size, 11px);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    border: 1px solid rgba(27, 31, 35, 0.06);
+    box-sizing: border-box;
+}
+
+.heatmap-day-leetcode:hover {
+    border-color: rgba(27, 31, 35, 0.8);
+    border-width: 2px;
+    transform: scale(1.1);
+    z-index: 10;
+}
+
+/* LeetCode 绿色系颜色方案 */
+.heatmap-day-leetcode.level-0 {
+    background-color: #ebedf0;
+    fill: #ebedf0;
+}
+
+.heatmap-day-leetcode.level-1 {
+    background-color: #9be9a8;
+    fill: #9be9a8;
+}
+
+.heatmap-day-leetcode.level-2 {
+    background-color: #40c463;
+    fill: #40c463;
+}
+
+.heatmap-day-leetcode.level-3 {
+    background-color: #30a14e;
+    fill: #30a14e;
+}
+
+.heatmap-day-leetcode.level-4 {
+    background-color: #216e39;
+    fill: #216e39;
+}
+
+.leetcode-legend {
+    font-size: 11px;
+    color: #586069;
+}
+
+.legend-label {
+    font-size: 11px;
+    color: #586069;
+}
+
+.legend-squares {
+    display: flex;
+    gap: 2px;
+}
+
+.legend-square {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid rgba(27, 31, 35, 0.06);
+    box-sizing: border-box;
+}
+
+.legend-square.level-0 {
+    background-color: #ebedf0;
+}
+
+.legend-square.level-1 {
+    background-color: #9be9a8;
+}
+
+.legend-square.level-2 {
+    background-color: #40c463;
+}
+
+.legend-square.level-3 {
+    background-color: #30a14e;
+}
+
+.legend-square.level-4 {
+    background-color: #216e39;
+}
+
+/* 加载动画 */
+.loading-state-leetcode {
+    padding: 40px 0;
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ebedf0;
+    border-top: 2px solid #40c463;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    color: #586069;
+    font-size: 14px;
+}
+
+/* 空状态样式 */
+.empty-heatmap-leetcode {
+    color: #586069;
+    font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .leetcode-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: left;
+        font-size: 12px;
+    }
+    
+    .leetcode-grid-large {
+        margin: 10px auto 0;
+        transform: scale(0.8);
+        transform-origin: center;
+    }
+    
+    .leetcode-heatmap-container-large {
+        padding: 15px 0;
+        min-height: 140px;
+    }
+    
+    .leetcode-legend {
+        justify-content: center;
+        margin-top: 15px;
+    }
+}
+
+@media (max-width: 576px) {
+    .leetcode-grid-large {
+        transform: scale(0.5);
+        margin-left: 10px;
+        min-width: 800px;
+    }
+    
+    .leetcode-heatmap-container-large {
+        padding: 10px 0;
+        min-height: 140px;
+    }
+    
+    .leetcode-header {
+        font-size: 11px;
+    }
 }
 </style>
 {{end}} 

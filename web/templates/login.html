@@ -276,6 +276,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 // 页面加载动画
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM内容已加载，开始初始化登录页面');
+    
+    // 先检查用户是否已经登录
+    checkAuthStatus();
     // 登录卡片淡入动画
     const loginCard = document.querySelector('.login-card');
     const welcomePanel = document.querySelector('.welcome-panel');
@@ -319,6 +322,62 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// ========== JWT 工具函数 ==========
+function parseJwt(token) {
+    try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (_) {
+        return null;
+    }
+}
+
+function isTokenExpired(token) {
+    const payload = parseJwt(token);
+    if (!payload || !payload.exp) return true;
+    return (Date.now() / 1000) >= payload.exp;
+}
+
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
+}
+
+function clearToken() {
+    localStorage.removeItem('token');
+    document.cookie = 'token=; Max-Age=0; path=/';
+}
+
+function checkAuthStatus() {
+    let token = localStorage.getItem('token') || getCookie('token');
+
+    // 没有 token 或已过期
+    if (!token || isTokenExpired(token)) {
+        clearToken();
+        return;
+    }
+
+    // 设置 axios 头部以便后端校验
+    if (typeof axios !== 'undefined') {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+
+    // 向后端发送校验请求
+    axios.get('/api/auth/verify', { timeout: 3000 })
+        .then(() => {
+            console.log('token 验证通过，跳转仪表盘');
+            showAlert('检测到您已登录，跳转到仪表盘...', 'info');
+            setTimeout(() => {
+                window.location.replace('/dashboard');
+            }, 500);
+        })
+        .catch(err => {
+            console.warn('token 验证失败，已清理', err);
+            clearToken();
+        });
+}
 
 // 键盘快捷键支持
 document.addEventListener('keydown', function(e) {

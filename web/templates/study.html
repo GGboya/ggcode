@@ -105,59 +105,60 @@
 let studyPlanId = null;
 let studyPlan = null;
 let dailyQuestions = [];
+let currentQuestionIndex = 0;
+let startIndex = 0; // 新增：记录开始学习的位置
 
 // 页面加载时获取学习计划ID
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Study DOM加载完成');
-    
     const urlParams = new URLSearchParams(window.location.search);
     studyPlanId = urlParams.get('plan');
     
     if (!studyPlanId) {
         showAlert('缺少学习计划参数', 'danger');
-        setTimeout(() => {
-            window.location.href = '/study-plans';
-        }, 2000);
+        setTimeout(() => { window.location.href = '/study-plans'; }, 2000);
         return;
     }
     
-    // 等待一小段时间让base.html的setupAxios完成，然后加载数据
+    // 等待axios设置好
     setTimeout(() => {
-        console.log('开始加载Study数据，学习计划ID:', studyPlanId);
         loadStudyData();
     }, 200);
 });
 
-// 加载学习数据
+// 加载所有初始学习数据
 async function loadStudyData() {
-    console.log('开始加载学习数据');
-    console.log('当前axios headers:', axios.defaults.headers.common);
-    
     try {
-        // 并行加载学习计划信息、进度和今日任务
-        console.log('发送并行请求加载学习数据...');
-        const [planResponse, progressResponse, questionsResponse] = await Promise.all([
+        const [planResponse, questionsResponse] = await Promise.all([
             axios.get(`/api/study-plan/${studyPlanId}`),
-            axios.get(`/api/study-plan/${studyPlanId}/progress`),
             axios.get(`/api/study-plan/${studyPlanId}/daily-questions`)
         ]);
         
-        console.log('学习计划响应:', planResponse.data);
-        console.log('进度响应:', progressResponse.data);
-        console.log('今日题目响应:', questionsResponse.data);
-        
         studyPlan = planResponse.data;
-        const progress = progressResponse.data;
-        dailyQuestions = questionsResponse.data;
+        
+        // 适配新的响应格式
+        const questionsData = questionsResponse.data;
+        dailyQuestions = questionsData.questions || [];
+        startIndex = questionsData.start || 0;
         
         renderStudyPlanInfo();
-        renderProgressOverview(progress);
+        await reloadProgress(); // 加载并渲染初始进度
         renderDailyTasks();
-        renderStudyStats(progress);
         
     } catch (error) {
         console.error('加载学习数据失败:', error);
         showAlert('加载学习数据失败: ' + (error.response?.data?.error || error.message), 'danger');
+    }
+}
+
+// 重新加载并渲染进度和统计
+async function reloadProgress() {
+    try {
+        const progressResponse = await axios.get(`/api/study-plan/${studyPlanId}/progress`);
+        const progress = progressResponse.data;
+        renderProgressOverview(progress);
+        renderStudyStats(progress);
+    } catch (error) {
+        console.error('刷新进度失败:', error);
     }
 }
 
@@ -170,51 +171,51 @@ function renderStudyPlanInfo() {
 // 渲染进度概览
 function renderProgressOverview(progress) {
     const html = `
-        <div class="col-md-3 text-center">
-            <div class="border-end">
-                <h4 class="text-primary mb-1">${progress.total_questions}</h4>
-                <small class="text-muted">总题数</small>
-            </div>
-        </div>
-        <div class="col-md-3 text-center">
-            <div class="border-end">
-                <h4 class="text-info mb-1">${progress.studied_count}</h4>
-                <small class="text-muted">已学习</small>
-            </div>
-        </div>
-        <div class="col-md-3 text-center">
-            <div class="border-end">
-                <h4 class="text-success mb-1">${progress.completed_count}</h4>
-                <small class="text-muted">已掌握</small>
-            </div>
-        </div>
-        <div class="col-md-3 text-center">
-            <h4 class="text-warning mb-1">${progress.review_count}</h4>
-            <small class="text-muted">待复习</small>
-        </div>
+        <div class="col-md-3 text-center"><div class="border-end"><h4 class="text-primary mb-1">${progress.total_questions}</h4><small class="text-muted">总题数</small></div></div>
+        <div class="col-md-3 text-center"><div class="border-end"><h4 class="text-info mb-1">${progress.studied_count}</h4><small class="text-muted">已学习</small></div></div>
+        <div class="col-md-3 text-center"><div class="border-end"><h4 class="text-success mb-1">${progress.completed_count}</h4><small class="text-muted">已掌握</small></div></div>
+        <div class="col-md-3 text-center"><h4 class="text-warning mb-1">${progress.review_count}</h4><small class="text-muted">待复习</small></div>
     `;
-    
     document.getElementById('progressOverview').innerHTML = html;
 }
 
-// 渲染今日任务
+// 渲染每日任务区域
 function renderDailyTasks() {
-    if (dailyQuestions.length === 0) {
+    if (!dailyQuestions || dailyQuestions.length === 0) {
         document.getElementById('dailyTasks').innerHTML = `
             <div class="text-center py-4">
                 <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                 <h5 class="text-success">今日任务已完成！</h5>
                 <p class="text-muted">你已经完成了今天的学习任务，明天再来吧！</p>
-                <a href="/study-plans" class="btn btn-primary">
-                    <i class="fas fa-arrow-left"></i> 返回学习计划
-                </a>
-            </div>
-        `;
-        return;
+                <a href="/study-plans" class="btn btn-primary"><i class="fas fa-arrow-left"></i> 返回学习计划</a>
+            </div>`;
+    } else {
+        // 从断点位置开始学习
+        currentQuestionIndex = startIndex;
+        
+        // 如果已经全部完成，显示完成信息
+        if (startIndex >= dailyQuestions.length) {
+            document.getElementById('dailyTasks').innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-trophy fa-3x text-warning mb-3"></i>
+                    <h5 class="text-success">太棒了，今日任务全部完成！</h5>
+                    <p class="text-muted">你的努力终将有所回报，明天继续加油！</p>
+                    <a href="/study-plans" class="btn btn-primary mt-3"><i class="fas fa-arrow-left"></i> 返回学习计划</a>
+                </div>`;
+        } else {
+            // 显示断点续学提示（如果不是从头开始）
+            if (startIndex > 0) {
+                showContinueStudyMessage();
+            }
+            showCurrentQuestion(currentQuestionIndex);
+        }
     }
-    
-    // 显示当前题目（扇贝单词风格）
-    showCurrentQuestion(0);
+}
+
+// 显示断点续学提示
+function showContinueStudyMessage() {
+    const message = `欢迎回来！你今天已经学习了 ${startIndex} 道题，现在从第 ${startIndex + 1} 题继续学习。`;
+    showAlert(message, 'info');
 }
 
 // 渲染学习统计
@@ -224,193 +225,123 @@ function renderStudyStats(progress) {
     
     const html = `
         <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <small class="text-muted">学习进度</small>
-                <small class="text-primary">${progressRate}%</small>
-            </div>
-            <div class="progress" style="height: 8px;">
-                <div class="progress-bar bg-primary" style="width: ${progressRate}%"></div>
-            </div>
+            <div class="d-flex justify-content-between align-items-center mb-1"><small class="text-muted">学习进度</small><small class="text-primary">${progressRate}%</small></div>
+            <div class="progress" style="height: 8px;"><div class="progress-bar bg-primary" style="width: ${progressRate}%"></div></div>
         </div>
         <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <small class="text-muted">掌握率</small>
-                <small class="text-success">${masteryRate}%</small>
-            </div>
-            <div class="progress" style="height: 8px;">
-                <div class="progress-bar bg-success" style="width: ${masteryRate}%"></div>
-            </div>
+            <div class="d-flex justify-content-between align-items-center mb-1"><small class="text-muted">掌握率</small><small class="text-success">${masteryRate}%</small></div>
+            <div class="progress" style="height: 8px;"><div class="progress-bar bg-success" style="width: ${masteryRate}%"></div></div>
         </div>
-        <div class="text-center">
-            <small class="text-muted">
-                继续努力，你已经学习了 ${progress.studied_count} 道题！
-            </small>
-        </div>
+        <div class="text-center"><small class="text-muted">继续努力，你已经学习了 ${progress.studied_count} 道题！</small></div>
     `;
-    
     document.getElementById('studyStats').innerHTML = html;
 }
 
-// 获取难度颜色
-function getDifficultyColor(difficulty) {
-    switch (difficulty.toLowerCase()) {
-        case 'easy': return 'success';
-        case 'medium': return 'warning';
-        case 'hard': return 'danger';
-        default: return 'secondary';
-    }
-}
-
-let currentQuestionIndex = 0;
-
-// 显示当前题目（扇贝单词风格）
+// 显示当前题目
 function showCurrentQuestion(index) {
     if (index >= dailyQuestions.length) {
-        // 所有题目完成
         document.getElementById('dailyTasks').innerHTML = `
-            <div class="text-center py-5">
-                <i class="fas fa-trophy fa-4x text-warning mb-4"></i>
-                <h3 class="text-success mb-3">🎉 恭喜完成今日学习任务！</h3>
-                <p class="text-muted mb-4">你已经完成了今天的 ${dailyQuestions.length} 道题目学习</p>
-                <div class="d-flex justify-content-center gap-3">
-                    <a href="/study-plans" class="btn btn-primary">
-                        <i class="fas fa-arrow-left"></i> 返回学习计划
-                    </a>
-                    <button class="btn btn-outline-primary" onclick="loadStudyData()">
-                        <i class="fas fa-redo"></i> 重新加载
-                    </button>
-                </div>
-            </div>
-        `;
+            <div class="text-center py-4">
+                <i class="fas fa-trophy fa-3x text-warning mb-3"></i>
+                <h5 class="text-success">太棒了，今日任务全部完成！</h5>
+                <p class="text-muted">你的努力终将有所回报，明天继续加油！</p>
+                <a href="/study-plans" class="btn btn-primary mt-3"><i class="fas fa-arrow-left"></i> 返回学习计划</a>
+            </div>`;
         return;
     }
-    
+
     currentQuestionIndex = index;
     const item = dailyQuestions[index];
     const question = item.question;
     const isReview = item.is_review;
-    
-    const html = `
+
+    // 计算实际的题目序号和总体进度
+    const actualIndex = index + 1;
+    const totalQuestions = dailyQuestions.length;
+    const overallProgress = ((index + 1) / totalQuestions) * 100;
+
+    const questionCard = `
         <div class="text-center">
-            <!-- 进度指示器 -->
-            <div class="mb-4">
-                <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-primary" style="width: ${((index + 1) / dailyQuestions.length) * 100}%"></div>
-                </div>
-                <small class="text-muted mt-2 d-block">
-                    第 ${index + 1} 题 / 共 ${dailyQuestions.length} 题
-                    ${isReview ? '<span class="badge bg-warning text-dark ms-2">复习</span>' : '<span class="badge bg-primary ms-2">新题</span>'}
-                </small>
-            </div>
-            
-            <!-- 题目卡片 -->
-            <div class="card shadow-lg border-0" style="max-width: 600px; margin: 0 auto;">
-                <div class="card-body p-5">
-                    <div class="mb-4">
-                        <span class="badge bg-${getDifficultyColor(question.difficulty)} fs-6 mb-3">${question.difficulty}</span>
-                        <h2 class="card-title mb-4">${question.title}</h2>
-                        <a href="${question.leetcode_url}" target="_blank" class="btn btn-outline-primary mb-4">
-                            <i class="fas fa-external-link-alt"></i> 在 LeetCode 中查看题目
-                        </a>
-                    </div>
-                    
-                    <!-- 学习提示 -->
-                    <div class="alert alert-light border mb-4">
-                        <h6 class="mb-2">
-                            <i class="fas fa-lightbulb text-warning"></i> 学习提示
-                        </h6>
-                        <p class="mb-0 small text-muted">
-                            请先尝试独立思考和解决这道题目，然后根据你的完成情况选择下面的选项：
-                        </p>
-                    </div>
-                    
-                    <!-- 选择按钮 -->
-                    <div class="d-grid gap-3">
-                        <button class="btn btn-success btn-lg" onclick="handleQuestionResult('ac')">
-                            <i class="fas fa-check-circle"></i> 独立 AC
-                            <small class="d-block">我能够独立完成这道题</small>
-                        </button>
-                        <button class="btn btn-danger btn-lg" onclick="handleQuestionResult('failed')">
-                            <i class="fas fa-times-circle"></i> 不会做
-                            <small class="d-block">我需要查看解答或提示</small>
-                        </button>
-                    </div>
-                </div>
+            <p class="text-muted mb-2">第 ${actualIndex} 题 / 共 ${totalQuestions} 题
+                ${isReview ? '<span class="badge bg-warning ms-2">复习</span>' : '<span class="badge bg-info ms-2">新题</span>'}
+            </p>
+            <div class="progress mb-4" style="height: 4px;">
+                <div class="progress-bar" style="width: ${overallProgress}%" role="progressbar"></div>
             </div>
         </div>
-    `;
-    
-    document.getElementById('dailyTasks').innerHTML = html;
+        <div class="card shadow-sm p-4 text-center" style="min-height: 250px;">
+            <div class="mb-3"><span class="badge bg-warning text-dark">${question.difficulty}</span></div>
+            <h3 class="mb-4">${question.title}</h3>
+            <div class="mb-4"><a href="${question.leetcode_url}" target="_blank" class="btn btn-outline-primary"><i class="fas fa-external-link-alt"></i> 在 LeetCode 中查看题目</a></div>
+            <div class="alert alert-light border small">
+                <i class="fas fa-lightbulb text-warning"></i> <strong>学习提示:</strong> 请先尝试独立思考和解决这道题目，然后根据你的完成情况选择下面的选项。
+            </div>
+        </div>
+        <div class="mt-4 text-center">
+            <div class="row">
+                <div class="col-6">
+                    <button class="btn btn-lg btn-success w-100" onclick="completeQuestion(${question.id}, 'ac')">
+                        <i class="fas fa-check-circle"></i> 独立 AC
+                        <span class="d-block small text-white-50">我能够独立完成这道题</span>
+                    </button>
+                </div>
+                <div class="col-6">
+                     <button class="btn btn-lg btn-danger w-100" onclick="completeQuestion(${question.id}, 'failed')">
+                        <i class="fas fa-times-circle"></i> 未掌握
+                         <span class="d-block small text-white-50">需要再次学习这道题</span>
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    document.getElementById('dailyTasks').innerHTML = questionCard;
 }
 
-// 处理题目结果
-async function handleQuestionResult(resultType) {
-    const item = dailyQuestions[currentQuestionIndex];
-    const question = item.question;
-    
+// 完成题目处理
+async function completeQuestion(questionId, resultType) {
     try {
-        // 显示加载状态
-        const buttons = document.querySelectorAll('#dailyTasks button');
-        buttons.forEach(btn => {
-            btn.disabled = true;
-            if (btn.onclick && btn.onclick.toString().includes(resultType)) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
-            }
-        });
-        
-        await axios.post('/api/complete-question', {
-            question_id: question.id,
+        const response = await axios.post('/api/complete-question', {
+            question_id: questionId,
             result_type: resultType
         });
+        showAlert(response.data.message, 'success');
         
-        // 显示反馈
-        let message, alertType;
-        if (resultType === 'ac') {
-            message = '🎉 太棒了！独立AC，继续保持！';
-            alertType = 'success';
-        } else {
-            message = '💪 没关系，继续努力！已加入复习计划';
-            alertType = 'info';
-        }
-        
-        showAlert(message, alertType);
-        
-        // 延迟1秒后显示下一题
-        setTimeout(() => {
-            showCurrentQuestion(currentQuestionIndex + 1);
-        }, 1000);
+        await reloadProgress(); // 刷新进度
+        showCurrentQuestion(currentQuestionIndex + 1); // 显示下一题
         
     } catch (error) {
-        console.error('提交结果失败:', error);
-        showAlert('提交失败: ' + (error.response?.data?.error || error.message), 'danger');
-        
-        // 恢复按钮状态
-        const buttons = document.querySelectorAll('#dailyTasks button');
-        buttons.forEach(btn => {
-            btn.disabled = false;
-        });
-        showCurrentQuestion(currentQuestionIndex); // 重新显示当前题目
+        console.error('完成题目失败:', error);
+        showAlert('操作失败: ' + (error.response?.data?.error || error.message), 'danger');
     }
 }
 
 // 显示提示信息
-function showAlert(message, type) {
+function showAlert(message, type = 'info') {
+    const alertContainer = document.getElementById('alert-container') || document.body;
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '1050';
+    alertDiv.setAttribute('role', 'alert');
+    alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
     
-    document.body.appendChild(alertDiv);
+    alertContainer.appendChild(alertDiv);
     
-    // 3秒后自动消失
     setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
+        const alertInstance = bootstrap.Alert.getOrCreateInstance(alertDiv);
+        if(alertInstance) {
+            alertInstance.close();
         }
-    }, 3000);
+    }, 4000);
+}
+
+function getDifficultyColor(difficulty) {
+    switch(difficulty) {
+        case 'Easy': return 'success';
+        case 'Medium': return 'warning';
+        case 'Hard': return 'danger';
+        default: return 'secondary';
+    }
 }
 </script>
 {{end}} 

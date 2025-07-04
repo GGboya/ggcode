@@ -541,8 +541,9 @@ function renderQuestionBanks() {
                                 
                                 <!-- 共享题库操作（针对非自己的题库） -->
                                 ${(bank.is_shared || bank.is_official) && !isOwnBank ? `
-                                    <button class="btn btn-outline-warning" onclick="toggleStarQuestionBank(${bank.id})" id="starBtn${bank.id}">
-                                        <i class="fas fa-star"></i> <span id="starText${bank.id}">收藏</span>
+                                    <button class="btn btn-outline-secondary" onclick="toggleStarQuestionBank(${bank.id})" id="starBtn${bank.id}">
+                                        <i class="fas fa-star ${bank.is_starred ? 'text-warning' : 'text-muted'}" id="starIcon${bank.id}"></i> 
+                                        <span id="starText${bank.id}">${bank.is_starred ? '已收藏' : '收藏'}</span>
                                     </button>
                                     <button class="btn btn-outline-info" onclick="forkQuestionBank(${bank.id})">
                                         <i class="fas fa-code-branch"></i> Fork
@@ -557,39 +558,9 @@ function renderQuestionBanks() {
     });
     
     container.innerHTML = html;
-    
-    // 初始化收藏按钮状态
-    initializeStarButtons();
 }
 
-// 初始化收藏按钮状态
-async function initializeStarButtons() {
-    try {
-        const response = await axios.get('/api/starred-questionbanks?limit=1000');
-        // 处理分页格式的响应
-        let starredBanks;
-        if (response.data.data) {
-            starredBanks = response.data.data;
-        } else {
-            // 兼容旧版本返回格式
-            starredBanks = response.data;
-        }
-        const starredBankIds = starredBanks.map(bank => bank.id);
-        
-        // 更新所有收藏按钮的状态
-        starredBankIds.forEach(bankId => {
-            const starBtn = document.getElementById(`starBtn${bankId}`);
-            const starText = document.getElementById(`starText${bankId}`);
-            if (starBtn && starText) {
-                starText.textContent = '已收藏';
-                starBtn.classList.remove('btn-outline-warning');
-                starBtn.classList.add('btn-warning');
-            }
-        });
-    } catch (error) {
-        console.log('初始化收藏状态失败:', error);
-    }
-}
+// 注意: 收藏状态现在直接从后端API返回的 is_starred 字段获取，无需单独初始化
 
 // 查看题目
 async function viewQuestions(bankId, page = 1) {
@@ -1147,7 +1118,8 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
         const response = await axios.put(`/api/questions/${window.currentQuestionId}`, {
             title: title,
             leetcode_url: url,
-            difficulty: difficulty
+            difficulty: difficulty,
+            question_bank_id: currentViewingBankId  // 添加题库ID
         });
         
         showAlert('题目更新成功！', 'success');
@@ -1226,7 +1198,11 @@ function deleteQuestion(questionId) {
 // 确认删除题目
 async function deleteQuestionConfirmed(questionId) {
     try {
-        await axios.delete(`/api/questions/${questionId}`);
+        await axios.delete(`/api/questions/${questionId}`, {
+            data: {
+                question_bank_id: currentViewingBankId  // 添加题库ID
+            }
+        });
         
         showAlert('题目删除成功！', 'success');
         
@@ -1355,22 +1331,14 @@ async function unshareQuestionBank(bankId) {
     }
 }
 
-// 切换Star状态
+// 切换Star状态 - 优化版：直接根据星星图标颜色判断
 async function toggleStarQuestionBank(bankId) {
     try {
-        // 先检查当前是否已收藏
-        const response = await axios.get('/api/starred-questionbanks?limit=1000');
-        // 处理分页格式的响应
-        let starredBanks;
-        if (response.data.data) {
-            starredBanks = response.data.data;
-        } else {
-            // 兼容旧版本返回格式
-            starredBanks = response.data;
-        }
-        const isStarred = starredBanks.some(bank => bank.id === bankId);
+        // 直接从星星图标颜色判断当前是否已收藏
+        const starIcon = document.getElementById(`starIcon${bankId}`);
+        const isCurrentlyStarred = starIcon && starIcon.classList.contains('text-warning');
         
-        if (isStarred) {
+        if (isCurrentlyStarred) {
             await unstarQuestionBank(bankId);
         } else {
             await starQuestionBank(bankId);
@@ -1387,13 +1355,13 @@ async function starQuestionBank(bankId) {
         await axios.post(`/api/questionbanks/${bankId}/star`);
         showAlert('题库已收藏！', 'success');
         
-        // 更新按钮状态
-        const starBtn = document.getElementById(`starBtn${bankId}`);
+        // 更新星星图标和文字状态
+        const starIcon = document.getElementById(`starIcon${bankId}`);
         const starText = document.getElementById(`starText${bankId}`);
-        if (starBtn && starText) {
+        if (starIcon && starText) {
             starText.textContent = '已收藏';
-            starBtn.classList.remove('btn-outline-warning');
-            starBtn.classList.add('btn-warning');
+            starIcon.classList.remove('text-muted');
+            starIcon.classList.add('text-warning');
         }
         
         refreshCurrentPage();
@@ -1419,13 +1387,13 @@ async function unstarQuestionBank(bankId) {
         await axios.delete(`/api/questionbanks/${bankId}/star`);
         showAlert('已取消收藏！', 'success');
         
-        // 更新按钮状态
-        const starBtn = document.getElementById(`starBtn${bankId}`);
+        // 更新星星图标和文字状态
+        const starIcon = document.getElementById(`starIcon${bankId}`);
         const starText = document.getElementById(`starText${bankId}`);
-        if (starBtn && starText) {
+        if (starIcon && starText) {
             starText.textContent = '收藏';
-            starBtn.classList.remove('btn-warning');
-            starBtn.classList.add('btn-outline-warning');
+            starIcon.classList.remove('text-warning');
+            starIcon.classList.add('text-muted');
         }
         
         refreshCurrentPage();
@@ -1642,6 +1610,11 @@ async function loadStarredBanks() {
             questionBanks = response.data;
             currentPagination = null;
         }
+        
+        // 为已收藏的题库添加 is_starred 标识
+        questionBanks.forEach(bank => {
+            bank.is_starred = true;
+        });
         
         renderQuestionBanks();
     } catch (error) {

@@ -42,6 +42,63 @@
 
 <!-- 注册页面脚本 -->
 <script>
+// 检查用户是否已经登录
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuthStatus();
+});
+
+// ========== JWT 工具 ==========
+function parseJwt(token) {
+    try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (_) {
+        return null;
+    }
+}
+
+function isTokenExpired(token) {
+    const payload = parseJwt(token);
+    if (!payload || !payload.exp) return true;
+    return (Date.now() / 1000) >= payload.exp;
+}
+
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
+}
+
+function clearToken() {
+    localStorage.removeItem('token');
+    document.cookie = 'token=; Max-Age=0; path=/';
+}
+
+function checkAuthStatus() {
+    let token = localStorage.getItem('token') || getCookie('token');
+
+    if (!token || isTokenExpired(token)) {
+        clearToken();
+        return;
+    }
+
+    if (typeof axios !== 'undefined') {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+
+    axios.get('/api/auth/verify', { timeout: 3000 })
+        .then(() => {
+            console.log('token 验证通过，跳转仪表盘');
+            showAlert('检测到您已登录，跳转到仪表盘...', 'info');
+            setTimeout(() => {
+                window.location.replace('/dashboard');
+            }, 500);
+        })
+        .catch(() => {
+            clearToken();
+        });
+}
+
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     

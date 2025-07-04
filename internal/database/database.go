@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"ggcode/internal/models"
 	"os"
 
 	"gorm.io/driver/mysql"
@@ -28,13 +29,22 @@ func Init() (*gorm.DB, error) {
 
 	// 自动迁移表结构
 	err = db.AutoMigrate(
-		&User{},
-		&QuestionBank{},
-		&QuestionBankStar{},
-		&Question{},
-		&UserStudyPlan{},
-		&UserQuestionProgress{},
-		&UserCheckIn{},
+		&models.User{},
+		&models.QuestionBank{},
+		&models.QuestionBankStar{},
+		&models.Question{},
+		&models.UserStudyPlan{},
+		&models.UserQuestionProgress{},
+		&models.UserCheckIn{},
+		&models.InterviewIsland{},
+		&models.InterviewLevel{},
+		&models.UserLevelProgress{},
+		&models.UserLevelSubmission{},
+		&models.InterviewTestCase{},
+		&models.AlgoTag{},
+		&models.QuestionTag{},
+		&models.UserUnlockedTag{},
+		&models.DailyStudyPlanCache{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %v", err)
@@ -60,13 +70,13 @@ func getEnv(key, defaultValue string) string {
 func initOfficialData(db *gorm.DB) error {
 	// 检查是否已存在官方题库
 	var count int64
-	db.Model(&QuestionBank{}).Where("is_official = ?", true).Count(&count)
+	db.Model(&models.QuestionBank{}).Where("is_official = ?", true).Count(&count)
 	if count > 0 {
 		return nil // 已存在，不重复初始化
 	}
 
 	// 创建官方题库
-	officialBank := QuestionBank{
+	officialBank := models.QuestionBank{
 		Name:        "LeetCode Hot 100",
 		Description: "LeetCode 热题 HOT 100",
 		IsOfficial:  true,
@@ -78,7 +88,7 @@ func initOfficialData(db *gorm.DB) error {
 	}
 
 	// 添加部分 Hot 100 题目（示例）
-	questions := []Question{
+	questions := []models.Question{
 		{Title: "两数之和", LeetcodeURL: "https://leetcode.cn/problems/two-sum/", Difficulty: "Easy", QuestionBankID: officialBank.ID},
 		{Title: "两数相加", LeetcodeURL: "https://leetcode.cn/problems/add-two-numbers/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
 		{Title: "无重复字符的最长子串", LeetcodeURL: "https://leetcode.cn/problems/longest-substring-without-repeating-characters/", Difficulty: "Medium", QuestionBankID: officialBank.ID},

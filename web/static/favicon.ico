@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="32" height="32" fill="url(#bg)"/>
+  <g transform="translate(4, 8)">
+    <!-- Brain outline -->
+    <path d="M6 4 C4 4, 2 6, 2 8 C2 12, 4 16, 8 16 C12 16, 14 12, 14 8 C14 6, 12 4, 10 4" 
+          fill="none" stroke="#ffffff" stroke-width="2" opacity="0.9"/>
+    <path d="M18 4 C20 4, 22 6, 22 8 C22 12, 20 16, 16 16 C12 16, 10 12, 10 8" 
+          fill="none" stroke="#ffffff" stroke-width="2" opacity="0.7"/>
+    <!-- Neural connections -->
+    <circle cx="8" cy="8" r="1" fill="#ffffff" opacity="0.8"/>
+    <circle cx="16" cy="8" r="1" fill="#ffffff" opacity="0.8"/>
+    <line x1="9" y1="8" x2="15" y2="8" stroke="#ffffff" stroke-width="1" opacity="0.6"/>
+    <!-- Code brackets -->
+    <text x="6" y="12" fill="#ffffff" font-family="monospace" font-size="6" opacity="0.9">&lt;&gt;</text>
+    <text x="16" y="12" fill="#ffffff" font-family="monospace" font-size="6" opacity="0.9">{}</text>
+  </g>
+</svg> 

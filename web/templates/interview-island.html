@@ -1,0 +1,1952 @@
+{{template "base.html" .}}
+
+{{define "interview-island-content"}}
+<style>
+    .island-container {
+        position: relative;
+        width: 100%;
+        min-height: 80vh;
+        height: auto;
+        background: transparent; /* 让world-map的背景显示 */
+        border-radius: 20px;
+        overflow: visible;
+        margin-bottom: 2rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 岛屿详情视图的背景 - 海洋主题 */
+    #islandDetail {
+        background: 
+            linear-gradient(135deg, #4FC3F7 0%, #29B6F6 30%, #03A9F4 60%, #0288D1 100%);
+        border-radius: 20px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* 岛屿详情页面的海浪效果 */
+    #islandDetail::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 200%;
+        height: 60px;
+        background: 
+            linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.15) 25%, 
+                rgba(255,255,255,0.3) 50%, 
+                rgba(255,255,255,0.15) 75%, 
+                transparent 100%);
+        border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        animation: detail-wave 10s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    @keyframes detail-wave {
+        0%, 100% { 
+            transform: translateX(-30%) rotate(-1deg); 
+            opacity: 0.5; 
+        }
+        50% { 
+            transform: translateX(-20%) rotate(1deg); 
+            opacity: 0.7; 
+        }
+    }
+
+    /* 确保岛屿详情内容在海浪之上 */
+    #islandDetail > * {
+        position: relative;
+        z-index: 2;
+    }
+
+    .island-map {
+        position: relative;
+        width: 100%;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 50px;
+    }
+
+    .island-info {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        min-width: 250px;
+        margin: 20px;
+        flex-shrink: 0;
+    }
+
+    .progress-summary {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        min-width: 250px;
+        margin: 20px;
+        flex-shrink: 0;
+    }
+
+    .level-path {
+        /* 这个类现在被 #levelPath 替代，保留以防兼容性问题 */
+        display: block;
+    }
+
+    .level-node {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 4px solid;
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+        flex-shrink: 0;
+    }
+
+    .level-node.locked {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        border-color: #495057;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .level-node.unlocked {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border-color: #20c997;
+        animation: pulse 2s infinite;
+    }
+
+    .level-node.completed {
+        background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+        border-color: #6610f2;
+    }
+
+    .level-node:hover:not(.locked) {
+        transform: scale(1.1);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+    }
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(32, 201, 151, 0.7); }
+        70% { box-shadow: 0 0 0 20px rgba(32, 201, 151, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(32, 201, 151, 0); }
+    }
+
+
+
+    .island-selector {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 20px;
+        flex-shrink: 0;
+    }
+
+    .island-tab {
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+    .island-tab.active {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .island-tab:hover {
+        background: rgba(255, 255, 255, 1);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 300px;
+    }
+
+
+
+    .world-map {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 80px;
+        padding: 80px 20px;
+        min-height: 600px;
+        background: 
+            linear-gradient(135deg, #4FC3F7 0%, #29B6F6 30%, #03A9F4 60%, #0288D1 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* 海洋波浪层 1 - 大波浪 */
+    .world-map::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 200%;
+        height: 100px;
+        background: 
+            radial-gradient(ellipse at center, rgba(255,255,255,0.3) 0%, transparent 70%),
+            linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.2) 25%, 
+                rgba(255,255,255,0.4) 50%, 
+                rgba(255,255,255,0.2) 75%, 
+                transparent 100%);
+        border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        animation: wave1 8s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    /* 海洋波浪层 2 - 中波浪 */
+    .world-map::after {
+        content: '';
+        position: absolute;
+        bottom: 20px;
+        left: -50%;
+        width: 200%;
+        height: 80px;
+        background: 
+            linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.15) 20%, 
+                rgba(255,255,255,0.3) 50%, 
+                rgba(255,255,255,0.15) 80%, 
+                transparent 100%);
+        border-radius: 60% 40% 0 0 / 100% 100% 0 0;
+        animation: wave2 12s ease-in-out infinite reverse;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    /* 海浪动画 */
+    @keyframes wave1 {
+        0%, 100% { 
+            transform: translateX(-50%) rotate(-2deg); 
+            opacity: 0.6; 
+        }
+        50% { 
+            transform: translateX(-40%) rotate(1deg); 
+            opacity: 0.8; 
+        }
+    }
+
+    @keyframes wave2 {
+        0%, 100% { 
+            transform: translateX(-25%) rotate(1deg); 
+            opacity: 0.4; 
+        }
+        50% { 
+            transform: translateX(-35%) rotate(-1deg); 
+            opacity: 0.7; 
+        }
+    }
+
+    /* 海洋泡沫特效 */
+    .bubble {
+        position: absolute;
+        background: rgba(255,255,255,0.6);
+        border-radius: 50%;
+        animation: bubble-float 15s infinite linear;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    @keyframes bubble-float {
+        0% {
+            transform: translateY(100vh) scale(0);
+            opacity: 0;
+        }
+        10% {
+            opacity: 1;
+        }
+        90% {
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-100px) scale(1);
+            opacity: 0;
+        }
+    }
+
+    .island-node {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        z-index: 10;
+        background: none;
+        border: none;
+        color: #fff;
+    }
+
+    /* 岛屿主体 - 超可爱圆润形状 */
+    .island-node::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: 
+            radial-gradient(ellipse at 30% 20%, #FFE082 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 80%, #FFCC02 0%, transparent 40%),
+            linear-gradient(145deg, #66BB6A 0%, #4CAF50 30%, #43A047 60%, #388E3C 100%);
+        clip-path: 
+            polygon(25% 6%, 75% 6%, 89% 25%, 96% 45%, 89% 70%, 75% 89%, 50% 96%, 25% 89%, 11% 70%, 4% 45%, 11% 25%);
+        border-radius: 45% 55% 60% 40% / 55% 45% 55% 45%;
+        box-shadow: 
+            0 15px 40px rgba(0,0,0,0.2),
+            0 5px 15px rgba(0,0,0,0.1),
+            inset 0 8px 20px rgba(255,255,255,0.3),
+            inset 0 -5px 15px rgba(0,0,0,0.1),
+            inset -8px 0 15px rgba(0,0,0,0.05),
+            inset 8px 0 15px rgba(255,255,255,0.1);
+        transition: all 0.5s ease;
+        filter: brightness(1.1) saturate(1.2);
+    }
+
+    /* 岛屿沙滩效果 */
+    .island-node::after {
+        content: '';
+        position: absolute;
+        width: 85%;
+        height: 15px;
+        background: 
+            linear-gradient(90deg, 
+                rgba(255,235,178,0.8) 0%, 
+                rgba(255,224,130,0.9) 50%, 
+                rgba(255,235,178,0.8) 100%);
+        border-radius: 50%;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        filter: blur(3px);
+        transition: all 0.5s ease;
+        z-index: -1;
+    }
+
+
+
+    /* 岛屿内容区域 */
+    .island-content {
+        position: relative;
+        z-index: 5;
+        text-align: center;
+        padding: 22px 18px;
+        background: 
+            radial-gradient(ellipse at top, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 70%),
+            rgba(255,255,255,0.15);
+        border-radius: 20px;
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255,255,255,0.3);
+        box-shadow: 
+            0 8px 25px rgba(0,0,0,0.15),
+            inset 0 3px 8px rgba(255,255,255,0.2);
+        transition: all 0.4s ease;
+        max-width: 160px;
+        transform: perspective(1000px) rotateX(5deg);
+    }
+
+    .island-node h4 {
+        font-size: 17px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        text-shadow: 
+            0 2px 4px rgba(0,0,0,0.3),
+            0 0 10px rgba(255,255,255,0.3);
+        line-height: 1.2;
+        letter-spacing: 0.5px;
+    }
+
+    .island-node p {
+        font-size: 12px;
+        margin: 0;
+        opacity: 0.95;
+        line-height: 1.4;
+        text-shadow: 
+            0 1px 3px rgba(0,0,0,0.4),
+            0 0 8px rgba(255,255,255,0.2);
+        font-weight: 500;
+    }
+
+    /* 进度指示器 - 超可爱样式 */
+    .island-progress {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 50px;
+        height: 50px;
+        background: 
+            radial-gradient(circle at 30% 30%, #FFE0B2 0%, transparent 50%),
+            linear-gradient(135deg, #FF9800 0%, #F57C00 50%, #E65100 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: bold;
+        color: white;
+        border: 4px solid #FFE0B2;
+        box-shadow: 
+            0 6px 20px rgba(255,87,34,0.4),
+            0 3px 10px rgba(0,0,0,0.2),
+            inset 0 2px 5px rgba(255,255,255,0.3);
+        z-index: 10;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        animation: progress-glow 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes progress-glow {
+        0% {
+            box-shadow: 
+                0 6px 20px rgba(255,87,34,0.4),
+                0 3px 10px rgba(0,0,0,0.2),
+                inset 0 2px 5px rgba(255,255,255,0.3);
+        }
+        100% {
+            box-shadow: 
+                0 8px 30px rgba(255,87,34,0.6),
+                0 4px 15px rgba(0,0,0,0.3),
+                inset 0 2px 8px rgba(255,255,255,0.4);
+        }
+    }
+
+    /* 锁定状态 - 可爱灰色风格 */
+    .island-node.locked::before {
+        background: 
+            radial-gradient(ellipse at 30% 20%, #E0E0E0 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 80%, #BDBDBD 0%, transparent 40%),
+            linear-gradient(145deg, #BDBDBD 0%, #9E9E9E 30%, #757575 60%, #616161 100%);
+        filter: grayscale(100%) brightness(0.8);
+    }
+
+    .island-node.locked .island-content {
+        background: rgba(96,96,96,0.4);
+        color: #E0E0E0;
+        border-color: rgba(255,255,255,0.1);
+    }
+
+    .island-node.locked {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .island-node.locked::after {
+        background: 
+            linear-gradient(90deg, 
+                rgba(189,189,189,0.5) 0%, 
+                rgba(158,158,158,0.6) 50%, 
+                rgba(189,189,189,0.5) 100%);
+    }
+
+    /* 悬停效果 - 超可爱弹跳 */
+    .island-node:not(.locked):hover {
+        transform: translateY(-20px) scale(1.1) rotate(2deg);
+        filter: brightness(1.1) saturate(1.3);
+    }
+
+    .island-node:not(.locked):hover::before {
+        box-shadow: 
+            0 25px 60px rgba(0,0,0,0.3),
+            0 10px 30px rgba(76,175,80,0.4),
+            0 5px 15px rgba(0,0,0,0.1),
+            inset 0 10px 25px rgba(255,255,255,0.4),
+            inset 0 -8px 20px rgba(0,0,0,0.1),
+            inset -10px 0 20px rgba(0,0,0,0.05),
+            inset 10px 0 20px rgba(255,255,255,0.15);
+        filter: brightness(1.2) saturate(1.3) hue-rotate(5deg);
+        animation: island-glow 0.6s ease-out;
+    }
+
+    @keyframes island-glow {
+        0% { filter: brightness(1.1) saturate(1.2); }
+        50% { filter: brightness(1.3) saturate(1.4) hue-rotate(10deg); }
+        100% { filter: brightness(1.2) saturate(1.3) hue-rotate(5deg); }
+    }
+
+    .island-node:not(.locked):hover::after {
+        width: 95%;
+        bottom: -25px;
+        opacity: 0.7;
+        background: 
+            linear-gradient(90deg, 
+                rgba(255,235,178,0.9) 0%, 
+                rgba(255,224,130,1) 50%, 
+                rgba(255,235,178,0.9) 100%);
+        filter: blur(4px);
+    }
+
+    .island-node:not(.locked):hover .island-content {
+        transform: scale(1.08) perspective(1000px) rotateX(0deg);
+        background: 
+            radial-gradient(ellipse at top, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 70%),
+            rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+        box-shadow: 
+            0 12px 35px rgba(0,0,0,0.2),
+            inset 0 4px 12px rgba(255,255,255,0.3);
+    }
+
+    /* 解锁动画 - 可爱浮动 */
+    .island-node:not(.locked) {
+        animation: float 4s ease-in-out infinite;
+    }
+
+    .island-node:not(.locked):nth-child(2n) {
+        animation: float 4.5s ease-in-out infinite 0.5s;
+    }
+
+    .island-node:not(.locked):nth-child(3n) {
+        animation: float 5s ease-in-out infinite 1s;
+    }
+
+    @keyframes float {
+        0%, 100% { 
+            transform: translateY(0px) rotate(0deg); 
+        }
+        25% {
+            transform: translateY(-6px) rotate(1deg);
+        }
+        50% { 
+            transform: translateY(-12px) rotate(0deg); 
+        }
+        75% {
+            transform: translateY(-6px) rotate(-1deg);
+        }
+    }
+
+    /* 管理员控制按钮优化 */
+    .island-admin-controls {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        display: flex;
+        gap: 5px;
+        z-index: 15;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .island-node:hover .island-admin-controls {
+        opacity: 1;
+    }
+
+    .island-admin-controls .btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(10px);
+    }
+
+    .island-admin-controls .btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Style for search results in modal */
+    .search-result-item {
+        cursor: pointer;
+        padding: 8px 12px;
+    }
+    .search-result-item:hover {
+        background-color: #f0f0f0;
+    }
+
+    /* 关卡路径容器 */
+    #levelPath {
+        display: grid;
+        grid-template-columns: repeat(4, 150px); /* 每行4个关卡，固定宽度 */
+        gap: 40px 50px; /* 行间距和列间距 */
+        padding: 50px;
+        max-width: 900px;
+        margin: 0 auto;
+        position: relative;
+        justify-content: center;
+    }
+
+    /* 关卡节点基础样式 - 超可爱设计 */
+    .level-node {
+        width: 130px;
+        height: 130px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        justify-self: center;
+        cursor: pointer;
+        background: none;
+        border: none;
+    }
+
+    /* 关卡主体 - 可爱的不规则圆形 */
+    .level-node::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 45% 55% 52% 48% / 48% 62% 38% 52%;
+        transition: all 0.5s ease;
+        z-index: 1;
+    }
+
+    /* 关卡阴影效果 */
+    .level-node::after {
+        content: '';
+        position: absolute;
+        width: 85%;
+        height: 20px;
+        background: rgba(0,0,0,0.15);
+        border-radius: 50%;
+        bottom: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        filter: blur(8px);
+        transition: all 0.5s ease;
+        z-index: 0;
+    }
+
+    /* 已完成关卡 - 绿色可爱风格 */
+    .level-node.completed::before {
+        background: 
+            radial-gradient(circle at 25% 25%, #C8E6C9 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, #A5D6A7 0%, transparent 40%),
+            linear-gradient(135deg, #66BB6A 0%, #4CAF50 30%, #43A047 60%, #388E3C 100%);
+        box-shadow: 
+            0 12px 35px rgba(76,175,80,0.3),
+            0 6px 20px rgba(0,0,0,0.15),
+            inset 0 8px 16px rgba(255,255,255,0.3),
+            inset 0 -4px 12px rgba(0,0,0,0.1);
+        border: 3px solid #C8E6C9;
+    }
+
+    .level-node.completed {
+        color: white;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        animation: completed-float 3s ease-in-out infinite;
+    }
+
+    @keyframes completed-float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-8px) rotate(2deg); }
+    }
+
+    /* 当前可进行关卡 - 蓝紫色发光效果 */
+    .level-node.unlocked::before {
+        background: 
+            radial-gradient(circle at 30% 20%, #E1BEE7 0%, transparent 50%),
+            radial-gradient(circle at 70% 80%, #D1C4E9 0%, transparent 40%),
+            linear-gradient(135deg, #9C27B0 0%, #673AB7 30%, #3F51B5 60%, #2196F3 100%);
+        box-shadow: 
+            0 15px 40px rgba(156,39,176,0.4),
+            0 8px 25px rgba(0,0,0,0.2),
+            inset 0 8px 16px rgba(255,255,255,0.3),
+            inset 0 -4px 12px rgba(0,0,0,0.1);
+        border: 3px solid #E1BEE7;
+        animation: unlocked-glow 2s ease-in-out infinite alternate;
+    }
+
+    .level-node.unlocked {
+        color: white;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        animation: unlocked-bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes unlocked-glow {
+        0% { 
+            box-shadow: 
+                0 15px 40px rgba(156,39,176,0.4),
+                0 8px 25px rgba(0,0,0,0.2),
+                inset 0 8px 16px rgba(255,255,255,0.3),
+                inset 0 -4px 12px rgba(0,0,0,0.1);
+        }
+        100% { 
+            box-shadow: 
+                0 20px 50px rgba(156,39,176,0.6),
+                0 12px 35px rgba(33,150,243,0.3),
+                0 8px 25px rgba(0,0,0,0.2),
+                inset 0 10px 20px rgba(255,255,255,0.4),
+                inset 0 -6px 16px rgba(0,0,0,0.15);
+        }
+    }
+
+    @keyframes unlocked-bounce {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-12px) scale(1.05); }
+    }
+
+    /* 锁定关卡 - 无色彩灰色风格 */
+    .level-node.locked::before {
+        background: 
+            linear-gradient(135deg, #F5F5F5 0%, #E0E0E0 30%, #BDBDBD 70%, #9E9E9E 100%);
+        box-shadow: 
+            0 8px 20px rgba(0,0,0,0.1),
+            inset 0 4px 8px rgba(255,255,255,0.3),
+            inset 0 -2px 6px rgba(0,0,0,0.1);
+        border: 2px solid #E0E0E0;
+        filter: grayscale(100%) brightness(0.9);
+    }
+
+    .level-node.locked {
+        color: #9E9E9E;
+        cursor: not-allowed;
+        opacity: 0.7;
+        text-shadow: none;
+        position: relative;
+    }
+
+    /* 锁定遮罩 */
+    .level-node.locked .level-content {
+        opacity: 0.5;
+        filter: blur(1px);
+    }
+
+    .level-node.locked::after {
+        background: rgba(0,0,0,0.08);
+    }
+
+    /* 锁定图标 - 可爱的锁头 */
+    .level-lock-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 24px;
+        color: #9E9E9E;
+        z-index: 3;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        animation: lock-shake 3s ease-in-out infinite;
+    }
+
+    @keyframes lock-shake {
+        0%, 90%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+        95% { transform: translate(-50%, -50%) rotate(-3deg); }
+        97% { transform: translate(-50%, -50%) rotate(3deg); }
+    }
+
+    /* 关卡内容容器 */
+    .level-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    /* 关卡编号 - 超可爱字体 */
+    .level-number {
+        font-size: 32px;
+        font-weight: 900;
+        margin-bottom: 6px;
+        line-height: 1;
+        text-shadow: 
+            0 3px 6px rgba(0,0,0,0.3),
+            0 0 20px rgba(255,255,255,0.3);
+        font-family: 'Comic Sans MS', cursive, sans-serif;
+    }
+
+    /* 星级显示 - 更可爱的样式 */
+    .level-stars {
+        display: flex;
+        gap: 3px;
+        margin-bottom: 6px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    .level-stars .star {
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .level-stars .star:not(.empty) {
+        color: #FFD700;
+        text-shadow: 0 0 8px rgba(255,215,0,0.6);
+        animation: star-twinkle 2s ease-in-out infinite alternate;
+    }
+
+    .level-stars .star:not(.empty):nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .level-stars .star:not(.empty):nth-child(2) {
+        animation-delay: 0.3s;
+    }
+
+    .level-stars .star:not(.empty):nth-child(3) {
+        animation-delay: 0.6s;
+    }
+
+    .level-stars .star.empty {
+        color: rgba(255,255,255,0.3);
+    }
+
+    .level-node.locked .level-stars .star:not(.empty) {
+        color: #BDBDBD;
+        text-shadow: none;
+        animation: none;
+    }
+
+    @keyframes star-twinkle {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(1.1); opacity: 1; }
+    }
+
+    /* 关卡名称 - 可爱字体 */
+    .level-title {
+        font-size: 11px;
+        text-align: center;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        line-height: 1.2;
+    }
+
+    /* 难度标识 - 可爱小徽章 */
+    .difficulty-badge {
+        position: absolute;
+        top: -12px;
+        right: -12px;
+        font-size: 9px;
+        padding: 4px 8px;
+        border-radius: 15px;
+        border: 3px solid white;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 
+            0 4px 12px rgba(0,0,0,0.2),
+            inset 0 2px 4px rgba(255,255,255,0.3);
+        z-index: 3;
+        font-family: 'Comic Sans MS', cursive, sans-serif;
+    }
+
+    .difficulty-easy { 
+        background: linear-gradient(135deg, #4CAF50, #81C784);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    
+    .difficulty-medium { 
+        background: linear-gradient(135deg, #FF9800, #FFB74D);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    
+    .difficulty-hard { 
+        background: linear-gradient(135deg, #F44336, #EF5350);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    /* 锁定状态的难度标识 */
+    .level-node.locked .difficulty-badge {
+        background: linear-gradient(135deg, #BDBDBD, #9E9E9E) !important;
+        color: #757575 !important;
+        text-shadow: none !important;
+    }
+
+    /* 管理员控制按钮 */
+    .admin-controls {
+        position: absolute;
+        top: -15px;
+        left: -15px;
+        display: flex;
+        gap: 5px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .level-node:hover .admin-controls {
+        opacity: 1;
+    }
+
+    .admin-controls .btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border: 2px solid white;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+            /* 路径连接线 - 可爱的彩虹连接线 */
+        .level-path-line {
+            position: absolute;
+            background: linear-gradient(90deg, 
+                #FF6B6B 0%, 
+                #4ECDC4 25%, 
+                #45B7D1 50%, 
+                #96CEB4 75%, 
+                #FECA57 100%);
+            border-radius: 3px;
+            z-index: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            opacity: 0.8;
+        }
+
+        /* 水平连接线 */
+        .level-path-line.horizontal {
+            width: 70px;
+            height: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* 垂直连接线 */  
+        .level-path-line.vertical {
+            width: 6px;
+            height: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, 
+                #FF6B6B 0%, 
+                #4ECDC4 25%, 
+                #45B7D1 50%, 
+                #96CEB4 75%, 
+                #FECA57 100%);
+        }
+
+        /* 右向连接线 */
+        .level-path-line.right {
+            right: -85px;
+        }
+
+        /* 左向连接线 */
+        .level-path-line.left {
+            left: -85px;
+        }
+
+        /* 向下连接线 */
+        .level-path-line.down {
+            bottom: -105px;
+        }
+
+        /* 向上连接线 */
+        .level-path-line.up {
+            top: -105px;
+        }
+
+    /* 悬停效果 - 超可爱弹跳 */
+    .level-node:not(.locked):hover {
+        transform: translateY(-8px) scale(1.15) rotate(3deg);
+        filter: brightness(1.2) saturate(1.3);
+    }
+
+    .level-node:not(.locked):hover::before {
+        transform: scale(1.05);
+        filter: brightness(1.3) saturate(1.4);
+    }
+
+    .level-node:not(.locked):hover::after {
+        width: 95%;
+        bottom: -20px;
+        opacity: 0.4;
+        background: rgba(0,0,0,0.25);
+    }
+
+    .level-node:not(.locked):hover .level-content {
+        animation: content-bounce 0.6s ease-out;
+    }
+
+    @keyframes content-bounce {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1.05); }
+    }
+
+    .level-node:not(.locked):hover .level-stars .star:not(.empty) {
+        animation: star-sparkle 0.8s ease-out infinite;
+    }
+
+    @keyframes star-sparkle {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        25% { transform: scale(1.3) rotate(10deg); }
+        75% { transform: scale(1.2) rotate(-5deg); }
+    }
+
+    .level-node.locked:hover {
+        cursor: not-allowed;
+        transform: none;
+        filter: none;
+    }
+</style>
+
+<!-- 加载状态 -->
+<div id="loading" class="loading-spinner">
+    <div class="spinner-border text-primary mb-3" role="status">
+        <span class="visually-hidden">加载中...</span>
+    </div>
+    <p class="text-muted">正在加载面试岛数据...</p>
+</div>
+
+<!-- 面试岛容器 -->
+<div id="islandContainer" class="island-container" style="display: none;">
+    <!-- 顶部工具栏 -->
+    <div class="d-flex justify-content-between align-items-center p-3">
+        <div>
+            <button id="backToWorldBtn" class="btn btn-outline-light d-none" onclick="showWorldMap()">
+                <i class="fas fa-arrow-left"></i> 返回地图
+            </button>
+        </div>
+        <div>
+            <!-- 仅管理员显示 -->
+            <button id="createIslandBtn" class="btn btn-light d-none" onclick="createIsland()">
+                <i class="fas fa-plus"></i> 新建岛屿
+            </button>
+        </div>
+    </div>
+
+    <!-- 世界地图视图：展示所有岛屿 -->
+    <div id="worldMapContainer">
+        <div class="text-center mb-4" style="padding: 20px;">
+            <h2 style="color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.3); margin-bottom: 10px;">
+                <i class="fas fa-map me-3"></i>探索岛屿世界
+            </h2>
+            <p style="color: rgba(255,255,255,0.9); font-size: 16px; text-shadow: 0 1px 5px rgba(0,0,0,0.3);">
+                选择一座岛屿，开始你的编程挑战之旅
+            </p>
+        </div>
+        <div id="worldMap" class="world-map">
+            <!-- 岛屿节点由 JS 生成 -->
+        </div>
+    </div>
+
+    <!-- 岛屿详情视图（原有内容） -->
+    <div id="islandDetail" class="flex-grow-1 d-flex flex-column d-none">
+        <!-- 保留原有 info & progress -->
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div class="island-info" id="detailInfo"></div>
+            <div class="progress-summary" id="detailSummary"></div>
+        </div>
+        <!-- 地图区域 -->
+        <div class="island-map flex-grow-1">
+            <div id="levelPath" class="level-path"></div>
+            <!-- 新增关卡按钮（仅管理员）-->
+            <div id="addLevelContainer" class="text-center mt-4" style="display: none;">
+                <button class="btn btn-success btn-lg" onclick="openCreateLevelModal()" style="border-radius: 50px; padding: 12px 30px; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);">
+                    <i class="fas fa-plus-circle me-2"></i> 新增关卡
+                </button>
+                <div class="text-muted mt-2" style="font-size: 0.9em;">
+                    <i class="fas fa-info-circle me-1"></i>点击添加新的挑战关卡
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增：创建关卡模态框 -->
+<div class="modal fade" id="createLevelModal" tabindex="-1" aria-labelledby="createLevelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createLevelModalLabel">新增关卡</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createLevelForm">
+                    <input type="hidden" id="islandIdInput">
+                    <div class="mb-3">
+                        <label for="levelNameInput" class="form-label">关卡名称</label>
+                        <input type="text" class="form-control" id="levelNameInput" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="levelDifficultySelect" class="form-label">关卡难度</label>
+                        <select class="form-select" id="levelDifficultySelect" required>
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                        </select>
+                    </div>
+                    
+                    <!-- 题目信息部分 -->
+                    <div class="mb-3">
+                        <label for="questionTitleInput" class="form-label">题目标题</label>
+                        <input type="text" class="form-control" id="questionTitleInput" placeholder="如果不填写，将使用关卡名称作为题目标题">
+                    </div>
+                    <div class="mb-3">
+                        <label for="questionDescriptionInput" class="form-label">题目描述</label>
+                        <textarea class="form-control" id="questionDescriptionInput" rows="6" placeholder="请在此处描述题目要求和解题思路..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="questionLeetcodeInput" class="form-label">LeetCode链接（可选）</label>
+                        <input type="url" class="form-control" id="questionLeetcodeInput" placeholder="https://leetcode.com/problems/...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="createLevel()">创建关卡</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentIslandIndex = 0;
+    let islandsData = [];
+    // 是否管理员，后端需在接口返回或模板注入
+    let isAdmin = true;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadIslandMap();
+        checkAndRefreshData();
+        // 初始只显示世界地图，隐藏关卡详情 (使用Bootstrap类避免display冲突)
+        document.getElementById('worldMapContainer').classList.remove('d-none');
+        document.getElementById('islandDetail').classList.add('d-none');
+    });
+    
+    // 检查并刷新数据（从关卡页面返回后）
+    function checkAndRefreshData() {
+        if (localStorage.getItem('interviewIslandNeedsRefresh') === 'true') {
+            console.log('🎉 检测到关卡完成，正在刷新岛屿数据...');
+            localStorage.removeItem('interviewIslandNeedsRefresh');
+            
+            // 延迟一点再刷新，确保后端数据已更新
+            setTimeout(async () => {
+                await loadIslandMap();
+                
+                // 判断当前在哪个视图并刷新对应视图
+                if (document.getElementById('islandDetail').style.display !== 'none') {
+                    renderCurrentIsland(); // 岛屿详情视图
+                } else {
+                    renderWorldMap(); // 世界地图视图
+                }
+                
+                // 显示提示消息
+                showAlert('恭喜！关卡进度已更新 🎉', 'success');
+            }, 800);
+        }
+    }
+
+    // 加载面试岛地图数据
+    async function loadIslandMap() {
+        try {
+            console.log('开始加载面试岛数据...');
+            const response = await axios.get('/api/interview-island/map');
+            islandsData = response.data.data;
+            // 从接口获取管理员标识和解锁岛屿数量
+            if (typeof response.data.is_admin !== 'undefined') {
+                isAdmin = !!response.data.is_admin;
+            }
+            if (typeof response.data.unlocked_island_count !== 'undefined') {
+                unlockedIslandCount = Math.max(1, response.data.unlocked_island_count); // 确保至少解锁第一个岛屿
+            }
+            console.log('是否管理员:', isAdmin);
+            console.log('解锁岛屿数量:', unlockedIslandCount);
+            console.log('面试岛数据加载成功:', islandsData);
+            
+            if (islandsData && islandsData.length > 0) {
+                console.log('渲染面试岛界面...');
+                renderIslandSelector();
+                renderWorldMap(); // 只显示世界地图，不自动进入关卡详情
+                console.log('面试岛界面渲染完成');
+            } else {
+                console.log('暂无面试岛数据，但不显示错误提示');
+                renderWorldMap(); // 即使没有数据也显示空的世界地图
+            }
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('islandContainer').style.display = 'block';
+            // 强制隐藏关卡详情 (使用class)
+            document.getElementById('islandDetail').classList.add('d-none');
+            document.getElementById('worldMapContainer').classList.remove('d-none');
+        } catch (error) {
+            console.error('加载面试岛数据失败:', error);
+            // 只在真正的网络错误时才显示错误
+            if (error.response && error.response.status !== 200) {
+                document.getElementById('loading').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>加载失败</h5>
+                        <p>错误信息: ${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadIslandMap()">重新加载</button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    // 渲染岛屿选择器 (旧功能保留以兼容，但若不存在则忽略)
+    function renderIslandSelector() {
+        const selector = document.querySelector('.island-selector');
+        if (!selector) return; // 若页面不存在该元素则跳过
+        selector.innerHTML = '';
+
+        islandsData.forEach((island, index) => {
+            const tab = document.createElement('button');
+            tab.className = `island-tab ${index === currentIslandIndex ? 'active' : ''}`;
+            tab.innerHTML = `
+                <i class="fas fa-island-tropical me-2"></i>
+                ${island.island.name}
+                <span class="badge bg-primary ms-2">${island.completed_count}/${island.total_count}</span>
+            `;
+            tab.onclick = () => switchIsland(index);
+            selector.appendChild(tab);
+        });
+    }
+
+    // 切换岛屿
+    function switchIsland(index) {
+        currentIslandIndex = index;
+        renderIslandSelector();
+        // 不自动进入关卡详情
+        // renderCurrentIsland();
+        // 强制隐藏关卡详情
+        document.getElementById('islandDetail').classList.add('d-none');
+        document.getElementById('worldMapContainer').classList.remove('d-none');
+    }
+
+    // 渲染当前岛屿 (更新到新视图容器)
+    function renderCurrentIsland() {
+        if (!islandsData[currentIslandIndex]) return;
+        const islandInfo = islandsData[currentIslandIndex];
+        const island = islandInfo.island;
+
+        // 更新 info 面板
+        const infoEl = document.getElementById('detailInfo');
+        if (infoEl) {
+            infoEl.innerHTML = `
+                <h5><i class="fas fa-island-tropical me-2"></i>${island.name}</h5>
+                <p class="text-muted mb-3">${island.description || ''}</p>
+                <div class="progress mb-2" style="height:8px;">
+                    <div class="progress-bar" style="width:${islandInfo.total_count? (islandInfo.completed_count/islandInfo.total_count*100):0}%"></div>
+                </div>
+                <small class="text-muted">${islandInfo.completed_count}/${islandInfo.total_count} 关卡完成</small>`;
+        }
+
+        // 更新 summary 面板
+        const summaryEl = document.getElementById('detailSummary');
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+                <h6 class="mb-3"><i class="fas fa-chart-line me-2"></i>总体进度</h6>
+                <div class="row text-center">
+                    <div class="col-6"><div class="h4 mb-1" id="totalStars">${islandInfo.total_stars}</div><small class="text-muted">总星数</small></div>
+                    <div class="col-6"><div class="h4 mb-1" id="completedLevels">${islandInfo.completed_count}</div><small class="text-muted">完成关卡</small></div>
+                </div>`;
+        }
+
+        // 渲染关卡路径 - S型蛇形布局
+        renderLevelPath(islandInfo.levels||[], islandInfo.user_progress||[]);
+        
+        // 更新进度摘要
+        updateProgressSummary();
+    }
+
+    // 渲染关卡路径 - S型蛇形布局
+    function renderLevelPath(levels, userProgress) {
+        const pathContainer = document.getElementById('levelPath');
+        console.log('开始渲染关卡路径，容器:', pathContainer);
+        pathContainer.innerHTML = '';
+
+        // 将用户进度转换为映射，便于查找
+        const progressMap = {};
+        if (userProgress && Array.isArray(userProgress)) {
+            userProgress.forEach(progress => {
+                progressMap[progress.level_id] = progress;
+            });
+        }
+        console.log('进度映射:', progressMap);
+
+        const LEVELS_PER_ROW = 4;
+        
+        levels.forEach((level, index) => {
+            const progress = progressMap[level.id] || { status: 'locked', stars: 0 };
+            
+            // 改进解锁逻辑：管理员可以看到所有关卡，第一个关卡自动解锁
+            if (isAdmin) {
+                if (progress.status === 'locked') {
+                    progress.status = 'unlocked'; // 管理员可以看到所有关卡
+                }
+            } else if (index === 0 && progress.status === 'locked') {
+                progress.status = 'unlocked'; // 第一个关卡自动解锁
+            }
+            
+            console.log(`渲染关卡 ${level.level_num}:`, level, '进度:', progress);
+            
+            // 计算当前关卡在S型路径中的位置
+            const rowIndex = Math.floor(index / LEVELS_PER_ROW);
+            const colIndex = index % LEVELS_PER_ROW;
+            const isEvenRow = rowIndex % 2 === 0;
+            
+            // 对于偶数行（第2、4、6行等），需要反转列的顺序实现S型
+            const actualColIndex = isEvenRow ? colIndex : (LEVELS_PER_ROW - 1 - colIndex);
+            
+            // 创建关卡节点
+            const node = document.createElement('div');
+            node.className = `level-node ${progress.status}`;
+            
+            // 创建可爱的彩虹连接线
+            const isLastInRow = colIndex === LEVELS_PER_ROW - 1;
+            const isFirstInRow = colIndex === 0; 
+            const isLastLevel = index === levels.length - 1;
+            const hasNextLevel = index + 1 < levels.length;
+            
+            // 水平连接线（连接同行相邻关卡）
+            if (!isLastLevel && hasNextLevel) {
+                const nextRowIndex = Math.floor((index + 1) / LEVELS_PER_ROW);
+                const isSameRow = rowIndex === nextRowIndex;
+                
+                if (isSameRow) {
+                    const horizontalLine = document.createElement('div');
+                    horizontalLine.className = 'level-path-line horizontal';
+                    
+                    if (isEvenRow) {
+                        // 奇数行：从左到右
+                        horizontalLine.classList.add('right');
+                    } else {
+                        // 偶数行：从右到左  
+                        horizontalLine.classList.add('left');
+                    }
+                    
+                    node.appendChild(horizontalLine);
+                }
+            }
+            
+            // 垂直连接线（行末转弯）
+            if (!isLastLevel && hasNextLevel) {
+                const nextRowIndex = Math.floor((index + 1) / LEVELS_PER_ROW);
+                const isDifferentRow = rowIndex !== nextRowIndex;
+                
+                if (isDifferentRow) {
+                    const verticalLine = document.createElement('div');
+                    verticalLine.className = 'level-path-line vertical down';
+                    node.appendChild(verticalLine);
+                }
+            }
+
+            // 设置Grid位置
+            node.style.gridColumnStart = actualColIndex + 1;
+            node.style.gridRowStart = rowIndex + 1;
+            
+            // 新增：管理员控制按钮
+            let adminHtml = '';
+            if (isAdmin) {
+                adminHtml = `
+                    <div class="admin-controls">
+                        <button class="btn btn-light edit-level-btn" title="编辑关卡" onclick="editLevel(${level.id}, '${level.name.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-light edit-level-detail-btn" title="编辑关卡详情" onclick="editLevelDetail(${level.id})">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <button class="btn btn-light manage-cases-btn" title="测试用例" onclick="manageTestCases(${level.id})">
+                            <i class="fas fa-vial"></i>
+                        </button>
+                        <button class="btn btn-light delete-level-btn" title="删除关卡" onclick="deleteLevel(${level.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>`;
+            }
+
+            // 添加难度标识
+            const difficultyClass = `difficulty-${level.difficulty.toLowerCase()}`;
+            
+            node.innerHTML = `
+                ${adminHtml}
+                <div class="level-content">
+                    <div class="level-number">${level.level_num}</div>
+                    <div class="level-stars">
+                        ${generateStars(progress.stars || 0)}
+                    </div>
+                    <div class="level-title">${level.name}</div>
+                </div>
+                <div class="difficulty-badge ${difficultyClass}">
+                    ${level.difficulty}
+                </div>
+                ${progress.status === 'locked' ? '<div class="level-lock-icon"><i class="fas fa-lock"></i></div>' : ''}
+            `;
+
+            // 保持原有点击逻辑
+            if (progress.status !== 'locked') {
+                node.style.cursor = 'pointer';
+                node.onclick = (e) => {
+                    // 避免点击管理员按钮导致进入关卡
+                    if (e.target.closest('.admin-controls')) {
+                        return;
+                    }
+                    enterLevel(level.id);
+                };
+            }
+
+            console.log('添加关卡节点:', node);
+            pathContainer.appendChild(node);
+        });
+        
+        console.log('关卡路径渲染完成，容器子元素数量:', pathContainer.children.length);
+        
+        // 控制新增关卡按钮的显示
+        const addLevelContainer = document.getElementById('addLevelContainer');
+        if (addLevelContainer) {
+            addLevelContainer.style.display = isAdmin ? 'block' : 'none';
+        }
+    }
+
+    // 生成星级显示
+    function generateStars(starCount) {
+        let stars = '';
+        for (let i = 0; i < 3; i++) {
+            stars += `<i class="fas fa-star star ${i < starCount ? '' : 'empty'}"></i>`;
+        }
+        return stars;
+    }
+
+    // 更新总体进度
+    function updateProgressSummary() {
+        let totalStars = 0;
+        let completedLevels = 0;
+
+        islandsData.forEach(island => {
+            totalStars += island.total_stars;
+            completedLevels += island.completed_count;
+        });
+
+        // 检查元素是否存在再更新
+        const totalStarsEl = document.getElementById('totalStars');
+        const completedLevelsEl = document.getElementById('completedLevels');
+        
+        if (totalStarsEl) {
+            totalStarsEl.textContent = totalStars;
+        }
+        if (completedLevelsEl) {
+            completedLevelsEl.textContent = completedLevels;
+        }
+    }
+
+    // 进入关卡
+    function enterLevel(levelId) {
+        window.location.href = `/level/${levelId}`;
+    }
+
+    /* ------------------ 管理员相关功能 ------------------ */
+    let allQuestions = []; // 缓存所有问题
+    let createLevelModal; // 模态框实例
+
+    // 打开创建关卡模态框
+    async function openCreateLevelModal() {
+        if (!createLevelModal) {
+            createLevelModal = new bootstrap.Modal(document.getElementById('createLevelModal'));
+        }
+
+        // 重置表单
+        document.getElementById('createLevelForm').reset();
+        
+        // 设置岛屿ID
+        const currentIslandId = islandsData[currentIslandIndex].island.id;
+        document.getElementById('islandIdInput').value = currentIslandId;
+
+        createLevelModal.show();
+    }
+
+    // 创建关卡
+    async function createLevel() {
+        const islandId = document.getElementById('islandIdInput').value;
+        const name = document.getElementById('levelNameInput').value.trim();
+        const difficulty = document.getElementById('levelDifficultySelect').value;
+        const questionTitle = document.getElementById('questionTitleInput').value.trim();
+        const questionDescription = document.getElementById('questionDescriptionInput').value.trim();
+        const questionLeetcodeURL = document.getElementById('questionLeetcodeInput').value.trim();
+
+        if (!name) {
+            alert('请输入关卡名称');
+            return;
+        }
+
+        try {
+            const response = await axios.post('/api/interview-island/level/create', {
+                island_id: parseInt(islandId),
+                name: name,
+                difficulty: difficulty,
+                question_title: questionTitle || name + ' 题目',
+                question_description: questionDescription || '请在此处编写代码解决问题',
+                question_leetcode_url: questionLeetcodeURL
+            });
+
+            if (response.data) {
+                alert('关卡创建成功！');
+                createLevelModal.hide();
+                // 重新加载数据
+                await loadIslandMap();
+                renderCurrentIsland();
+            }
+        } catch (error) {
+            console.error('创建关卡失败:', error);
+            const errorMsg = error.response?.data?.error || '创建关卡失败';
+            alert('创建关卡失败: ' + errorMsg);
+        }
+    }
+
+    // 编辑关卡名称
+    async function editLevel(levelId, currentName) {
+        const newName = prompt('请输入新的关卡名称：', currentName || '');
+        if (!newName || newName === currentName) {
+            return;
+        }
+        try {
+            await axios.post(`/api/interview-island/level/${levelId}/edit`, { name: newName });
+            showAlert('关卡名称已更新', 'success');
+            // 更新前端视图
+            loadIslandMap();
+        } catch (error) {
+            const msg = error.response?.data?.error || '更新失败';
+            showAlert(msg, 'danger');
+        }
+    }
+
+    // 删除关卡
+    async function deleteLevel(levelId) {
+        if (!confirm('确定要删除这个关卡吗？此操作不可撤销！')) {
+            return;
+        }
+        try {
+            await axios.delete(`/api/interview-island/level/${levelId}`);
+            showAlert('关卡已删除', 'success');
+            loadIslandMap();
+        } catch (error) {
+            const msg = error.response?.data?.error || '删除失败';
+            showAlert(msg, 'danger');
+        }
+    }
+
+    // 编辑关卡详情 (题目内容)
+    async function editLevelDetail(levelId) {
+        try {
+            // 获取关卡详情
+            const response = await axios.get(`/api/interview-island/level/${levelId}`);
+            const levelData = response.data.data;
+
+            // 创建编辑模态框
+            const modalHtml = `
+            <div class="modal fade" id="editLevelDetailModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">编辑关卡详情 - ${levelData.level.name}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editLevelDetailForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editLevelName" class="form-label">关卡名称</label>
+                                            <input type="text" class="form-control" id="editLevelName" value="${levelData.level.name}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editLevelDifficulty" class="form-label">难度</label>
+                                            <select class="form-select" id="editLevelDifficulty" required>
+                                                <option value="Easy" ${levelData.level.difficulty === 'Easy' ? 'selected' : ''}>简单</option>
+                                                <option value="Medium" ${levelData.level.difficulty === 'Medium' ? 'selected' : ''}>中等</option>
+                                                <option value="Hard" ${levelData.level.difficulty === 'Hard' ? 'selected' : ''}>困难</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editQuestionTitle" class="form-label">题目标题</label>
+                                            <input type="text" class="form-control" id="editQuestionTitle" value="${levelData.question.title || ''}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editQuestionLeetcode" class="form-label">LeetCode 链接</label>
+                                            <input type="url" class="form-control" id="editQuestionLeetcode" value="${levelData.question.leetcode_url || ''}" placeholder="https://leetcode.com/problems/...">
+                                            <small class="form-text text-muted">仅供展示，不提供跳转</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editQuestionDescription" class="form-label">题目描述 (支持 Markdown)</label>
+                                            <textarea class="form-control" id="editQuestionDescription" rows="15" placeholder="支持 Markdown 格式，如: ## 题目描述 给定一个数组 nums，返回...">${levelData.question.description || ''}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="button" class="btn btn-primary" onclick="submitEditLevelDetail(${levelId})">保存</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            
+            // 移除已存在的模态框
+            const existingModal = document.getElementById('editLevelDetailModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // 添加新模态框
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('editLevelDetailModal'));
+            modal.show();
+            
+            // 模态框关闭后移除DOM
+            document.getElementById('editLevelDetailModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+            
+        } catch (error) {
+            console.error('获取关卡详情失败:', error);
+            const msg = error.response?.data?.error || '获取关卡详情失败';
+            showAlert(msg, 'danger');
+        }
+    }
+
+    // 提交编辑关卡详情
+    async function submitEditLevelDetail(levelId) {
+        const name = document.getElementById('editLevelName').value.trim();
+        const difficulty = document.getElementById('editLevelDifficulty').value;
+        const questionTitle = document.getElementById('editQuestionTitle').value.trim();
+        const questionDescription = document.getElementById('editQuestionDescription').value.trim();
+        const questionLeetcodeUrl = document.getElementById('editQuestionLeetcode').value.trim();
+
+        if (!name || !questionTitle) {
+            showAlert('请填写关卡名称和题目标题', 'warning');
+            return;
+        }
+
+        try {
+            await axios.put(`/api/interview-island/level/${levelId}`, {
+                name: name,
+                difficulty: difficulty,
+                question_title: questionTitle,
+                question_description: questionDescription,
+                question_leetcode_url: questionLeetcodeUrl
+            });
+            
+            showAlert('关卡详情已更新', 'success');
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editLevelDetailModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // 重新加载数据
+            await loadIslandMap();
+            renderCurrentIsland();
+            
+        } catch (error) {
+            console.error('更新关卡详情失败:', error);
+            const msg = error.response?.data?.error || '更新关卡详情失败';
+            showAlert(msg, 'danger');
+        }
+    }
+
+    // ------------------ 测试用例管理 ------------------
+    async function manageTestCases(levelId) {
+        try {
+            const res = await axios.get(`/api/interview-island/level/${levelId}/testcases`);
+            const cases = res.data.data || [];
+            renderTestCaseModal(levelId, cases);
+        } catch (err) {
+            showAlert(err.response?.data?.error || '加载测试用例失败', 'danger');
+        }
+    }
+
+    function renderTestCaseModal(levelId, cases) {
+        let modal = document.getElementById('testCaseModal');
+        if (!modal) {
+            const html = `
+            <div class="modal fade" id="testCaseModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">测试用例管理 - 关卡 ${levelId}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="d-flex justify-content-end mb-2">
+                      <button class="btn btn-sm btn-primary" id="addCaseBtn"><i class="fas fa-plus"></i> 新增用例</button>
+                    </div>
+                    <div id="caseList"></div>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            modal = document.getElementById('testCaseModal');
+        }
+        const list = modal.querySelector('#caseList');
+        list.innerHTML = cases.length === 0 ? '<p class="text-muted">暂无测试用例</p>' : cases.map(c=>`<div class="card mb-2">
+            <div class="card-body p-2">
+              <div class="d-flex justify-content-between">
+                <span>#${c.order ?? 0} ${c.is_sample ? '<span class="badge bg-info">样例</span>':''}</span>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteTestCase(${c.id}, ${levelId})"><i class="fas fa-trash"></i></button>
+              </div>
+              <small class="text-muted">输入</small>
+              <pre class="bg-light p-2">${c.input}</pre>
+              <small class="text-muted">输出</small>
+              <pre class="bg-light p-2">${c.output}</pre>
+            </div>
+        </div>`).join('');
+
+        modal.querySelector('#addCaseBtn').onclick = ()=>addTestCase(levelId);
+        new bootstrap.Modal(modal).show();
+    }
+
+    // 显示新增/编辑测试用例模态框
+    function addTestCase(levelId) {
+        let modal = document.getElementById('addCaseModal');
+        if (!modal) {
+            const html = `
+            <div class="modal fade" id="addCaseModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">新增测试用例</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label">输入数据 (Input)</label>
+                      <textarea class="form-control" id="caseInput" rows="4" placeholder="支持多行"></textarea>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">期望输出 (Output)</label>
+                      <textarea class="form-control" id="caseOutput" rows="4" placeholder="支持多行"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                      <input class="form-check-input" type="checkbox" id="caseIsSample">
+                      <label class="form-check-label" for="caseIsSample">设为样例</label>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="saveCaseBtn">保存</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            modal = document.getElementById('addCaseModal');
+        }
+
+        // 清空旧值
+        modal.querySelector('#caseInput').value = '';
+        modal.querySelector('#caseOutput').value = '';
+        modal.querySelector('#caseIsSample').checked = false;
+
+        // 绑定保存事件
+        modal.querySelector('#saveCaseBtn').onclick = ()=>{
+            const input = modal.querySelector('#caseInput').value.trim();
+            const output = modal.querySelector('#caseOutput').value.trim();
+            const isSample = modal.querySelector('#caseIsSample').checked;
+            if(!input && !output){ showAlert('请输入内容','warning'); return; }
+            axios.post(`/api/interview-island/level/${levelId}/testcases`, {input, output, is_sample: isSample, order: 0})
+                .then(()=>{ showAlert('已添加用例','success'); bootstrap.Modal.getInstance(modal).hide(); manageTestCases(levelId); })
+                .catch(err=>{ showAlert(err.response?.data?.error||'添加失败','danger'); });
+        };
+
+        new bootstrap.Modal(modal).show();
+    }
+
+    function deleteTestCase(id, levelId) {
+        if(!confirm('确定删除此用例?')) return;
+        axios.delete(`/api/interview-island/testcases/${id}`) // placeholder route, yet to implement
+            .then(()=>{ showAlert('已删除','success'); manageTestCases(levelId); })
+            .catch(err=>{ showAlert(err.response?.data?.error||'删除失败','danger'); });
+    }
+
+    // ------------- 新增：世界地图视图 ------------- //
+    let unlockedIslandCount = 1; // 默认至少解锁第一个岛屿
+
+    function renderWorldMap() {
+        const world = document.getElementById('worldMap');
+        world.innerHTML = '';
+        
+        // 检查数据是否为空
+        if (!islandsData || !Array.isArray(islandsData) || islandsData.length === 0) {
+            // 显示空状态
+            world.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-compass fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">暂无面试岛数据</h4>
+                    <p class="text-muted mb-4">管理员还没有创建任何面试岛</p>
+                    ${isAdmin ? '<button class="btn btn-primary" onclick="createIsland()"><i class="fas fa-plus me-2"></i>创建第一个岛屿</button>' : '<p class="text-muted small">请联系管理员创建面试岛</p>'}
+                </div>
+            `;
+            return;
+        }
+        
+        // 添加海洋泡沫特效
+        for (let i = 0; i < 12; i++) {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.style.left = Math.random() * 100 + '%';
+            bubble.style.width = bubble.style.height = (Math.random() * 8 + 4) + 'px';
+            bubble.style.animationDelay = Math.random() * 15 + 's';
+            bubble.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            world.appendChild(bubble);
+        }
+        
+        islandsData.forEach((islandInfo, index) => {
+            const island = islandInfo.island;
+            // 解锁逻辑：
+            // 1. 管理员：所有岛屿都解锁
+            // 2. 普通用户：第一个岛屿（index 0）总是解锁，其他岛屿根据解锁数量判断
+            let locked = false;
+            if (!isAdmin) {
+                if (index === 0) {
+                    locked = false; // 第一个岛屿总是解锁
+                } else {
+                    locked = index >= unlockedIslandCount; // 其他岛屿根据解锁数量判断
+                }
+            }
+            
+            console.log(`岛屿 ${index} (${island.name}): 管理员=${isAdmin}, 解锁数量=${unlockedIslandCount}, 锁定=${locked}`);
+            
+            // 计算完成百分比
+            const completionRate = islandInfo.total_count > 0 ? 
+                Math.round((islandInfo.completed_count / islandInfo.total_count) * 100) : 0;
+            
+            // 管理员控制按钮
+            let adminHtml = '';
+            if (isAdmin) {
+                adminHtml = `
+                    <div class="island-admin-controls">
+                        <button class="btn btn-light btn-sm" title="编辑岛屿" onclick="editIsland(event, ${island.id}, '${island.name.replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-light btn-sm" title="删除岛屿" onclick="deleteIsland(event, ${island.id})"><i class="fas fa-trash"></i></button>
+                    </div>`;
+            }
+            
+            // 进度指示器
+            const progressHtml = !locked ? `
+                <div class="island-progress">
+                    ${completionRate}%
+                </div>
+            ` : '';
+            
+            const node = document.createElement('div');
+            node.className = `island-node ${locked ? 'locked' : ''}`;
+            
+            // 添加岛屿装饰
+            const decorations = ['🌴', '🏔️', '🌺', '🥥', '🌊'];
+            const decoration = decorations[index % decorations.length];
+            
+            node.innerHTML = `
+                ${adminHtml}
+                ${progressHtml}
+                <div class="island-decoration" style="position: absolute; top: 10px; left: 10px; font-size: 18px; z-index: 2; opacity: 0.8;">
+                    ${decoration}
+                </div>
+                <div class="island-content">
+                    <h4>${island.name}</h4>
+                    <p>${island.description || '踏上这座神秘的岛屿，开始你的挑战之旅'}</p>
+                    ${!locked ? `<div class="mt-2 small">
+                        <i class="fas fa-trophy text-warning me-1"></i>${islandInfo.completed_count}/${islandInfo.total_count} 关卡
+                        ${index === 0 ? '<span class="badge bg-success ms-1" style="font-size: 8px;">起始岛</span>' : ''}
+                    </div>` : '<div class="mt-2 small"><i class="fas fa-lock me-1"></i>暂未解锁</div>'}
+                </div>
+            `;
+            
+            if (!locked) {
+                node.onclick = () => showIslandDetail(index);
+            }
+            world.appendChild(node);
+        });
+        
+        // 管理按钮显隐
+        document.getElementById('createIslandBtn').classList.toggle('d-none', !isAdmin);
+        document.getElementById('backToWorldBtn').classList.add('d-none');
+        document.getElementById('islandDetail').classList.add('d-none');
+        document.getElementById('worldMapContainer').classList.remove('d-none');
+    }
+
+    function showIslandDetail(index) {
+        currentIslandIndex = index;
+        renderCurrentIsland();
+        document.getElementById('worldMapContainer').classList.add('d-none');
+        document.getElementById('islandDetail').classList.remove('d-none');
+        document.getElementById('backToWorldBtn').classList.remove('d-none');
+    }
+
+    function showWorldMap() {
+        renderWorldMap();
+        document.getElementById('islandDetail').classList.add('d-none');
+        document.getElementById('worldMapContainer').classList.remove('d-none');
+    }
+
+    // 创建岛屿（管理员）
+    function createIsland() {
+        const name = prompt('岛屿名称：');
+        if (!name) return;
+        const description = prompt('描述：', '');
+        axios.post('/api/interview-island/create', { name, description })
+            .then(() => { showAlert('已创建岛屿', 'success'); loadIslandMap(); })
+            .catch(err => { showAlert(err.response?.data?.error || '创建失败', 'danger'); });
+    }
+
+    function editIsland(event, islandId, currentName) {
+        event.stopPropagation();
+        const name = prompt('岛屿名称：', currentName);
+        if (!name) return;
+        const description = prompt('描述：');
+        axios.post(`/api/interview-island/${islandId}/edit`, { name, description })
+            .then(() => { showAlert('已更新岛屿', 'success'); loadIslandMap(); })
+            .catch(err => { showAlert(err.response?.data?.error || '更新失败', 'danger'); });
+    }
+
+    function deleteIsland(event, islandId) {
+        event.stopPropagation();
+        if (!confirm('确定要删除该岛屿？')) return;
+        axios.post(`/api/interview-island/${islandId}/delete`)
+            .then(() => { showAlert('已删除岛屿', 'success'); loadIslandMap(); })
+            .catch(err => { showAlert(err.response?.data?.error || '删除失败', 'danger'); });
+    }
+
+    // load marked script once
+    document.addEventListener('DOMContentLoaded',()=>{
+        const m=document.createElement('script');m.src='https://cdn.jsdelivr.net/npm/marked/marked.min.js';document.head.appendChild(m);
+    });
+</script>
+{{end}} 

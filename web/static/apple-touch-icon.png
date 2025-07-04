@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <defs>
+    <linearGradient id="bg180" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="highlight180" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background with rounded corners for iOS -->
+  <rect x="0" y="0" width="180" height="180" rx="40" ry="40" fill="url(#bg180)"/>
+  
+  <!-- Main icon -->
+  <g transform="translate(40, 40)">
+    <!-- Brain/Code symbol -->
+    <g transform="translate(20, 20)">
+      <!-- Left brain hemisphere -->
+      <path d="M10 20 C10 10, 20 10, 30 20 C30 30, 20 40, 10 50 C10 40, 10 30, 10 20 Z" 
+            fill="url(#highlight180)" opacity="0.9"/>
+      
+      <!-- Right brain hemisphere -->
+      <path d="M50 20 C50 10, 60 10, 70 20 C70 30, 70 40, 70 50 C60 40, 50 30, 50 20 Z" 
+            fill="url(#highlight180)" opacity="0.8"/>
+      
+      <!-- Connection lines -->
+      <line x1="30" y1="25" x2="50" y2="25" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+      <line x1="30" y1="35" x2="50" y2="35" stroke="#ffffff" stroke-width="4" opacity="0.7"/>
+      <line x1="30" y1="45" x2="50" y2="45" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+      
+      <!-- Code symbols -->
+      <text x="15" y="35" fill="#ffffff" font-family="monospace" font-size="12" font-weight="bold" opacity="0.9">&lt;/&gt;</text>
+      <text x="55" y="35" fill="#ffffff" font-family="monospace" font-size="12" font-weight="bold" opacity="0.9">{}</text>
+    </g>
+    
+    <!-- GG Text -->
+    <text x="50" y="85" fill="#ffffff" font-family="Inter, sans-serif" font-size="18" font-weight="700" text-anchor="middle" opacity="0.9">GGCode</text>
+  </g>
+  
+  <!-- Highlight effect -->
+  <circle cx="60" cy="60" r="15" fill="#ffffff" opacity="0.2"/>
+</svg> 

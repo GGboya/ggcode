@@ -1,2 +1,8 @@
 *.sql
 .env
+.VSCodeCounter/
+.idea/
+.vscode/
+.conf
+.sh
+ggcode

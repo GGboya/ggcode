@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="highlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.2" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#bg)" stroke="#ffffff" stroke-width="2" opacity="0.95"/>
+  
+  <!-- Brain/Code icon -->
+  <g transform="translate(16, 16)">
+    <!-- Left brain hemisphere -->
+    <path d="M4 8 C4 4, 8 4, 12 8 C12 12, 8 16, 4 20 C4 16, 4 12, 4 8 Z" 
+          fill="url(#highlight)" opacity="0.9"/>
+    
+    <!-- Right brain hemisphere -->
+    <path d="M20 8 C20 4, 24 4, 28 8 C28 12, 28 16, 28 20 C24 16, 20 12, 20 8 Z" 
+          fill="url(#highlight)" opacity="0.7"/>
+    
+    <!-- Connection lines (neural networks) -->
+    <line x1="12" y1="10" x2="20" y2="10" stroke="#ffffff" stroke-width="2" opacity="0.8"/>
+    <line x1="12" y1="14" x2="20" y2="14" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+    <line x1="12" y1="18" x2="20" y2="18" stroke="#ffffff" stroke-width="2" opacity="0.8"/>
+    
+    <!-- Code symbols -->
+    <text x="6" y="12" fill="#ffffff" font-family="monospace" font-size="6" opacity="0.9">&lt;/&gt;</text>
+    <text x="22" y="12" fill="#ffffff" font-family="monospace" font-size="6" opacity="0.9">{}</text>
+  </g>
+  
+  <!-- Highlight effect -->
+  <circle cx="24" cy="24" r="4" fill="#ffffff" opacity="0.3"/>
+</svg> 

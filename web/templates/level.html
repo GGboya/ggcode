@@ -1,0 +1,1948 @@
+{{define "level-content"}}
+<!-- 关卡页面特有的CSS样式 -->
+<style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .level-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 0;
+        }
+
+        .timer-display {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 10px 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .timer-text {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .main-container {
+            height: calc(100vh - 120px);
+            padding: 0;
+        }
+
+        .main-panels {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+
+        .problem-panel {
+            flex: 0 0 35%;
+            min-width: 240px;
+            max-width: 70%;
+            overflow-y: auto;
+        }
+
+        .code-panel {
+            flex: 1 1 auto;
+            min-width: 400px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-container {
+            flex: 1 1 0; /* 固定占据剩余所有空间，不随内容增加 */
+            min-height: 0; /* 允许在父 flex 容器中收缩，避免内容将测试面板顶出视口 */
+            position: relative;
+            /* 由 CodeMirror 内部滚动，不在容器本身滚动 */
+            overflow: hidden;
+        }
+
+        .editor-actions {
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 15px 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+
+        /* 新增: 右侧底部测试面板 */
+        .test-container {
+            background: #ffffff;
+            border-top: 1px solid #dee2e6;
+            height: 400px; /* 扩大 */
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 防止外溢 */
+        }
+        .test-container .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .test-container pre {
+            max-height: 120px;
+            overflow: auto;
+        }
+
+        /* CodeMirror编辑器样式优化 */
+        .CodeMirror {
+            height: 100% !important; /* 填满容器，禁止随内容增长 */
+            overflow: hidden; /* 防止与内部 CodeMirror-scroll 重复滚动条 */
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        /* 性能优化：硬件加速 */
+        #codeEditor {
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+
+        /* 代码补全样式优化 */
+        .CodeMirror-hints {
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            background: #2d2d2d;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .CodeMirror-hint {
+            color: #f8f8f2;
+            padding: 6px 10px;
+            border-radius: 3px;
+            margin: 1px;
+        }
+
+        .CodeMirror-hint-active {
+            background: #49483e;
+            color: #fff;
+        }
+
+        .CodeMirror-hint-keyword {
+            color: #f92672 !important;  /* 关键字用红色 */
+            font-weight: bold;
+        }
+
+        .CodeMirror-hint-word {
+            color: #a6e22e !important;  /* 普通单词用绿色 */
+        }
+
+        /* 补全提示图标 */
+        .CodeMirror-hint:before {
+            content: "●";
+            margin-right: 6px;
+            font-size: 8px;
+        }
+
+        .CodeMirror-hint-keyword:before {
+            color: #f92672;
+        }
+
+        .CodeMirror-hint-word:before {
+            color: #a6e22e;
+        }
+
+        /* 分隔条 */
+        .drag-bar {
+            height: 6px;
+            background: #e0e0e0;
+            cursor: row-resize;
+        }
+
+        /* 竖向拖动分隔条 */
+        .v-drag-bar {
+            width: 6px;
+            cursor: col-resize;
+            background: #e0e0e0;
+        }
+
+        /* 成功模态框动画样式 */
+        .celebration-container {
+            position: relative;
+            height: 100px;
+        }
+        
+        .success-icon {
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* 五彩纸屑动画 */
+        .confetti {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .confetti-piece {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #FFD700;
+            animation: confetti-fall 3s ease-out infinite;
+        }
+        
+        .confetti-piece:nth-child(1) {
+            left: 10%;
+            background: #FF6B6B;
+            animation-delay: 0s;
+        }
+        
+        .confetti-piece:nth-child(2) {
+            left: 30%;
+            background: #4ECDC4;
+            animation-delay: 0.5s;
+        }
+        
+        .confetti-piece:nth-child(3) {
+            left: 50%;
+            background: #45B7D1;
+            animation-delay: 1s;
+        }
+        
+        .confetti-piece:nth-child(4) {
+            left: 70%;
+            background: #96CEB4;
+            animation-delay: 1.5s;
+        }
+        
+        .confetti-piece:nth-child(5) {
+            left: 90%;
+            background: #FFEAA7;
+            animation-delay: 2s;
+        }
+        
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(200px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+        
+        /* 统计卡片样式 */
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        /* Animate.css 样式（如果没有引入的话） */
+        .animate__animated {
+            animation-duration: 1s;
+            animation-fill-mode: both;
+        }
+        
+        .animate__bounceIn {
+            animation-name: bounceIn;
+        }
+        
+        .animate__fadeInUp {
+            animation-name: fadeInUp;
+        }
+        
+        @keyframes bounceIn {
+            0%, 20%, 40%, 60%, 80% {
+                animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+            }
+            0% {
+                opacity: 0;
+                transform: scale3d(.3, .3, .3);
+            }
+            20% {
+                transform: scale3d(1.1, 1.1, 1.1);
+            }
+            40% {
+                transform: scale3d(.9, .9, .9);
+            }
+            60% {
+                opacity: 1;
+                transform: scale3d(1.03, 1.03, 1.03);
+            }
+            80% {
+                transform: scale3d(.97, .97, .97);
+            }
+            100% {
+                opacity: 1;
+                transform: scale3d(1, 1, 1);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            0% {
+                opacity: 0;
+                transform: translate3d(0, 40px, 0);
+            }
+            100% {
+                opacity: 1;
+                transform: none;
+            }
+        }
+        
+        /* 模态框背景模糊效果 */
+        .modal.show {
+            backdrop-filter: blur(5px);
+        }
+    </style>
+    <!-- 关卡头部 -->
+    <div class="level-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <button class="btn btn-light btn-sm me-3" onclick="goBack()">
+                        <i class="fas fa-arrow-left me-2"></i>返回地图
+                    </button>
+                    <span class="fw-bold">关卡 {{.levelID}}</span>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="timer-display d-inline-block">
+                        <div class="timer-text" id="timer">00:00</div>
+                        <small>闯关时间</small>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="navbar-text me-3">
+                        <i class="fas fa-user me-1"></i>{{.username}}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义测试模态框 -->
+    <div class="modal fade" id="customTestModal" tabindex="-1" aria-labelledby="customTestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="customTestModalLabel">
+                        <i class="fas fa-flask me-2"></i>自定义测试用例
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customInput" class="form-label">
+                                    <strong>输入数据:</strong>
+                                    <small class="text-muted">(可以为空)</small>
+                                </label>
+                                <textarea id="customInput" class="form-control" rows="4" placeholder="在此输入测试数据..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customExpected" class="form-label">
+                                    <strong>期望输出:</strong>
+                                    <small class="text-muted">(可选，用于对比)</small>
+                                </label>
+                                <textarea id="customExpected" class="form-control" rows="4" placeholder="在此输入期望的输出结果..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>提示:</strong> 自定义测试可以帮助您调试代码。输入您的测试数据，系统会运行您的代码并显示实际输出。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="runCustomTest()">
+                        <i class="fas fa-play me-1"></i>运行测试
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 评测结果模态框 -->
+    <div class="modal fade" id="hydroResultModal" tabindex="-1" aria-labelledby="hydroResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="hydroResultModalLabel">评测结果</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="hydroResultContent">
+                    <!-- 动态生成内容 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功庆祝模态框 -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="modal-body text-center p-5">
+                    <!-- 庆祝动画区域 -->
+                    <div class="celebration-container mb-4">
+                        <div class="success-icon animate__animated animate__bounceIn">
+                            <i class="fas fa-trophy text-warning" style="font-size: 4rem;"></i>
+                        </div>
+                        <div class="confetti">
+                            <div class="confetti-piece"></div>
+                            <div class="confetti-piece"></div>
+                            <div class="confetti-piece"></div>
+                            <div class="confetti-piece"></div>
+                            <div class="confetti-piece"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 标题 -->
+                    <h2 class="mb-4 animate__animated animate__fadeInUp">
+                        🎉 恭喜通关！ 🎉
+                    </h2>
+                    
+                    <!-- 成绩展示 -->
+                    <div class="row mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="successScore">100/100</div>
+                                <div class="stat-label">得分</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="successTime">0:12</div>
+                                <div class="stat-label">用时</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <div class="stat-value" id="successStars">
+                                    <i class="fas fa-star text-warning"></i>
+                                    <i class="fas fa-star text-warning"></i>
+                                    <i class="fas fa-star text-warning"></i>
+                                </div>
+                                <div class="stat-label">星级</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 操作按钮 -->
+                    <div class="d-flex gap-3 justify-content-center animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
+                        <button type="button" class="btn btn-light btn-lg px-4" onclick="goBackToMap()">
+                            <i class="fas fa-map me-2"></i>返回地图
+                        </button>
+                        <button type="button" class="btn btn-outline-light btn-lg px-4" data-bs-dismiss="modal">
+                            <i class="fas fa-code me-2"></i>继续编程
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container-fluid main-container">
+        <div class="main-panels" id="mainRow">
+            <!-- 题目面板 -->
+            <div class="problem-panel" id="problemPanel">
+                <div id="problemContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">正在加载题目...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 垂直拖动条 -->
+            <div class="v-drag-bar" id="verticalDragBar"></div>
+
+            <!-- 代码面板 -->
+            <div class="code-panel" id="codePanel">
+                <div class="editor-container">
+                    <div id="codeEditor" style="height: 100%;"></div>
+                </div>
+                
+                <div class="editor-actions">
+                    <div>
+                        <select id="languageSelector" class="form-select d-inline-block me-2" style="width: auto;">
+                            <option value="cpp">C++</option>
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                            <option value="go">Go</option>
+                        </select>
+                        <input type="hidden" id="judgeSelector" value="go-judge">
+                        <button id="testBtn" class="btn btn-outline-success me-2">
+                            <i class="fas fa-play me-1"></i><span id="testBtnText">测试</span>
+                        </button>
+                        <button id="customTestBtn" class="btn btn-outline-warning me-2 d-none" data-bs-toggle="modal" data-bs-target="#customTestModal">
+                            <i class="fas fa-flask me-1"></i>自定义测试
+                        </button>
+                        <button id="submitBtn" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-1"></i><span id="submitBtnText">提交</span>
+                        </button>
+                        <button id="sandboxInfoBtn" class="btn btn-outline-info btn-sm ms-2 d-none" title="查看沙箱信息">
+                            <i class="fas fa-shield-alt"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-secondary" onclick="resetCode()">
+                            <i class="fas fa-undo me-1"></i>重置代码
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 可拖动分隔条 -->
+                <div class="drag-bar" id="editorDragBar"></div>
+
+                <!-- 右侧底部测试/结果面板 (模拟力扣) -->
+                <div class="test-container">
+                    <ul class="nav nav-tabs" id="testTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="cases-tab" data-bs-toggle="tab" data-bs-target="#testCases" type="button" role="tab">测试用例</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="result-tab" data-bs-toggle="tab" data-bs-target="#testResult" type="button" role="tab">测试结果</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content h-100">
+                        <div class="tab-pane fade show active" id="testCases" role="tabpanel">
+                            <div id="testCasesContent" class="small text-muted">正在加载...</div>
+                        </div>
+                        <div class="tab-pane fade" id="testResult" role="tabpanel">
+                            <div id="testResultContent" class="small text-muted">暂无结果</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 等待base.html中的axios加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟加载轻量级编辑器，避免与axios冲突
+            setTimeout(function() {
+                loadLightEditor();
+            }, 100);
+        });
+
+        function loadLightEditor() {
+            // 使用轻量级的CodeMirror编辑器
+            const cssLink = document.createElement('link');
+            cssLink.rel = 'stylesheet';
+            cssLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css';
+            document.head.appendChild(cssLink);
+
+            const themeLink = document.createElement('link');
+            themeLink.rel = 'stylesheet';
+            themeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css';
+            document.head.appendChild(themeLink);
+
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js';
+            script.onload = function() {
+                loadLanguageModes();
+            };
+            document.head.appendChild(script);
+        }
+
+        function loadLanguageModes() {
+            const resources = [
+                // 加载所有支持的语言模式
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js',     // C++, Java
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js',  // Python
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/go/go.min.js'           // Go
+            ];
+            
+            let loadedCount = 0;
+            resources.forEach(src => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = function() {
+                    loadedCount++;
+                    if (loadedCount === resources.length) {
+                        initializePage();
+                    }
+                };
+                script.onerror = function() {
+                    console.warn('Failed to load:', src);
+                    loadedCount++;
+                    if (loadedCount === resources.length) {
+                        initializePage();
+                    }
+                };
+                document.head.appendChild(script);
+            });
+        }
+    </script>
+    <script>
+        let editor;
+        let startTime = Date.now();
+        let timerInterval;
+        let currentLevelId = "{{.levelID}}";
+        
+        // 性能优化：防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 删除复杂的代码补全功能，避免乱码问题
+
+        async function initializePage() {
+            try {
+                // 确保axios可用
+                if (typeof axios === 'undefined') {
+                    console.error('axios未加载，等待重试...');
+                    setTimeout(initializePage, 500);
+                    return;
+                }
+                
+                await loadLevelData();
+                await initializeEditor();
+                startTimer();
+                setupJudgeSelector();
+            } catch (error) {
+                console.error('初始化失败:', error);
+                alert('页面初始化失败，请刷新重试');
+            }
+        }
+
+        async function loadLevelData() {
+            try {
+                const response = await axios.get('/api/interview-island/level/' + currentLevelId);
+                const levelData = response.data.data;
+                renderProblemContent(levelData);
+            } catch (error) {
+                if (error.response && error.response.status === 403) {
+                    alert('关卡未解锁');
+                    goBack();
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        function renderProblemContent(levelData) {
+            const level = levelData.level;
+            const question = levelData.question;
+            const sampleCases = levelData.sample_cases;
+
+            let problemHtml = '<div class="problem-title">';
+            problemHtml += '<h4>' + level.name + '</h4>';
+            problemHtml += '<span class="badge bg-primary">' + level.difficulty + '</span>';
+            problemHtml += '</div>';
+            
+            // 添加题目描述部分
+            if (question.description) {
+                problemHtml += '<div class="problem-description mt-3">';
+                problemHtml += '<h6>题目描述</h6>';
+                problemHtml += '<div class="description-content">';
+                // 简单的 markdown 渲染
+                problemHtml += parseMarkdown(question.description);
+                problemHtml += '</div>';
+                problemHtml += '</div>';
+            }
+            
+            // 题目链接部分（仅显示，不可跳转）
+            if (question.leetcode_url) {
+                problemHtml += '<div class="problem-link mt-3">';
+                problemHtml += '<h6>LeetCode 链接</h6>';
+                problemHtml += '<p class="text-muted">';
+                problemHtml += '<i class="fas fa-link me-1"></i>';
+                problemHtml += '<span class="text-decoration-none">' + question.leetcode_url + '</span>';
+                problemHtml += '<small class="text-muted ms-2">(仅供参考，不可跳转)</small>';
+                problemHtml += '</p>';
+                problemHtml += '</div>';
+            }
+
+            problemHtml += '<div class="sample-cases mt-4">';
+            problemHtml += '<h6>样例测试用例</h6>';
+            
+            for (let i = 0; i < sampleCases.length; i++) {
+                const testCase = sampleCases[i];
+                problemHtml += '<div class="card mt-2">';
+                problemHtml += '<div class="card-body">';
+                problemHtml += '<h6 class="card-title">样例 ' + (i + 1) + '</h6>';
+                problemHtml += '<div class="mb-2">';
+                problemHtml += '<strong>输入：</strong>';
+                problemHtml += '<pre class="bg-light p-2 rounded">' + testCase.input + '</pre>';
+                problemHtml += '</div>';
+                problemHtml += '<div>';
+                problemHtml += '<strong>输出：</strong>';
+                problemHtml += '<pre class="bg-light p-2 rounded">' + testCase.output + '</pre>';
+                problemHtml += '</div>';
+                problemHtml += '</div>';
+                problemHtml += '</div>';
+            }
+            
+            problemHtml += '</div>';
+
+            // 存储样例用例并渲染到右侧测试用例面板
+            window.sampleCases = sampleCases;
+            renderTestCases(sampleCases);
+
+            document.getElementById('problemContent').innerHTML = problemHtml;
+        }
+
+        // 渲染右下侧测试用例列表
+        function renderTestCases(cases) {
+            const container = document.getElementById('testCasesContent');
+            if (!container) return;
+            if (!cases || cases.length === 0) {
+                container.innerHTML = '<span class="text-muted">暂无测试用例</span>';
+                return;
+            }
+            let html = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">自定义输入</label>
+                    <textarea id="customInputArea" class="form-control" rows="4" placeholder="在此输入测试数据..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">期望输出 (可选)</label>
+                    <textarea id="customExpectedArea" class="form-control" rows="3" placeholder="在此输入期望输出..."></textarea>
+                </div>
+                <hr/>
+                <h6 class="fw-bold">样例测试用例</h6>`;
+            cases.forEach((c, idx) => {
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body p-2">
+                            <div class="fw-bold mb-1">样例 ${idx + 1}</div>
+                            <div class="text-muted small">输入:</div>
+                            <pre class="bg-light p-2 rounded small">${c.input || '(空)'}</pre>
+                            <div class="text-muted small">输出:</div>
+                            <pre class="bg-light p-2 rounded small">${c.output || '(空)'}</pre>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // 在面板显示结果并切换到"测试结果"Tab
+        function showResultInPanel(html) {
+            const resultContainer = document.getElementById('testResultContent');
+            if (resultContainer) {
+                resultContainer.innerHTML = html;
+            }
+            const resultTabTrigger = document.querySelector('#result-tab');
+            if (resultTabTrigger) {
+                const tab = new bootstrap.Tab(resultTabTrigger);
+                tab.show();
+            }
+        }
+
+        async function initializeEditor() {
+            return new Promise(function(resolve) {
+                // 确保CodeMirror已加载
+                if (typeof CodeMirror === 'undefined') {
+                    console.error('CodeMirror未正确加载');
+                    resolve();
+                    return;
+                }
+                
+                // 确保容器存在并可见
+                const container = document.getElementById('codeEditor');
+                if (!container) {
+                    console.error('编辑器容器未找到');
+                    resolve();
+                    return;
+                }
+                
+                // 创建简化的CodeMirror编辑器
+                editor = CodeMirror(container, {
+                    value: '', // 先创建空编辑器
+                    mode: 'text/x-c++src',
+                    theme: 'monokai',
+                    lineNumbers: true,
+                    indentUnit: 4,
+                    tabSize: 4,
+                    indentWithTabs: false,
+                    autoCloseBrackets: true,
+                    matchBrackets: true,
+                    gutters: ["CodeMirror-linenumbers"],
+                    styleActiveLine: true
+                });
+                
+                // 初始化完成后再设置内容
+                setTimeout(function() {
+                    editor.setValue(getInitialCode('cpp'));
+                }, 100);
+
+                // 修复编辑器显示问题：多次刷新确保正确渲染
+                setTimeout(function() {
+                    editor.refresh();
+                    // 强制重新设置内容并刷新
+                    const currentValue = editor.getValue();
+                    editor.setValue(currentValue);
+                    editor.refresh();
+                    editor.focus();
+                }, 300);
+                
+                // 额外的刷新确保完全渲染
+                setTimeout(function() {
+                    editor.refresh();
+                }, 1000);
+
+                // 暂时禁用复制粘贴限制，方便测试
+                /*
+                editor.on('keydown', function(cm, event) {
+                    if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C')) {
+                        event.preventDefault();
+                        alert('禁止复制代码');
+                    }
+                    if ((event.ctrlKey || event.metaKey) && (event.key === 'v' || event.key === 'V')) {
+                        event.preventDefault();
+                        alert('禁止粘贴代码');
+                    }
+                });
+
+                // 禁用右键菜单
+                editor.on('contextmenu', function(cm, event) {
+                    event.preventDefault();
+                });
+                */
+
+                // 简化的输入处理（删除自动补全）
+
+                setupEventListeners();
+                resolve();
+            });
+        }
+
+        function getInitialCode(language) {
+            if (language === 'cpp') {
+                return '#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    // 在这里编写你的代码\n    \n    return 0;\n}';
+            } else if (language === 'python') {
+                return '# 在这里编写你的代码\n\ndef main():\n    pass\n\nif __name__ == "__main__":\n    main()';
+            } else if (language === 'java') {
+                return 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // 在这里编写你的代码\n        \n    }\n}';
+            } else if (language === 'go') {
+                return 'package main\n\nimport (\n    "fmt"\n)\n\nfunc main() {\n    // 在这里编写你的代码\n    \n}';
+            }
+            return '';
+        }
+
+        function setupEventListeners() {
+            document.getElementById('languageSelector').addEventListener('change', function(e) {
+                const language = e.target.value;
+                
+                // 设置编辑器内容和语言模式
+                editor.setValue(getInitialCode(language));
+                
+                // 设置语言模式
+                let mode;
+                switch(language) {
+                    case 'cpp':
+                        mode = 'text/x-c++src';
+                        break;
+                    case 'java':
+                        mode = 'text/x-java';
+                        break;
+                    case 'python':
+                        mode = 'text/x-python';
+                        break;
+                    case 'go':
+                        mode = 'text/x-go';
+                        break;
+                    default:
+                        mode = 'text/plain';
+                }
+                editor.setOption('mode', mode);
+                
+                // 重新聚焦编辑器
+                editor.focus();
+            });
+
+            document.getElementById('testBtn').addEventListener('click', testCode);
+            document.getElementById('submitBtn').addEventListener('click', submitCode);
+            document.getElementById('sandboxInfoBtn').addEventListener('click', showSandboxInfo);
+        }
+
+        function startTimer() {
+            let lastDisplayedTime = '';
+            timerInterval = setInterval(function() {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                
+                const timeString = minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
+                
+                // 性能优化：只在时间实际改变时更新DOM
+                if (timeString !== lastDisplayedTime) {
+                    document.getElementById('timer').textContent = timeString;
+                    lastDisplayedTime = timeString;
+                }
+            }, 1000);
+        }
+
+        async function testCode() {
+            const code = editor.getValue().trim();
+            if (!code) {
+                alert('请先编写代码');
+                return;
+            }
+
+            const language = document.getElementById('languageSelector').value;
+            const judgeType = document.getElementById('judgeSelector').value;
+            
+            try {
+                showLoadingInResultPanel();
+                let response;
+                if (judgeType === 'go-judge') {
+                    // 使用 go-judge 进行评测
+                    response = await axios.post('/api/go-judge/level/' + currentLevelId + '/test', {
+                        code: code,
+                        language: language,
+                        input: document.getElementById('customInputArea') ? document.getElementById('customInputArea').value : '',
+                        expected: document.getElementById('customExpectedArea') ? document.getElementById('customExpectedArea').value : ''
+                    });
+                    
+                    // go-judge 评测系统返回即时结果
+                    const result = response.data.result;
+                    displayGoJudgeTestResult(result);
+                } else if (judgeType === 'docker') {
+                    // 使用Docker容器池进行评测（高性能）
+                    response = await axios.post('/api/docker-judge/level/' + currentLevelId + '/test', {
+                        code: code,
+                        language: language
+                    });
+                    
+                    // Docker评测系统返回即时结果（无需轮询）
+                    const result = response.data.data;
+                    displayHydroTestResult(result);
+                } else {
+                    // 使用Hydro评测系统
+                    response = await axios.post('/api/hydro-judge/level/' + currentLevelId + '/test', {
+                        code: code,
+                        language: language
+                    });
+                    
+                    const result = response.data.data;
+                    const submissionId = response.data.submission_id;
+                    
+                    // 如果是PENDING状态，开始轮询
+                    if (result.status === 'PENDING') {
+                        pollHydroResult(submissionId, false);
+                    } else {
+                        displayHydroTestResult(result);
+                    }
+                }
+            } catch (error) {
+                const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
+                alert('测试失败: ' + errorMsg);
+            }
+        }
+
+        async function submitCode() {
+            const code = editor.getValue().trim();
+            if (!code) {
+                alert('请先编写代码');
+                return;
+            }
+
+            const language = document.getElementById('languageSelector').value;
+            const judgeType = document.getElementById('judgeSelector').value;
+            const submitTime = Math.floor((Date.now() - startTime) / 1000);
+            
+            try {
+                showLoadingInResultPanel();
+                let response;
+                if (judgeType === 'go-judge') {
+                    // 使用 go-judge 进行评测
+                    response = await axios.post('/api/go-judge/level/' + currentLevelId + '/submit', {
+                        code: code,
+                        language: language,
+                        submit_time: submitTime
+                    });
+                    
+                    // go-judge 评测系统返回即时结果
+                    const result = response.data.result;
+                    displayGoJudgeSubmitResult(result);
+                    
+                    // 检查通关状态（同步结果）
+                    if (result.status === 'Accepted') {
+                        handleSuccess(result, submitTime);
+                    }
+                } else if (judgeType === 'docker') {
+                    // 使用Docker容器池进行评测（高性能）
+                    response = await axios.post('/api/docker-judge/level/' + currentLevelId + '/submit', {
+                        code: code,
+                        language: language,
+                        submit_time: submitTime
+                    });
+                    
+                    // Docker评测系统返回即时结果（无需轮询）
+                    const result = response.data.data;
+                    displayHydroSubmitResult(result);
+                    
+                    // 检查通关状态（同步结果）
+                    if (result.status === 'AC') {
+                        handleSuccess(result, submitTime);
+                    }
+                } else {
+                    // 使用Hydro评测系统
+                    response = await axios.post('/api/hydro-judge/level/' + currentLevelId + '/submit', {
+                        code: code,
+                        language: language,
+                        submit_time: submitTime
+                    });
+                    
+                    const result = response.data.data;
+                    const submissionId = response.data.submission_id;
+                    
+                    // 如果是PENDING状态，开始轮询
+                    if (result.status === 'PENDING') {
+                        pollHydroResult(submissionId, true);
+                    } else {
+                        displayHydroSubmitResult(result);
+                        if (result.status === 'AC') {
+                            handleSuccess(result, submitTime);
+                        }
+                    }
+                }
+            } catch (error) {
+                const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
+                alert('提交失败: ' + errorMsg);
+            }
+        }
+
+        function handleSuccess(result, submitTime) {
+            // 停止计时器
+            clearInterval(timerInterval);
+            
+            // 计算用时和得分
+            const timeUsed = Math.floor((Date.now() - startTime) / 1000);
+            
+            // 根据评测类型获取得分信息
+            const judgeType = document.getElementById('judgeSelector').value;
+            let score = 0;
+            let maxScore = 100;
+            
+            if (judgeType === 'go-judge') {
+                // go-judge 简化得分计算
+                if (result.status === 'Accepted') {
+                    score = 100;
+                    maxScore = 100;
+                }
+                // Go-Judge 系统已在后端处理进度提交，无需额外提交
+            } else if (judgeType === 'hydro') {
+                score = result.score || 0;
+                maxScore = result.max_score || 100;
+                // Hydro 系统已在后端处理进度提交，无需额外提交
+            } else {
+                // Docker评测已经在后端处理了进度提交
+                score = result.score || 0;
+                maxScore = result.max_score || 100;
+            }
+            
+            // 设置标志，通知面试岛页面刷新数据
+            localStorage.setItem('interviewIslandNeedsRefresh', 'true');
+            
+            // 显示通关消息
+            setTimeout(() => {
+                showSuccessModal(score, maxScore, timeUsed);
+            }, 1000);
+        }
+
+        function setupJudgeSelector() {
+            // 按钮固定文本，无需动态切换
+            const testBtnText = document.getElementById('testBtnText');
+            const submitBtnText = document.getElementById('submitBtnText');
+            testBtnText.textContent = '测试';
+            submitBtnText.textContent = '提交';
+        }
+
+        function resetCode() {
+            const language = document.getElementById('languageSelector').value;
+            editor.setValue(getInitialCode(language));
+        }
+
+        function goBack() {
+            window.location.href = '/interview-island';
+        }
+
+        // 显示成功庆祝模态框
+        function showSuccessModal(score, maxScore, timeUsed) {
+            // 更新模态框中的数据
+            document.getElementById('successScore').textContent = `${score}/${maxScore}`;
+            document.getElementById('successTime').textContent = `${Math.floor(timeUsed/60)}:${(timeUsed%60).toString().padStart(2,'0')}`;
+            
+            // 计算星级 (根据用时和得分)
+            const stars = calculateStars(score, maxScore, timeUsed);
+            updateStarsDisplay(stars);
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('successModal'));
+            modal.show();
+        }
+
+        // 计算星级 (这里可以根据实际需求调整计算逻辑)
+        function calculateStars(score, maxScore, timeUsed) {
+            if (score < maxScore) return 1; // 未满分至少1星
+            
+            // 满分情况下根据用时计算星级
+            if (timeUsed <= 60) return 3;        // 1分钟内 - 3星
+            else if (timeUsed <= 300) return 3;  // 5分钟内 - 3星  
+            else if (timeUsed <= 600) return 2;  // 10分钟内 - 2星
+            else return 1;                       // 超过10分钟 - 1星
+        }
+
+        // 更新星级显示
+        function updateStarsDisplay(stars) {
+            const starsContainer = document.getElementById('successStars');
+            let starsHTML = '';
+            
+            for (let i = 1; i <= 3; i++) {
+                if (i <= stars) {
+                    starsHTML += '<i class="fas fa-star text-warning"></i>';
+                } else {
+                    starsHTML += '<i class="far fa-star text-muted"></i>';
+                }
+            }
+            
+            starsContainer.innerHTML = starsHTML;
+        }
+
+        // 返回地图的函数
+        function goBackToMap() {
+            window.location.href = '/interview-island';
+        }
+
+        // 运行自定义测试
+        async function runCustomTest() {
+            const code = editor.getValue().trim();
+            if (!code) {
+                alert('请先编写代码');
+                return;
+            }
+
+            const language = document.getElementById('languageSelector').value;
+            const customInput = document.getElementById('customInput').value;
+            const customExpected = document.getElementById('customExpected').value;
+            
+            try {
+                // 关闭自定义测试模态框
+                const customModal = bootstrap.Modal.getInstance(document.getElementById('customTestModal'));
+                customModal.hide();
+                
+                // 调用自定义测试API
+                const response = await axios.post('/api/docker-judge/custom-test', {
+                    code: code,
+                    language: language,
+                    input: customInput,
+                    expected: customExpected
+                });
+                
+                const result = response.data.data;
+                
+                // 显示结果
+                const content = generateDockerResultHTML(result, false);
+                showResultInPanel(content);
+                
+            } catch (error) {
+                const errorMsg = error.response && error.response.data && error.response.data.error ? error.response.data.error : error.message;
+                alert('自定义测试失败: ' + errorMsg);
+            }
+        }
+
+        // 显示Hydro测试结果
+        function displayHydroTestResult(result) {
+            const judgeType = document.getElementById('judgeSelector').value;
+            let content, title;
+            
+            if (judgeType === 'docker') {
+                content = generateDockerResultHTML(result, false);
+                title = 'Docker测试结果';
+            } else {
+                content = generateHydroResultHTML(result, false);
+                title = 'Hydro测试结果';
+            }
+            
+            showResultInPanel(content);
+            document.getElementById('hydroResultModalLabel').textContent = title;
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
+            modal.show();
+        }
+
+        // 显示Hydro提交结果
+        function displayHydroSubmitResult(result) {
+            const judgeType = document.getElementById('judgeSelector').value;
+            let content, title;
+            
+            if (judgeType === 'docker') {
+                content = generateDockerResultHTML(result, true);
+                title = 'Docker提交结果';
+            } else {
+                content = generateHydroResultHTML(result, true);
+                title = 'Hydro提交结果';
+            }
+            
+            showResultInPanel(content);
+            document.getElementById('hydroResultModalLabel').textContent = title;
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
+            modal.show();
+        }
+
+        // 显示 go-judge 测试结果
+        function displayGoJudgeTestResult(result) {
+            const html = generateGoJudgeResultHTML(result, false);
+            showResultInPanel(html);
+        }
+
+        // 显示 go-judge 提交结果
+        function displayGoJudgeSubmitResult(result) {
+            const html = generateGoJudgeResultHTML(result, true);
+            showResultInPanel(html);
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'PENDING': '等待评测',
+                'JUDGING': '评测中',
+                'AC': '通过',
+                'WA': '答案错误',
+                'TLE': '超时',
+                'MLE': '内存超限',
+                'RE': '运行错误',
+                'CE': '编译错误',
+                'SE': '系统错误',
+                'PC': '部分正确',
+                // go-judge 状态
+                'Accepted': '通过',
+                'Wrong Answer': '答案错误',
+                'Compile Error': '编译错误',
+                'Runtime Error': '运行错误',
+                'Memory Limit Exceeded': '内存超限',
+                'Time Limit Exceeded': '超时',
+                'Output Limit Exceeded': '输出超限',
+                'File Error': '文件错误',
+                'Non Zero Exit Status': '非零退出',
+                'Nonzero Exit Status': '非零退出',
+                'Signalled': '信号终止',
+                'Dangerous Syscall': '危险系统调用',
+                'Internal Error': '内部错误'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 获取状态徽章样式
+        function getStatusBadgeClass(status) {
+            const classMap = {
+                'AC': 'bg-success',
+                'WA': 'bg-danger',
+                'TLE': 'bg-warning',
+                'MLE': 'bg-warning',
+                'RE': 'bg-danger',
+                'CE': 'bg-secondary',
+                'SE': 'bg-dark',
+                'PC': 'bg-info',
+                'PENDING': 'bg-secondary',
+                'JUDGING': 'bg-primary',
+                // go-judge 状态
+                'Accepted': 'bg-success',
+                'Wrong Answer': 'bg-danger',
+                'Compile Error': 'bg-secondary',
+                'Runtime Error': 'bg-danger',
+                'Memory Limit Exceeded': 'bg-warning',
+                'Time Limit Exceeded': 'bg-warning',
+                'Output Limit Exceeded': 'bg-warning',
+                'File Error': 'bg-danger',
+                'Non Zero Exit Status': 'bg-danger',
+                'Nonzero Exit Status': 'bg-danger',
+                'Signalled': 'bg-danger',
+                'Dangerous Syscall': 'bg-danger',
+                'Internal Error': 'bg-dark'
+            };
+            return classMap[status] || 'bg-secondary';
+        }
+
+
+
+        // 生成Docker结果HTML
+        function generateDockerResultHTML(result, isSubmit) {
+            let html = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                    <span class="badge ${getStatusBadgeClass(result.status)} me-2">${getStatusText(result.status)}</span>
+                                    得分: ${result.score}/${result.max_score}
+                                    ${isSubmit ? `| 获得星数: ${result.stars || 0}` : ''}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>用时:</strong> ${result.time_used}ms
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>内存:</strong> ${result.memory_used}KB
+                                    </div>
+                                </div>
+            `;
+            
+            if (result.compile_message) {
+                html += `
+                    <hr>
+                    <div class="alert alert-warning">
+                        <strong>编译信息:</strong>
+                        <pre class="mb-0 mt-2">${result.compile_message}</pre>
+                    </div>
+                `;
+            }
+            
+            if (result.error) {
+                html += `
+                    <hr>
+                    <div class="alert alert-danger">
+                        <strong>错误信息:</strong>
+                        <pre class="mb-0 mt-2">${result.error}</pre>
+                    </div>
+                `;
+            }
+            
+            html += `</div></div></div></div>`;
+            
+            // 测试用例详情
+            if (result.test_cases && result.test_cases.length > 0) {
+                html += `
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-vial me-2"></i>测试用例详情
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                `;
+                
+                result.test_cases.forEach((testCase, index) => {
+                    const statusClass = getStatusBadgeClass(testCase.status);
+                    const statusText = getStatusText(testCase.status);
+                    
+                    html += `
+                        <div class="test-case-item mb-3 ${index > 0 ? 'border-top pt-3' : ''}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">
+                                    ${testCase.is_sample ? '样例' : '测试用例'} ${index + 1}
+                                    <span class="badge ${statusClass} ms-2">${statusText}</span>
+                                </h6>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="input-section">
+                                        <strong class="text-muted">输入:</strong>
+                                        <pre class="bg-light p-2 mt-1 small">${testCase.input || '(空)'}</pre>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="output-section">
+                                        <strong class="text-muted">您的输出:</strong>
+                                        <pre class="bg-light p-2 mt-1 small ${testCase.status === 'WA' ? 'border-danger' : ''}">${testCase.output || '(无输出)'}</pre>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="expected-section">
+                                        <strong class="text-muted">期望输出:</strong>
+                                        <pre class="bg-light p-2 mt-1 small">${testCase.expected || '(空)'}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div></div></div></div>`;
+            }
+            
+            return html;
+        }
+
+        // 生成Hydro结果HTML
+        function generateHydroResultHTML(result, isSubmit) {
+            let html = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                    <span class="badge ${getStatusBadgeClass(result.status)} me-2">${getStatusText(result.status)}</span>
+                                    得分: ${result.score}/${result.max_score}
+                                    ${isSubmit ? `| 获得星数: ${result.stars || 0}` : ''}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>用时:</strong> ${result.time_used}ms
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>内存:</strong> ${result.memory_used}KB
+                                    </div>
+                                </div>
+            `;
+            
+            if (result.compile_message) {
+                html += `
+                    <hr>
+                    <div class="alert alert-info">
+                        <strong>编译信息:</strong>
+                        <pre class="mb-0 mt-2">${result.compile_message}</pre>
+                    </div>
+                `;
+            }
+            
+            if (result.error) {
+                html += `
+                    <hr>
+                    <div class="alert alert-danger">
+                        <strong>错误信息:</strong> ${result.error}
+                    </div>
+                `;
+            }
+            
+            html += `</div></div></div></div>`;
+            
+            // 子任务结果
+            if (result.subtask_results && result.subtask_results.length > 0) {
+                html += `
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">子任务结果</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>子任务</th>
+                                                    <th>状态</th>
+                                                    <th>得分</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                `;
+                
+                result.subtask_results.forEach((subtask, index) => {
+                    html += `
+                        <tr>
+                            <td>子任务 ${index + 1}</td>
+                            <td><span class="badge ${getStatusBadgeClass(subtask.status)}">${getStatusText(subtask.status)}</span></td>
+                            <td>${subtask.score}/${subtask.max_score}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `</tbody></table></div></div></div></div>`;
+            }
+            
+            // 测试点结果
+            if (result.test_cases && result.test_cases.length > 0) {
+                const visibleCases = result.test_cases.filter(tc => !tc.is_hidden);
+                if (visibleCases.length > 0) {
+                    html += `
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">测试点详情</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>测试点</th>
+                                                        <th>状态</th>
+                                                        <th>用时</th>
+                                                        <th>内存</th>
+                                                        <th>得分</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                    `;
+                    
+                    visibleCases.forEach((testCase, index) => {
+                        html += `
+                            <tr>
+                                <td>测试点 ${testCase.id || (index + 1)}</td>
+                                <td><span class="badge ${getStatusBadgeClass(testCase.status)}">${getStatusText(testCase.status)}</span></td>
+                                <td>${testCase.time_used}ms</td>
+                                <td>${testCase.memory_used}KB</td>
+                                <td>${testCase.score}/${testCase.max_score}</td>
+                            </tr>
+                        `;
+                        
+                        // 显示WA的详细信息
+                        if (testCase.status === 'WA' && testCase.output && testCase.expected) {
+                            html += `
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="accordion" id="accordion${index}">
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                                                        查看输出详情
+                                                    </button>
+                                                </h2>
+                                                <div id="collapse${index}" class="accordion-collapse collapse" data-bs-parent="#accordion${index}">
+                                                    <div class="accordion-body">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <strong>您的输出:</strong>
+                                                                <pre class="bg-light p-2 mt-1">${testCase.output}</pre>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <strong>期望输出:</strong>
+                                                                <pre class="bg-light p-2 mt-1">${testCase.expected}</pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    });
+                    
+                    html += `</tbody></table></div></div></div></div>`;
+                }
+            }
+            
+            // 系统信息
+            if (result.system_info) {
+                html += `
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">系统信息</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>评测服务器:</strong> ${result.system_info.judge_server || 'Unknown'}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>评测时长:</strong> ${Math.round((result.judge_duration || 0) / 1000000)}ms
+                                        </div>
+                                    </div>
+                                    ${result.system_info.compiler_info ? `
+                                        <div class="row mt-2">
+                                            <div class="col-md-12">
+                                                <strong>编译器信息:</strong> ${result.system_info.compiler_info}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+
+        // 生成 go-judge 结果HTML（简化版）
+        function generateGoJudgeResultHTML(result, isSubmit) {
+            let score = result.score || 0;
+            let maxScore = result.max_score || 100;
+            let stars = result.stars || 0;
+
+            let html = `
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <span class="badge ${getStatusBadgeClass(result.status)} me-2">${getStatusText(result.status)}</span>
+                            得分: ${score}/${maxScore} ${isSubmit ? `| 星级: ${stars}` : ''}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-4"><strong>用时:</strong> ${result.time || 0}ms</div>
+                            <div class="col-4"><strong>内存:</strong> ${result.memory || 0}KB</div>
+                            <div class="col-4"><strong>退出码:</strong> ${result.exitStatus}</div>
+                        </div>
+            `;
+
+            // 输出信息
+            if (result.stdout) {
+                html += `<div class="mb-2"><strong>输出:</strong><pre class="bg-light p-2 rounded small">${result.stdout}</pre></div>`;
+            }
+            if (result.stderr) {
+                html += `<div class="mb-2"><strong>错误输出:</strong><pre class="bg-warning p-2 rounded small">${result.stderr}</pre></div>`;
+            }
+            if (result.error) {
+                html += `<div class="alert alert-danger"><pre class="mb-0 small">${result.error}</pre></div>`;
+            }
+
+            // 测试用例信息
+            if (result.input !== undefined || result.expected !== undefined) {
+                html += `<hr/><div class="row">
+                            <div class="col-md-4">
+                                <small class="text-muted">输入</small>
+                                <pre class="bg-light p-2 rounded small">${result.input || '(空)'}</pre>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">您的输出</small>
+                                <pre class="bg-light p-2 rounded small ${result.status==='Wrong Answer'?'text-danger':''}">${result.stdout || '(无输出)'}</pre>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">期望输出</small>
+                                <pre class="bg-light p-2 rounded small">${result.expected || '(空)'}</pre>
+                            </div>
+                         </div>`;
+            }
+
+            html += `</div></div>`;
+            return html;
+        }
+
+        // 轮询获取Hydro评测结果
+        async function pollHydroResult(submissionId, isSubmit) {
+            const maxAttempts = 30; // 最多轮询30次 (30秒)
+            let attempts = 0;
+            
+            // 显示轮询状态
+            let statusMessage = isSubmit ? '正在评测中...' : '正在测试中...';
+            showPollingStatus(statusMessage);
+            
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await axios.get(`/api/hydro-judge/result/${submissionId}`);
+                    const result = response.data.data;
+                    
+                    // 更新轮询状态
+                    updatePollingStatus(`${statusMessage} (${attempts}/${maxAttempts})`);
+                    
+                    // 检查是否完成
+                    if (result.status !== 'PENDING' && result.status !== 'JUDGING') {
+                        clearInterval(pollInterval);
+                        hidePollingStatus();
+                        
+                        // 显示最终结果
+                        if (isSubmit) {
+                            displayHydroSubmitResult(result);
+                            
+                            // 检查通关状态
+                            if (result.status === 'AC') {
+                                // 停止计时器
+                                clearInterval(timerInterval);
+                                
+                                // 计算用时和得分
+                                const timeUsed = Math.floor((Date.now() - startTime) / 1000);
+                                
+                                // Go-Judge 系统已在后端处理进度提交，无需额外提交
+                                
+                                // 设置标志，通知面试岛页面刷新数据
+                                localStorage.setItem('interviewIslandNeedsRefresh', 'true');
+                                
+                                // 显示通关消息
+                                setTimeout(() => {
+                                    showSuccessModal(result.score, result.max_score, timeUsed);
+                                }, 1000);
+                            }
+                        } else {
+                            displayHydroTestResult(result);
+                        }
+                        return;
+                    }
+                    
+                    // 检查是否超时
+                    if (attempts >= maxAttempts) {
+                        clearInterval(pollInterval);
+                        hidePollingStatus();
+                        alert('评测超时，请稍后手动查询结果');
+                    }
+                } catch (error) {
+                    console.error('轮询出错:', error);
+                    
+                    // 连续失败3次就停止轮询
+                    if (attempts >= 3) {
+                        clearInterval(pollInterval);
+                        hidePollingStatus();
+                        alert('获取评测结果失败: ' + (error.message || '网络错误'));
+                    }
+                }
+            }, 1000); // 每秒轮询一次
+        }
+
+        // 显示轮询状态
+        function showPollingStatus(message) {
+            // 禁用按钮防止重复提交
+            const testBtn = document.getElementById('testBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            testBtn.disabled = true;
+            submitBtn.disabled = true;
+            
+            // 更新按钮文本
+            if (message.includes('测试')) {
+                testBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + message;
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + message;
+            }
+        }
+
+        // 更新轮询状态
+        function updatePollingStatus(message) {
+            const testBtn = document.getElementById('testBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (message.includes('测试')) {
+                testBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + message;
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + message;
+            }
+        }
+
+        // 隐藏轮询状态
+        function hidePollingStatus() {
+            const testBtn = document.getElementById('testBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // 恢复按钮状态
+            testBtn.disabled = false;
+            submitBtn.disabled = false;
+            
+            // 恢复按钮文本 - 修复空指针错误，直接使用Hydro系统
+            testBtn.innerHTML = '<i class="fas fa-play me-1"></i>Hydro测试';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Hydro提交';
+        }
+
+        // 显示沙箱信息
+        async function showSandboxInfo() {
+            try {
+                const response = await axios.get('/api/hydro-judge/system-info');
+                const info = response.data.data;
+                
+                let content = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Hydro沙箱信息</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>沙箱模式:</strong> ${info.sandbox_mode || 'Enhanced'}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>安全级别:</strong> <span class="badge bg-success">中等</span>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <strong>支持特性:</strong>
+                                    <ul class="mt-2">
+                                        <li>✅ PID命名空间隔离</li>
+                                        <li>✅ 用户权限降级</li>
+                                        <li>✅ 进程资源监控</li>
+                                        <li>✅ 严格时间限制</li>
+                                        <li>✅ 代码安全检查</li>
+                                        <li>⚠️ 部分文件系统隔离</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <strong>限制说明:</strong>
+                                    <ul class="mt-2 text-muted">
+                                        <li>内存限制: 通过系统监控(非cgroup)</li>
+                                        <li>网络隔离: 无完全隔离</li>
+                                        <li>权限要求: 普通用户可用</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('hydroResultContent').innerHTML = content;
+                document.getElementById('hydroResultModalLabel').textContent = 'Hydro沙箱环境信息';
+                
+                const modal = new bootstrap.Modal(document.getElementById('hydroResultModal'));
+                modal.show();
+            } catch (error) {
+                alert('获取沙箱信息失败: ' + (error.message || '未知错误'));
+            }
+        }
+
+        // 在测试结果面板显示加载占位
+        function showLoadingInResultPanel() {
+            const resultContainer = document.getElementById('testResultContent');
+            if (!resultContainer) return;
+            resultContainer.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center h-100 w-100">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>`;
+            // 切换到结果页签
+            const resultTabTrigger = document.querySelector('#result-tab');
+            if (resultTabTrigger) {
+                const tab = new bootstrap.Tab(resultTabTrigger);
+                tab.show();
+            }
+        }
+
+        // 拖动分隔条调整高度
+        (function() {
+            const dragBar = document.getElementById('editorDragBar');
+            const editorContainer = document.querySelector('.editor-container');
+            const testContainer = document.querySelector('.test-container');
+            if (!dragBar || !editorContainer || !testContainer) return;
+
+            let isDragging = false;
+            let startY = 0;
+            let startHeight = 0;
+
+            dragBar.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startY = e.clientY;
+                startHeight = testContainer.offsetHeight;
+                document.body.style.userSelect = 'none';
+            });
+
+            window.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                const dy = startY - e.clientY; // 向上拖动增大编辑器，减小测试区域
+                let newHeight = startHeight + dy;
+                const minH = 180;
+                const maxH = 600;
+                newHeight = Math.max(minH, Math.min(maxH, newHeight));
+                testContainer.style.height = newHeight + 'px';
+                testContainer.style.maxHeight = newHeight + 'px';
+            });
+
+            window.addEventListener('mouseup', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
+
+        // 垂直拖动条逻辑
+        (function() {
+            const vBar = document.getElementById('verticalDragBar');
+            const problemPanel = document.getElementById('problemPanel');
+            const codePanel = document.getElementById('codePanel');
+            if (!vBar || !problemPanel || !codePanel) return;
+
+            let dragging = false;
+            let startX = 0;
+            let startLeftWidth = 0;
+
+            vBar.addEventListener('mousedown', e => {
+                dragging = true;
+                startX = e.clientX;
+                startLeftWidth = problemPanel.getBoundingClientRect().width;
+                document.body.style.userSelect = 'none';
+            });
+
+            window.addEventListener('mousemove', e => {
+                if (!dragging) return;
+                const dx = e.clientX - startX;
+                const containerWidth = document.getElementById('mainRow').getBoundingClientRect().width;
+                let newLeft = startLeftWidth + dx;
+                const minLeft = 240;
+                const maxLeft = containerWidth - 400;
+                newLeft = Math.max(minLeft, Math.min(maxLeft, newLeft));
+
+                problemPanel.style.flex = `0 0 ${newLeft}px`;
+                codePanel.style.flex = `1 1 auto`;
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (dragging) {
+                    dragging = false;
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
+
+        // 简单的 Markdown 解析器
+        function parseMarkdown(markdown) {
+            if (!markdown) return '';
+            
+            let html = markdown;
+            
+            // 转换标题
+            html = html.replace(/^### (.+)$/gm, '<h5>$1</h5>');
+            html = html.replace(/^## (.+)$/gm, '<h4>$1</h4>');
+            html = html.replace(/^# (.+)$/gm, '<h3>$1</h3>');
+            
+            // 转换粗体和斜体
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            
+            // 转换代码块
+            html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-light p-3 rounded"><code>$1</code></pre>');
+            
+            // 转换行内代码
+            html = html.replace(/`([^`]+)`/g, '<code class="bg-light px-1 rounded">$1</code>');
+            
+            // 转换换行
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = html.replace(/\n/g, '<br>');
+            
+            // 包装段落
+            if (html && !html.startsWith('<h') && !html.startsWith('<pre')) {
+                html = '<p>' + html + '</p>';
+            }
+            
+            return html;
+        }
+    </script>
+{{end}} 
