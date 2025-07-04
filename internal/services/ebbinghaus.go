@@ -602,6 +602,13 @@ func (s *EbbinghausService) DeleteStudyPlanWithProgress(userID, studyPlanID uint
 		return errors.New("清空学习进度失败")
 	}
 
+	// 删除该学习计划的每日缓存记录
+	if err := tx.Where("user_id = ? AND study_plan_id = ?", userID, studyPlanID).
+		Delete(&models.DailyStudyPlanCache{}).Error; err != nil {
+		tx.Rollback()
+		return errors.New("清空学习缓存失败")
+	}
+
 	// 删除学习计划
 	if err := tx.Where("id = ? AND user_id = ?", studyPlanID, userID).
 		Delete(&models.UserStudyPlan{}).Error; err != nil {

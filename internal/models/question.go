@@ -60,5 +60,5 @@ type DailyStudyPlanCache struct {
 
 	// 关联关系
 	User      User          `json:"user" gorm:"foreignKey:UserID"`
-	StudyPlan UserStudyPlan `json:"study_plan" gorm:"foreignKey:StudyPlanID"`
+	StudyPlan UserStudyPlan `gorm:"foreignKey:StudyPlanID"`
 }
