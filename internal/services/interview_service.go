@@ -186,7 +186,6 @@ func (s *interviewService) GetLevelDetail(userID, levelID uint) (*LevelDetailRes
 	question := models.Question{
 		ID:          level.ID, // 使用关卡ID作为题目ID
 		Title:       level.QuestionTitle,
-		Description: level.QuestionDescription,
 		LeetcodeURL: level.QuestionLeetcodeURL,
 		Difficulty:  level.Difficulty,
 	}
@@ -225,7 +224,6 @@ func (s *interviewService) GetLevelDetailForAdmin(userID, levelID uint) (*LevelD
 	question := models.Question{
 		ID:          level.ID, // 使用关卡ID作为题目ID
 		Title:       level.QuestionTitle,
-		Description: level.QuestionDescription,
 		LeetcodeURL: level.QuestionLeetcodeURL,
 		Difficulty:  level.Difficulty,
 	}

@@ -132,23 +132,59 @@ func (r *questionRepository) CreateQuestion(userID, bankID uint, title, leetcode
 
 // copyQuestionsFromOriginal 将原题库的题目复制到目标题库
 func (r *questionRepository) copyQuestionsFromOriginal(fromBankID, toBankID uint) error {
+	// 开始事务
+	tx := r.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 获取原题库的所有题目
 	var originalQuestions []models.Question
-	if err := r.db.Where("question_bank_id = ?", fromBankID).Find(&originalQuestions).Error; err != nil {
+	if err := tx.Where("question_bank_id = ?", fromBankID).Find(&originalQuestions).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
+	// 创建题目ID映射表，用于更新学习进度记录
+	idMapping := make(map[uint]uint)
+
+	// 复制题目
 	for _, q := range originalQuestions {
+		oldID := q.ID
 		newQ := models.Question{
 			Title:          q.Title,
 			LeetcodeURL:    q.LeetcodeURL,
 			Difficulty:     q.Difficulty,
-			Description:    q.Description,
 			QuestionBankID: toBankID,
 		}
-		if err := r.db.Create(&newQ).Error; err != nil {
+
+		// 在事务中创建新题目
+		if err := tx.Create(&newQ).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		// 记录ID映射关系
+		idMapping[oldID] = newQ.ID
+	}
+
+	// 批量更新学习进度记录
+	for oldID, newID := range idMapping {
+		if err := tx.Model(&models.UserQuestionProgress{}).
+			Where("question_id = ?", oldID).
+			Update("question_id", newID).Error; err != nil {
+			tx.Rollback()
 			return err
 		}
 	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -255,7 +291,6 @@ func (r *questionRepository) UpdateQuestionWithDescription(userID, questionID, b
 	question.Title = title
 	question.LeetcodeURL = leetcodeURL
 	question.Difficulty = difficulty
-	question.Description = description
 
 	if err := r.db.Save(&question).Error; err != nil {
 		return nil, errors.New("更新题目失败")

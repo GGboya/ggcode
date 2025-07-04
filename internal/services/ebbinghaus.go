@@ -8,6 +8,28 @@ import (
 	"gorm.io/gorm"
 )
 
+/*
+Fork 题库的优化设计：
+
+1. 懒加载策略：
+   - Fork 题库时不立即复制题目，只创建题库关联关系
+   - 直接复用原题库的题目进行学习，避免不必要的数据复制
+
+2. 学习进度记录：
+   - 用户学习时，直接使用原题库的题目ID记录学习进度
+   - 由于学习进度表有 UserID 字段，不同用户的进度天然分离
+
+3. 写时复制触发：
+   - 只有在用户真正需要修改题库时（添加、删除、编辑题目）才进行写时复制
+   - 写时复制时会同步更新所有相关的学习进度记录，确保数据一致性
+
+4. 统计兼容性：
+   - 所有统计函数都能智能识别 fork 题库的状态
+   - 根据是否发生写时复制来选择正确的题库ID进行统计
+
+这种设计既避免了数据冗余，又保证了功能的完整性和数据的一致性。
+*/
+
 type EbbinghausService struct {
 	db *gorm.DB
 }
@@ -21,10 +43,6 @@ var reviewIntervals = []int{1, 2, 4, 7, 15, 30, 60}
 
 // GetDailyQuestions 获取指定学习计划的当天需要学习的题目
 func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]QuestionWithProgress, error) {
-	// 先确保 Fork 题库在首次使用时完成写时复制（COW）。
-	// 如果学习计划关联的题库是 fork 且本地还没有题目，则把原题库的题目复制过来，
-	// 这样可以避免后续学习流程因为题库为空而报错。
-
 	// 获取指定的学习计划
 	var studyPlan models.UserStudyPlan
 	if err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).
@@ -33,47 +51,31 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 	}
 
 	questionBank := studyPlan.QuestionBank
+
+	// 确定实际使用的题库ID
+	// 如果是 fork 题库，直接使用原题库ID（除非已经进行了写时复制）
+	actualQuestionBankID := questionBank.ID
 	if questionBank.ForkedFrom != nil {
 		var localCount int64
 		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&localCount)
 		if localCount == 0 {
-			// 执行写时复制：把原题库题目复制到当前题库
-			var originalQuestions []models.Question
-			if err := s.db.Where("question_bank_id = ?", *questionBank.ForkedFrom).Find(&originalQuestions).Error; err != nil {
-				return nil, err
-			}
-			for _, q := range originalQuestions {
-				newQ := q
-				newQ.ID = 0 // 让 GORM 生成新主键
-				newQ.QuestionBankID = questionBank.ID
-				if err := s.db.Create(&newQ).Error; err != nil {
-					return nil, err
-				}
-			}
-			// 解除与原题库的 fork 关联，避免后续重复复制
-			_ = s.db.Model(&models.QuestionBank{}).
-				Where("id = ?", questionBank.ID).
-				Update("forked_from", nil).Error
+			// 还没有发生写时复制，直接使用原题库ID
+			actualQuestionBankID = *questionBank.ForkedFrom
 		}
 	}
-
-	// 下面的逻辑保持不变，但由于我们提前重新查询了 studyPlan，需调整变量引用
-	studyPlanID = studyPlan.ID // 保持原参数用途
-
-	// 重新定义 today、reviewQuestions 等变量之前，继续向下执行原有逻辑
 
 	today := time.Now().Truncate(24 * time.Hour)
 
 	// 1. 获取需要复习的题目（根据艾宾浩斯遗忘曲线）
 	var reviewQuestions []QuestionWithProgress
-	if err := s.getReviewQuestions(userID, questionBank.ID, today, &reviewQuestions); err != nil {
+	if err := s.getReviewQuestions(userID, actualQuestionBankID, today, &reviewQuestions); err != nil {
 		return nil, err
 	}
 
 	// 2. 如果复习题目不足每日学习量，添加新题目
 	remainingCount := studyPlan.DailyCount - len(reviewQuestions)
 	if remainingCount > 0 {
-		newQuestions, err := s.getNewQuestions(userID, questionBank.ID, remainingCount)
+		newQuestions, err := s.getNewQuestions(userID, actualQuestionBankID, remainingCount)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +85,7 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 	// 3. 如果仍然没有足够的题目，提供已掌握的题目供重新学习
 	if len(reviewQuestions) < studyPlan.DailyCount {
 		remainingCount = studyPlan.DailyCount - len(reviewQuestions)
-		masteredQuestions, err := s.getMasteredQuestions(userID, questionBank.ID, remainingCount)
+		masteredQuestions, err := s.getMasteredQuestions(userID, actualQuestionBankID, remainingCount)
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +96,7 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 	if len(reviewQuestions) == 0 {
 		// 检查题库是否有题目
 		var questionCount int64
-		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&questionCount)
+		s.db.Model(&models.Question{}).Where("question_bank_id = ?", actualQuestionBankID).Count(&questionCount)
 		if questionCount == 0 {
 			return nil, errors.New("题库中没有题目，请先添加题目")
 		}
@@ -187,8 +189,10 @@ func (s *EbbinghausService) getMasteredQuestions(userID, questionBankID uint, co
 }
 
 // CompleteQuestion 完成题目学习
+// 对于fork题库，直接使用原题库的题目ID记录学习进度，避免不必要的数据复制
 func (s *EbbinghausService) CompleteQuestion(userID, questionID uint, resultType string) error {
 	// 查找或创建学习进度记录
+	// 注意：这里直接使用传入的questionID，不需要进行写时复制
 	var progress models.UserQuestionProgress
 	err := s.db.Where("user_id = ? AND question_id = ?", userID, questionID).First(&progress).Error
 
@@ -304,14 +308,110 @@ type QuestionBankProgress struct {
 	MasteryRate    int   `json:"mastery_rate"`    // 掌握率百分比
 }
 
+// TriggerCopyOnWrite 在用户需要修改题库时触发写时复制
+// 这个函数应该在用户要添加、删除或修改题目时被调用
+func (s *EbbinghausService) TriggerCopyOnWrite(questionBankID uint) error {
+	// 获取题库信息
+	var questionBank models.QuestionBank
+	if err := s.db.Where("id = ?", questionBankID).First(&questionBank).Error; err != nil {
+		return err
+	}
+
+	// 如果不是 fork 题库，直接返回
+	if questionBank.ForkedFrom == nil {
+		return nil
+	}
+
+	// 检查是否已经发生了写时复制
+	var localCount int64
+	s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&localCount)
+	if localCount > 0 {
+		// 已经发生了写时复制，直接返回
+		return nil
+	}
+
+	// 开始事务
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 执行写时复制：把原题库题目复制到当前题库
+	var originalQuestions []models.Question
+	if err := tx.Where("question_bank_id = ?", *questionBank.ForkedFrom).Find(&originalQuestions).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 创建题目ID映射表，用于更新学习进度记录
+	idMapping := make(map[uint]uint)
+
+	for _, q := range originalQuestions {
+		oldID := q.ID
+		newQ := q
+		newQ.ID = 0 // 让 GORM 生成新主键
+		newQ.QuestionBankID = questionBank.ID
+		if err := tx.Create(&newQ).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+		idMapping[oldID] = newQ.ID
+	}
+
+	// 更新该题库相关的所有学习进度记录，将题目ID映射到新的ID
+	// 这一步很重要，确保用户的学习进度不会丢失
+	for oldID, newID := range idMapping {
+		if err := tx.Model(&models.UserQuestionProgress{}).
+			Where("question_id = ?", oldID).
+			Update("question_id", newID).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// 解除与原题库的 fork 关联
+	if err := tx.Model(&models.QuestionBank{}).
+		Where("id = ?", questionBank.ID).
+		Update("forked_from", nil).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetQuestionBankProgress 获取用户在特定题库的学习进度
 func (s *EbbinghausService) GetQuestionBankProgress(userID, questionBankID uint) (*QuestionBankProgress, error) {
 	var progress QuestionBankProgress
 	progress.QuestionBankID = questionBankID
 
+	// 获取题库信息，判断是否是fork题库
+	var questionBank models.QuestionBank
+	if err := s.db.Where("id = ?", questionBankID).First(&questionBank).Error; err != nil {
+		return nil, err
+	}
+
+	// 确定实际统计的题库ID
+	actualQuestionBankID := questionBankID
+	if questionBank.ForkedFrom != nil {
+		var localCount int64
+		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&localCount)
+		if localCount == 0 {
+			// 还没有发生写时复制，使用原题库ID进行统计
+			actualQuestionBankID = *questionBank.ForkedFrom
+		}
+	}
+
 	// 获取题库总题目数
 	if err := s.db.Model(&models.Question{}).
-		Where("question_bank_id = ?", questionBankID).
+		Where("question_bank_id = ?", actualQuestionBankID).
 		Count(&progress.TotalQuestions).Error; err != nil {
 		return nil, err
 	}
@@ -319,7 +419,7 @@ func (s *EbbinghausService) GetQuestionBankProgress(userID, questionBankID uint)
 	// 获取已学习题目数（有学习记录的）
 	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
-		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ?", userID, questionBankID).
+		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ?", userID, actualQuestionBankID).
 		Count(&progress.StudiedCount).Error; err != nil {
 		return nil, err
 	}
@@ -328,7 +428,7 @@ func (s *EbbinghausService) GetQuestionBankProgress(userID, questionBankID uint)
 	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ?",
-			userID, questionBankID, true).
+			userID, actualQuestionBankID, true).
 		Count(&progress.CompletedCount).Error; err != nil {
 		return nil, err
 	}
@@ -338,7 +438,7 @@ func (s *EbbinghausService) GetQuestionBankProgress(userID, questionBankID uint)
 	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ? AND user_question_progresses.next_review_date <= ?",
-			userID, questionBankID, false, today).
+			userID, actualQuestionBankID, false, today).
 		Count(&progress.ReviewCount).Error; err != nil {
 		return nil, err
 	}
@@ -498,9 +598,21 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 	var progress StudyPlanProgress
 	progress.StudyPlanID = studyPlanID
 
+	// 确定实际统计的题库ID
+	actualQuestionBankID := studyPlan.QuestionBankID
+	questionBank := studyPlan.QuestionBank
+	if questionBank.ForkedFrom != nil {
+		var localCount int64
+		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&localCount)
+		if localCount == 0 {
+			// 还没有发生写时复制，使用原题库ID进行统计
+			actualQuestionBankID = *questionBank.ForkedFrom
+		}
+	}
+
 	// 获取题库总题目数
 	if err := s.db.Model(&models.Question{}).
-		Where("question_bank_id = ?", studyPlan.QuestionBankID).
+		Where("question_bank_id = ?", actualQuestionBankID).
 		Count(&progress.TotalQuestions).Error; err != nil {
 		return nil, err
 	}
@@ -508,7 +620,7 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 	// 获取已学习题目数（有学习记录的）
 	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
-		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ?", userID, studyPlan.QuestionBankID).
+		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ?", userID, actualQuestionBankID).
 		Count(&progress.StudiedCount).Error; err != nil {
 		return nil, err
 	}
@@ -517,7 +629,7 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ?",
-			userID, studyPlan.QuestionBankID, true).
+			userID, actualQuestionBankID, true).
 		Count(&progress.CompletedCount).Error; err != nil {
 		return nil, err
 	}
@@ -527,7 +639,7 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 	if err := s.db.Model(&models.UserQuestionProgress{}).
 		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
 		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ? AND user_question_progresses.next_review_date <= ?",
-			userID, studyPlan.QuestionBankID, false, today).
+			userID, actualQuestionBankID, false, today).
 		Count(&progress.ReviewCount).Error; err != nil {
 		return nil, err
 	}
@@ -545,8 +657,21 @@ func (s *EbbinghausService) GetStudyPlanProgress(userID, studyPlanID uint) (*Stu
 func (s *EbbinghausService) DeleteStudyPlanWithProgress(userID, studyPlanID uint) error {
 	// 先获取学习计划信息
 	var studyPlan models.UserStudyPlan
-	if err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).First(&studyPlan).Error; err != nil {
+	if err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).
+		Preload("QuestionBank").First(&studyPlan).Error; err != nil {
 		return errors.New("学习计划不存在")
+	}
+
+	// 确定实际的题库ID
+	actualQuestionBankID := studyPlan.QuestionBankID
+	questionBank := studyPlan.QuestionBank
+	if questionBank.ForkedFrom != nil {
+		var localCount int64
+		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&localCount)
+		if localCount == 0 {
+			// 还没有发生写时复制，使用原题库ID
+			actualQuestionBankID = *questionBank.ForkedFrom
+		}
 	}
 
 	// 开始事务
@@ -563,7 +688,7 @@ func (s *EbbinghausService) DeleteStudyPlanWithProgress(userID, studyPlanID uint
 		WHERE user_id = ? AND question_id IN (
 			SELECT id FROM questions WHERE question_bank_id = ?
 		)
-	`, userID, studyPlan.QuestionBankID).Error; err != nil {
+	`, userID, actualQuestionBankID).Error; err != nil {
 		tx.Rollback()
 		return errors.New("清空学习进度失败")
 	}

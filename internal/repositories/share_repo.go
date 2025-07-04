@@ -126,7 +126,6 @@ func duplicateQuestions(tx *gorm.DB, fromBankID, toBankID uint) error {
 			Title:          q.Title,
 			LeetcodeURL:    q.LeetcodeURL,
 			Difficulty:     q.Difficulty,
-			Description:    q.Description,
 			QuestionBankID: toBankID,
 		}
 		if err := tx.Create(&newQ).Error; err != nil {
