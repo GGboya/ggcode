@@ -72,7 +72,7 @@ func (s *StudyPlanService) GetStudyPlanProgress(userID, planID uint) (*StudyPlan
 }
 
 // GetDailyQuestions 获取每日学习题目
-func (s *StudyPlanService) GetDailyQuestions(userID, planID uint) ([]QuestionWithProgress, error) {
+func (s *StudyPlanService) GetDailyQuestions(userID, planID uint) (*DailyQuestionsResponse, error) {
 	return s.ebbinghausService.GetDailyQuestions(userID, planID)
 }
 

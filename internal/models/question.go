@@ -47,3 +47,18 @@ type UserQuestionProgress struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// DailyStudyPlanCache 每日学习计划缓存
+type DailyStudyPlanCache struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	UserID      uint      `json:"user_id" gorm:"not null"`
+	StudyPlanID uint      `json:"study_plan_id" gorm:"not null"`
+	CacheDate   time.Time `json:"cache_date" gorm:"not null"`    // 缓存日期（按天）
+	QuestionIDs string    `json:"question_ids" gorm:"type:text"` // JSON格式存储题目ID列表
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+
+	// 关联关系
+	User      User          `json:"user" gorm:"foreignKey:UserID"`
+	StudyPlan UserStudyPlan `json:"study_plan" gorm:"foreignKey:StudyPlanID"`
+}

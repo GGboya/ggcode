@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"ggcode/internal/models"
 	"time"
@@ -41,8 +42,15 @@ func NewEbbinghausService(db *gorm.DB) *EbbinghausService {
 // 艾宾浩斯遗忘曲线复习间隔（天数）
 var reviewIntervals = []int{1, 2, 4, 7, 15, 30, 60}
 
-// GetDailyQuestions 获取指定学习计划的当天需要学习的题目
-func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]QuestionWithProgress, error) {
+// DailyQuestionsResponse 每日学习题目响应
+type DailyQuestionsResponse struct {
+	Questions []QuestionWithProgress `json:"questions"` // 今天的学习题目列表
+	Start     int                    `json:"start"`     // 从第几道题开始展示（0-based）
+	Total     int                    `json:"total"`     // 总题目数量
+}
+
+// GetDailyQuestions 获取指定学习计划的当天需要学习的题目（支持断点续学）
+func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) (*DailyQuestionsResponse, error) {
 	// 获取指定的学习计划
 	var studyPlan models.UserStudyPlan
 	if err := s.db.Where("id = ? AND user_id = ?", studyPlanID, userID).
@@ -51,64 +59,68 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) ([]Quest
 	}
 
 	questionBank := studyPlan.QuestionBank
+	today := time.Now().Truncate(24 * time.Hour)
 
 	// 确定实际使用的题库ID
-	// 如果是 fork 题库，直接使用原题库ID（除非已经进行了写时复制）
 	actualQuestionBankID := questionBank.ID
 	if questionBank.ForkedFrom != nil {
 		var localCount int64
 		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&localCount)
 		if localCount == 0 {
-			// 还没有发生写时复制，直接使用原题库ID
 			actualQuestionBankID = *questionBank.ForkedFrom
 		}
 	}
 
-	today := time.Now().Truncate(24 * time.Hour)
+	// 检查今天是否已有缓存的学习计划
+	var cache models.DailyStudyPlanCache
+	err := s.db.Where("user_id = ? AND study_plan_id = ? AND DATE(cache_date) = DATE(?)",
+		userID, studyPlanID, today).First(&cache).Error
 
-	// 1. 获取需要复习的题目（根据艾宾浩斯遗忘曲线）
-	var reviewQuestions []QuestionWithProgress
-	if err := s.getReviewQuestions(userID, actualQuestionBankID, today, &reviewQuestions); err != nil {
+	var questionIDs []uint
+
+	if err == gorm.ErrRecordNotFound {
+		// 今天第一次学习，生成新的学习计划并缓存
+		questions, err := s.generateDailyQuestions(userID, studyPlanID, actualQuestionBankID, studyPlan.DailyCount)
+		if err != nil {
+			return nil, err
+		}
+
+		// 提取题目ID
+		for _, q := range questions {
+			questionIDs = append(questionIDs, q.Question.ID)
+		}
+
+		// 缓存题目ID列表
+		if err := s.cacheDailyQuestions(userID, studyPlanID, questionIDs, today); err != nil {
+			// 缓存失败不影响学习，记录日志即可
+			// 可以在这里添加日志记录
+		}
+	} else if err != nil {
+		return nil, err
+	} else {
+		// 从缓存中获取题目ID列表
+		if err := json.Unmarshal([]byte(cache.QuestionIDs), &questionIDs); err != nil {
+			return nil, errors.New("解析缓存数据失败")
+		}
+	}
+
+	// 根据题目ID获取完整的题目信息
+	questions, err := s.getQuestionsByIDs(questionIDs, actualQuestionBankID)
+	if err != nil {
 		return nil, err
 	}
 
-	// 2. 如果复习题目不足每日学习量，添加新题目
-	remainingCount := studyPlan.DailyCount - len(reviewQuestions)
-	if remainingCount > 0 {
-		newQuestions, err := s.getNewQuestions(userID, actualQuestionBankID, remainingCount)
-		if err != nil {
-			return nil, err
-		}
-		reviewQuestions = append(reviewQuestions, newQuestions...)
+	// 计算 start 位置（今天已学习的题目数量）
+	start, err := s.calculateStartPosition(userID, questionIDs, today)
+	if err != nil {
+		return nil, err
 	}
 
-	// 3. 如果仍然没有足够的题目，提供已掌握的题目供重新学习
-	if len(reviewQuestions) < studyPlan.DailyCount {
-		remainingCount = studyPlan.DailyCount - len(reviewQuestions)
-		masteredQuestions, err := s.getMasteredQuestions(userID, actualQuestionBankID, remainingCount)
-		if err != nil {
-			return nil, err
-		}
-		reviewQuestions = append(reviewQuestions, masteredQuestions...)
-	}
-
-	// 4. 如果还是没有题目，说明题库为空，返回空数组而不是错误
-	if len(reviewQuestions) == 0 {
-		// 检查题库是否有题目
-		var questionCount int64
-		s.db.Model(&models.Question{}).Where("question_bank_id = ?", actualQuestionBankID).Count(&questionCount)
-		if questionCount == 0 {
-			return nil, errors.New("题库中没有题目，请先添加题目")
-		}
-
-		// 如果有题目但没有返回，可能是数据问题，返回空数组让用户可以继续操作
-		return []QuestionWithProgress{}, nil
-	}
-
-	if len(reviewQuestions) > studyPlan.DailyCount {
-		reviewQuestions = reviewQuestions[:studyPlan.DailyCount]
-	}
-	return reviewQuestions, nil
+	return &DailyQuestionsResponse{
+		Questions: questions,
+		Start:     start,
+		Total:     len(questions),
+	}, nil
 }
 
 // getReviewQuestions 获取需要复习的题目
@@ -306,85 +318,6 @@ type QuestionBankProgress struct {
 	ReviewCount    int64 `json:"review_count"`    // 待复习题目数
 	ProgressRate   int   `json:"progress_rate"`   // 学习进度百分比
 	MasteryRate    int   `json:"mastery_rate"`    // 掌握率百分比
-}
-
-// TriggerCopyOnWrite 在用户需要修改题库时触发写时复制
-// 这个函数应该在用户要添加、删除或修改题目时被调用
-func (s *EbbinghausService) TriggerCopyOnWrite(questionBankID uint) error {
-	// 获取题库信息
-	var questionBank models.QuestionBank
-	if err := s.db.Where("id = ?", questionBankID).First(&questionBank).Error; err != nil {
-		return err
-	}
-
-	// 如果不是 fork 题库，直接返回
-	if questionBank.ForkedFrom == nil {
-		return nil
-	}
-
-	// 检查是否已经发生了写时复制
-	var localCount int64
-	s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBank.ID).Count(&localCount)
-	if localCount > 0 {
-		// 已经发生了写时复制，直接返回
-		return nil
-	}
-
-	// 开始事务
-	tx := s.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 执行写时复制：把原题库题目复制到当前题库
-	var originalQuestions []models.Question
-	if err := tx.Where("question_bank_id = ?", *questionBank.ForkedFrom).Find(&originalQuestions).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// 创建题目ID映射表，用于更新学习进度记录
-	idMapping := make(map[uint]uint)
-
-	for _, q := range originalQuestions {
-		oldID := q.ID
-		newQ := q
-		newQ.ID = 0 // 让 GORM 生成新主键
-		newQ.QuestionBankID = questionBank.ID
-		if err := tx.Create(&newQ).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-		idMapping[oldID] = newQ.ID
-	}
-
-	// 更新该题库相关的所有学习进度记录，将题目ID映射到新的ID
-	// 这一步很重要，确保用户的学习进度不会丢失
-	for oldID, newID := range idMapping {
-		if err := tx.Model(&models.UserQuestionProgress{}).
-			Where("question_id = ?", oldID).
-			Update("question_id", newID).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
-	// 解除与原题库的 fork 关联
-	if err := tx.Model(&models.QuestionBank{}).
-		Where("id = ?", questionBank.ID).
-		Update("forked_from", nil).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // GetQuestionBankProgress 获取用户在特定题库的学习进度
@@ -827,4 +760,130 @@ func (s *EbbinghausService) GetStudyHeatmap(userID uint) (*HeatmapResponse, erro
 		MaxStreak:     maxStreak,          // 最长连续学习天数
 		ThisYear:      thisYearStudyCount, // 今年学习次数
 	}, nil
+}
+
+// generateDailyQuestions 生成每日学习题目
+func (s *EbbinghausService) generateDailyQuestions(userID, studyPlanID, questionBankID uint, dailyCount int) ([]QuestionWithProgress, error) {
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// 1. 获取需要复习的题目（根据艾宾浩斯遗忘曲线）
+	var reviewQuestions []QuestionWithProgress
+	if err := s.getReviewQuestions(userID, questionBankID, today, &reviewQuestions); err != nil {
+		return nil, err
+	}
+
+	// 限制复习题目数量不超过每日学习量
+	if len(reviewQuestions) > dailyCount {
+		reviewQuestions = reviewQuestions[:dailyCount]
+	}
+
+	// 2. 如果复习题目不足，添加新题目
+	currentCount := len(reviewQuestions)
+	if currentCount < dailyCount {
+		newQuestions, err := s.getNewQuestions(userID, questionBankID, dailyCount-currentCount)
+		if err != nil {
+			return nil, err
+		}
+		reviewQuestions = append(reviewQuestions, newQuestions...)
+	}
+
+	// 3. 如果仍然不足，提供已掌握的题目供重新学习
+	currentCount = len(reviewQuestions)
+	if currentCount < dailyCount {
+		masteredQuestions, err := s.getMasteredQuestions(userID, questionBankID, dailyCount-currentCount)
+		if err != nil {
+			return nil, err
+		}
+		reviewQuestions = append(reviewQuestions, masteredQuestions...)
+	}
+
+	// 如果还是没有题目，检查题库是否为空
+	if len(reviewQuestions) == 0 {
+		var questionCount int64
+		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBankID).Count(&questionCount)
+		if questionCount == 0 {
+			return nil, errors.New("题库中没有题目，请先添加题目")
+		}
+	}
+
+	// 确保不超过每日学习量
+	if len(reviewQuestions) > dailyCount {
+		reviewQuestions = reviewQuestions[:dailyCount]
+	}
+
+	return reviewQuestions, nil
+}
+
+// cacheDailyQuestions 缓存每日学习题目
+func (s *EbbinghausService) cacheDailyQuestions(userID, studyPlanID uint, questionIDs []uint, cacheDate time.Time) error {
+	// 序列化题目ID列表
+	questionIDsJSON, err := json.Marshal(questionIDs)
+	if err != nil {
+		return err
+	}
+
+	// 创建缓存记录
+	cache := models.DailyStudyPlanCache{
+		UserID:      userID,
+		StudyPlanID: studyPlanID,
+		CacheDate:   cacheDate,
+		QuestionIDs: string(questionIDsJSON),
+	}
+
+	return s.db.Create(&cache).Error
+}
+
+// getQuestionsByIDs 根据题目ID列表获取完整的题目信息
+func (s *EbbinghausService) getQuestionsByIDs(questionIDs []uint, questionBankID uint) ([]QuestionWithProgress, error) {
+	if len(questionIDs) == 0 {
+		return []QuestionWithProgress{}, nil
+	}
+
+	var questions []models.Question
+	if err := s.db.Where("id IN ? AND question_bank_id = ?", questionIDs, questionBankID).Find(&questions).Error; err != nil {
+		return nil, err
+	}
+
+	// 创建ID到题目的映射，保持原有顺序
+	questionMap := make(map[uint]models.Question)
+	for _, q := range questions {
+		questionMap[q.ID] = q
+	}
+
+	var result []QuestionWithProgress
+	for _, questionID := range questionIDs {
+		if question, exists := questionMap[questionID]; exists {
+			// 获取学习进度（如果有的话）
+			var progress models.UserQuestionProgress
+			s.db.Where("question_id = ?", questionID).First(&progress)
+
+			result = append(result, QuestionWithProgress{
+				Question: question,
+				Progress: progress,
+				IsReview: progress.ID != 0, // 如果有进度记录，说明是复习题目
+			})
+		}
+	}
+
+	return result, nil
+}
+
+// calculateStartPosition 计算开始位置（今天已学习的题目数量）
+func (s *EbbinghausService) calculateStartPosition(userID uint, questionIDs []uint, today time.Time) (int, error) {
+	if len(questionIDs) == 0 {
+		return 0, nil
+	}
+
+	// 统计今天已经学习过的题目数量
+	var studiedCount int64
+	err := s.db.Model(&models.UserQuestionProgress{}).
+		Where("user_id = ? AND question_id IN ? AND DATE(last_review_date) = DATE(?)",
+			userID, questionIDs, today).
+		Count(&studiedCount).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return int(studiedCount), nil
 }

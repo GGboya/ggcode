@@ -106,6 +106,7 @@ let studyPlanId = null;
 let studyPlan = null;
 let dailyQuestions = [];
 let currentQuestionIndex = 0;
+let startIndex = 0; // 新增：记录开始学习的位置
 
 // 页面加载时获取学习计划ID
 document.addEventListener('DOMContentLoaded', function() {
@@ -133,7 +134,11 @@ async function loadStudyData() {
         ]);
         
         studyPlan = planResponse.data;
-        dailyQuestions = questionsResponse.data;
+        
+        // 适配新的响应格式
+        const questionsData = questionsResponse.data;
+        dailyQuestions = questionsData.questions || [];
+        startIndex = questionsData.start || 0;
         
         renderStudyPlanInfo();
         await reloadProgress(); // 加载并渲染初始进度
@@ -185,9 +190,32 @@ function renderDailyTasks() {
                 <a href="/study-plans" class="btn btn-primary"><i class="fas fa-arrow-left"></i> 返回学习计划</a>
             </div>`;
     } else {
-        currentQuestionIndex = 0;
-        showCurrentQuestion(currentQuestionIndex);
+        // 从断点位置开始学习
+        currentQuestionIndex = startIndex;
+        
+        // 如果已经全部完成，显示完成信息
+        if (startIndex >= dailyQuestions.length) {
+            document.getElementById('dailyTasks').innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-trophy fa-3x text-warning mb-3"></i>
+                    <h5 class="text-success">太棒了，今日任务全部完成！</h5>
+                    <p class="text-muted">你的努力终将有所回报，明天继续加油！</p>
+                    <a href="/study-plans" class="btn btn-primary mt-3"><i class="fas fa-arrow-left"></i> 返回学习计划</a>
+                </div>`;
+        } else {
+            // 显示断点续学提示（如果不是从头开始）
+            if (startIndex > 0) {
+                showContinueStudyMessage();
+            }
+            showCurrentQuestion(currentQuestionIndex);
+        }
     }
+}
+
+// 显示断点续学提示
+function showContinueStudyMessage() {
+    const message = `欢迎回来！你今天已经学习了 ${startIndex} 道题，现在从第 ${startIndex + 1} 题继续学习。`;
+    showAlert(message, 'info');
 }
 
 // 渲染学习统计
@@ -227,12 +255,19 @@ function showCurrentQuestion(index) {
     const question = item.question;
     const isReview = item.is_review;
 
+    // 计算实际的题目序号和总体进度
+    const actualIndex = index + 1;
+    const totalQuestions = dailyQuestions.length;
+    const overallProgress = ((index + 1) / totalQuestions) * 100;
+
     const questionCard = `
         <div class="text-center">
-            <p class="text-muted mb-2">第 ${index + 1} 题 / 共 ${dailyQuestions.length} 题
+            <p class="text-muted mb-2">第 ${actualIndex} 题 / 共 ${totalQuestions} 题
                 ${isReview ? '<span class="badge bg-warning ms-2">复习</span>' : '<span class="badge bg-info ms-2">新题</span>'}
             </p>
-            <div class="progress mb-4" style="height: 4px;"><div class="progress-bar" style="width: ${((index + 1) / dailyQuestions.length) * 100}%" role="progressbar"></div></div>
+            <div class="progress mb-4" style="height: 4px;">
+                <div class="progress-bar" style="width: ${overallProgress}%" role="progressbar"></div>
+            </div>
         </div>
         <div class="card shadow-sm p-4 text-center" style="min-height: 250px;">
             <div class="mb-3"><span class="badge bg-warning text-dark">${question.difficulty}</span></div>
