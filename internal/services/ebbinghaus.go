@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"ggcode/internal/models"
+	"math"
+	"sort"
 	"time"
 
 	"gorm.io/gorm"
@@ -80,7 +82,7 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) (*DailyQ
 
 	if err == gorm.ErrRecordNotFound {
 		// 今天第一次学习，生成新的学习计划并缓存
-		questions, err := s.generateDailyQuestions(userID, studyPlanID, actualQuestionBankID, studyPlan.DailyCount)
+		questions, err := s.generateDailyQuestions(userID, actualQuestionBankID, studyPlan.DailyCount)
 		if err != nil {
 			return nil, err
 		}
@@ -173,33 +175,6 @@ func (s *EbbinghausService) getNewQuestions(userID, questionBankID uint, count i
 	return result, nil
 }
 
-// getMasteredQuestions 获取已掌握的题目供重新学习
-func (s *EbbinghausService) getMasteredQuestions(userID, questionBankID uint, count int) ([]QuestionWithProgress, error) {
-	var progresses []models.UserQuestionProgress
-
-	// 获取已掌握的题目，按最后复习时间排序（最久没复习的优先）
-	if err := s.db.Where("user_id = ? AND is_completed = ?", userID, true).
-		Preload("Question", "question_bank_id = ?", questionBankID).
-		Order("last_review_date ASC").
-		Limit(count).Find(&progresses).Error; err != nil {
-		return nil, err
-	}
-
-	var result []QuestionWithProgress
-	for _, progress := range progresses {
-		// 只处理指定题库的题目
-		if progress.Question.QuestionBankID == questionBankID {
-			result = append(result, QuestionWithProgress{
-				Question: progress.Question,
-				Progress: progress,
-				IsReview: true, // 标记为复习题目
-			})
-		}
-	}
-
-	return result, nil
-}
-
 // CompleteQuestion 完成题目学习
 // 对于fork题库，直接使用原题库的题目ID记录学习进度，避免不必要的数据复制
 func (s *EbbinghausService) CompleteQuestion(userID, questionID uint, resultType string) error {
@@ -279,6 +254,7 @@ type QuestionWithProgress struct {
 	Question models.Question             `json:"question"`
 	Progress models.UserQuestionProgress `json:"progress"`
 	IsReview bool                        `json:"is_review"` // 是否是复习题目
+	Score    int                         `json:"score"`     // 题目得分
 }
 
 // GetStudyStats 获取学习统计信息
@@ -763,18 +739,13 @@ func (s *EbbinghausService) GetStudyHeatmap(userID uint) (*HeatmapResponse, erro
 }
 
 // generateDailyQuestions 生成每日学习题目
-func (s *EbbinghausService) generateDailyQuestions(userID, studyPlanID, questionBankID uint, dailyCount int) ([]QuestionWithProgress, error) {
+func (s *EbbinghausService) generateDailyQuestions(userID, questionBankID uint, dailyCount int) ([]QuestionWithProgress, error) {
 	today := time.Now().Truncate(24 * time.Hour)
 
 	// 1. 获取需要复习的题目（根据艾宾浩斯遗忘曲线）
 	var reviewQuestions []QuestionWithProgress
 	if err := s.getReviewQuestions(userID, questionBankID, today, &reviewQuestions); err != nil {
 		return nil, err
-	}
-
-	// 限制复习题目数量不超过每日学习量
-	if len(reviewQuestions) > dailyCount {
-		reviewQuestions = reviewQuestions[:dailyCount]
 	}
 
 	// 2. 如果复习题目不足，添加新题目
@@ -787,31 +758,85 @@ func (s *EbbinghausService) generateDailyQuestions(userID, studyPlanID, question
 		reviewQuestions = append(reviewQuestions, newQuestions...)
 	}
 
-	// 3. 如果仍然不足，提供已掌握的题目供重新学习
-	currentCount = len(reviewQuestions)
-	if currentCount < dailyCount {
-		masteredQuestions, err := s.getMasteredQuestions(userID, questionBankID, dailyCount-currentCount)
-		if err != nil {
-			return nil, err
-		}
-		reviewQuestions = append(reviewQuestions, masteredQuestions...)
-	}
+	// 3. 对所有题目进行打分
+	s.ScoreQuestions(reviewQuestions)
 
-	// 如果还是没有题目，检查题库是否为空
-	if len(reviewQuestions) == 0 {
-		var questionCount int64
-		s.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBankID).Count(&questionCount)
-		if questionCount == 0 {
-			return nil, errors.New("题库中没有题目，请先添加题目")
-		}
-	}
+	// 4. 按照得分从高到低排序
+	sort.Slice(reviewQuestions, func(i, j int) bool {
+		return reviewQuestions[i].Score > reviewQuestions[j].Score
+	})
 
-	// 确保不超过每日学习量
+	// 5. 确保不超过每日学习量
 	if len(reviewQuestions) > dailyCount {
 		reviewQuestions = reviewQuestions[:dailyCount]
 	}
 
 	return reviewQuestions, nil
+}
+
+func (s *EbbinghausService) ScoreQuestions(questions []QuestionWithProgress) {
+	now := time.Now()
+
+	for i := range questions {
+		question := &questions[i]
+
+		// 1. 计算时间维度得分 (x)
+		timeScore := s.calculateTimeScore(question.Progress, now)
+
+		// 2. 计算难度得分 (y)
+		difficultyScore := s.calculateDifficultyScore(question.Question.Difficulty)
+
+		// 3. 综合得分 score = 0.5x + 0.5y
+		finalScore := 0.5*timeScore + 0.5*difficultyScore
+
+		// 转换为整数得分 (0-100)
+		question.Score = int(finalScore * 100)
+	}
+}
+
+// calculateTimeScore 计算时间维度得分
+// 上一次复习的间隔越久，得分越高
+func (s *EbbinghausService) calculateTimeScore(progress models.UserQuestionProgress, now time.Time) float64 {
+	// 如果是新题目（没有复习记录），给予较高的基础分
+	if progress.LastReviewDate.IsZero() {
+		return 0.8 // 新题目给予0.8的基础分
+	}
+
+	// 计算距离上次复习的天数
+	daysSinceLastReview := int(now.Sub(progress.LastReviewDate).Hours() / 24)
+
+	// 如果是当天复习的，给予最低分
+	if daysSinceLastReview <= 0 {
+		return 0.1
+	}
+
+	// 大部分题目的复习间隔集中在7天内，使用对数函数平滑映射
+	// 1天 -> 0.3, 3天 -> 0.6, 7天 -> 1.0, 14天+ -> 1.0
+	if daysSinceLastReview >= 14 {
+		return 1.0
+	}
+
+	// 使用对数函数进行平滑映射
+	// log(1+x) / log(1+14) 将 [0,14] 映射到 [0,1]
+	normalized := math.Log(1+float64(daysSinceLastReview)) / math.Log(1+14)
+
+	// 调整基础分，确保有合理的分布
+	return 0.2 + 0.8*normalized
+}
+
+// calculateDifficultyScore 计算难度得分
+// 题目难度越大，得分越高
+func (s *EbbinghausService) calculateDifficultyScore(difficulty string) float64 {
+	switch difficulty {
+	case "Easy":
+		return 0.3
+	case "Medium":
+		return 0.6
+	case "Hard":
+		return 1.0
+	default:
+		return 0.5 // 默认中等难度
+	}
 }
 
 // cacheDailyQuestions 缓存每日学习题目
