@@ -68,9 +68,9 @@ func (ctrl *QuestionController) CreateQuestion(c *gin.Context) {
 	}
 
 	var req struct {
-		Title       string `json:"title" binding:"required"`
-		LeetcodeURL string `json:"leetcode_url" binding:"required"`
-		Difficulty  string `json:"difficulty" binding:"required"`
+		Title      string `json:"title" binding:"required"`
+		URL        string `json:"url" binding:"required"`
+		Difficulty string `json:"difficulty" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -79,7 +79,7 @@ func (ctrl *QuestionController) CreateQuestion(c *gin.Context) {
 	}
 
 	// 调用服务层创建题目
-	question, err := ctrl.questionService.CreateQuestion(userID, uint(bankID), req.Title, req.LeetcodeURL, req.Difficulty)
+	question, err := ctrl.questionService.CreateQuestion(userID, uint(bankID), req.Title, req.URL, req.Difficulty)
 	if err != nil {
 		switch err.Error() {
 		case "题库不存在或无权限添加题目":
@@ -127,7 +127,7 @@ func (ctrl *QuestionController) UpdateQuestion(c *gin.Context) {
 
 	var req struct {
 		Title          string `json:"title" binding:"required"`
-		LeetcodeURL    string `json:"leetcode_url" binding:"required"`
+		URL            string `json:"url" binding:"required"`
 		Difficulty     string `json:"difficulty" binding:"required"`
 		QuestionBankID uint   `json:"question_bank_id"` // 添加题库ID字段
 	}
@@ -138,7 +138,7 @@ func (ctrl *QuestionController) UpdateQuestion(c *gin.Context) {
 	}
 
 	// 更新题目信息
-	question, err := ctrl.questionService.UpdateQuestion(userID, uint(questionID), req.QuestionBankID, req.Title, req.LeetcodeURL, req.Difficulty)
+	question, err := ctrl.questionService.UpdateQuestion(userID, uint(questionID), req.QuestionBankID, req.Title, req.URL, req.Difficulty)
 
 	if err != nil {
 		switch err.Error() {

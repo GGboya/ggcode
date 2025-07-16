@@ -1494,7 +1494,7 @@
         const difficulty = document.getElementById('levelDifficultySelect').value;
         const questionTitle = document.getElementById('questionTitleInput').value.trim();
         const questionDescription = document.getElementById('questionDescriptionInput').value.trim();
-        const questionLeetcodeURL = document.getElementById('questionLeetcodeInput').value.trim();
+        const questionURL = document.getElementById('questionLeetcodeInput').value.trim();
 
         if (!name) {
             alert('请输入关卡名称');
@@ -1508,7 +1508,7 @@
                 difficulty: difficulty,
                 question_title: questionTitle || name + ' 题目',
                 question_description: questionDescription || '请在此处编写代码解决问题',
-                question_leetcode_url: questionLeetcodeURL
+                question_url: questionURL
             });
 
             if (response.data) {
@@ -1595,7 +1595,7 @@
                                         </div>
                                         <div class="mb-3">
                                             <label for="editQuestionLeetcode" class="form-label">LeetCode 链接</label>
-                                            <input type="url" class="form-control" id="editQuestionLeetcode" value="${levelData.question.leetcode_url || ''}" placeholder="https://leetcode.com/problems/...">
+                                            <input type="url" class="form-control" id="editQuestionLeetcode" value="${levelData.question.url || ''}" placeholder="https://leetcode.com/problems/...">
                                             <small class="form-text text-muted">仅供展示，不提供跳转</small>
                                         </div>
                                     </div>
@@ -1647,7 +1647,7 @@
         const difficulty = document.getElementById('editLevelDifficulty').value;
         const questionTitle = document.getElementById('editQuestionTitle').value.trim();
         const questionDescription = document.getElementById('editQuestionDescription').value.trim();
-        const questionLeetcodeUrl = document.getElementById('editQuestionLeetcode').value.trim();
+        const questionURL = document.getElementById('editQuestionLeetcode').value.trim();
 
         if (!name || !questionTitle) {
             showAlert('请填写关卡名称和题目标题', 'warning');
@@ -1660,7 +1660,7 @@
                 difficulty: difficulty,
                 question_title: questionTitle,
                 question_description: questionDescription,
-                question_leetcode_url: questionLeetcodeUrl
+                question_url: questionURL
             });
             
             showAlert('关卡详情已更新', 'success');

@@ -97,6 +97,36 @@
                         <label for="bankDescription" class="form-label">题库描述</label>
                         <textarea class="form-control" id="bankDescription" rows="3"></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label for="bankSource" class="form-label">题目来源（可选）</label>
+                        <select class="form-select" id="bankSource">
+                            <option value="">不导入比赛题目</option>
+                            <option value="leetcode">LeetCode</option>
+                            <option value="atcoder">AtCoder</option>
+                            <option value="codeforces">Codeforces</option>
+                            <option value="nowcoder">牛客</option>
+                        </select>
+                        <div class="form-text">如需导入比赛题目，请选择来源</div>
+                    </div>
+                    <div class="mb-3" id="scoreRangeGroup" style="display: none;">
+                        <div class="row g-2 align-items-center flex-nowrap">
+                            <div class="col-auto">
+                                <label for="minScore" class="col-form-label">分数区间</label>
+                            </div>
+                            <div class="col-auto">
+                                <input type="number" class="form-control" id="minScore" placeholder="最低分" style="width: 100px;">
+                            </div>
+                            <div class="col-auto">
+                                <span class="form-text">-</span>
+                            </div>
+                            <div class="col-auto">
+                                <input type="number" class="form-control" id="maxScore" placeholder="最高分" style="width: 100px;">
+                            </div>
+                            <div class="col-auto">
+                                <span class="form-text">（可选）</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
@@ -158,9 +188,9 @@
                         <input type="text" class="form-control" id="questionTitle" required>
                     </div>
                     <div class="mb-3">
-                        <label for="questionURL" class="form-label">LeetCode链接</label>
+                        <label for="questionURL" class="form-label">题目链接</label>
                         <input type="url" class="form-control" id="questionURL" required>
-                        <div class="form-text">请输入完整的LeetCode题目链接</div>
+                        <div class="form-text">请输入完整的原题链接（如 LeetCode/AtCoder/Codeforces/牛客等）</div>
                     </div>
                     <div class="mb-3">
                         <label for="questionDifficulty" class="form-label">难度</label>
@@ -200,9 +230,9 @@
                         <input type="text" class="form-control" id="editQuestionTitle" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editQuestionURL" class="form-label">LeetCode链接</label>
+                        <label for="editQuestionURL" class="form-label">题目链接</label>
                         <input type="url" class="form-control" id="editQuestionURL" required>
-                        <div class="form-text">请输入完整的LeetCode题目链接</div>
+                        <div class="form-text">请输入完整的原题链接（如 LeetCode/AtCoder/Codeforces/牛客等）</div>
                     </div>
                     <div class="mb-3">
                         <label for="editQuestionDifficulty" class="form-label">难度</label>
@@ -746,9 +776,7 @@ function renderQuestionsList(questions, bank, pagination) {
                         <span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
                     </div>
                     <div class="btn-group btn-group-sm">
-                        <a href="${q.leetcode_url}" target="_blank" class="btn btn-outline-primary">
-                            <i class="fas fa-external-link-alt"></i> 做题
-                        </a>
+                        <a href="${q.url}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm ms-2">查看题目链接</a>
                         ${canEditBank(bank) ? `
                             <button class="btn btn-outline-warning" onclick="editQuestion(${q.id})">
                                 <i class="fas fa-edit"></i> 编辑
@@ -841,11 +869,19 @@ document.getElementById('createBankForm').addEventListener('submit', async funct
     
     const name = document.getElementById('bankName').value;
     const description = document.getElementById('bankDescription').value;
+    const source = document.getElementById('bankSource').value;
+    const minScoreRaw = document.getElementById('minScore').value;
+    const maxScoreRaw = document.getElementById('maxScore').value;
+    const minScore = minScoreRaw === '' ? null : Number(minScoreRaw);
+    const maxScore = maxScoreRaw === '' ? null : Number(maxScoreRaw);
     
     try {
         await axios.post('/api/questionbanks', {
             name: name,
-            description: description
+            description: description,
+            source: source,
+            min_score: minScore,
+            max_score: maxScore
         });
         
         showAlert('题库创建成功！', 'success');
@@ -885,7 +921,7 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
     try {
         const response = await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
             title: title,
-            leetcode_url: url,
+            question_url: url,
             difficulty: difficulty
         });
         
@@ -948,7 +984,7 @@ function addQuestionToModal(newQuestion, modal) {
                     <span class="badge ${getDifficultyClass(newQuestion.difficulty)}">${newQuestion.difficulty}</span>
                 </div>
                 <div class="btn-group btn-group-sm">
-                    <a href="${newQuestion.leetcode_url}" target="_blank" class="btn btn-outline-primary">
+                    <a href="${newQuestion.question_url}" target="_blank" rel="noopener" class="btn btn-outline-primary">
                         <i class="fas fa-external-link-alt"></i> 做题
                     </a>
                     ${canEdit ? `
@@ -1068,7 +1104,7 @@ async function fetchQuestionDetails(questionId) {
         
         // 填充编辑表单
         document.getElementById('editQuestionTitle').value = question.title;
-        document.getElementById('editQuestionURL').value = question.leetcode_url;
+        document.getElementById('editQuestionURL').value = question.question_url;
         document.getElementById('editQuestionDifficulty').value = question.difficulty;
         
         // 保存当前编辑的题目ID
@@ -1117,7 +1153,7 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
     try {
         const response = await axios.put(`/api/questions/${window.currentQuestionId}`, {
             title: title,
-            leetcode_url: url,
+            question_url: url,
             difficulty: difficulty,
             question_bank_id: currentViewingBankId  // 添加题库ID
         });
@@ -1141,7 +1177,7 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
         updateQuestionInModal(response.data || {
             id: window.currentQuestionId,
             title: title,
-            leetcode_url: url,
+            question_url: url,
             difficulty: difficulty
         });
         
@@ -1174,7 +1210,7 @@ function updateQuestionInModal(updatedQuestion) {
                     titleElement.textContent = newTitleText;
                     difficultyElement.className = `badge ${getDifficultyClass(updatedQuestion.difficulty)}`;
                     difficultyElement.textContent = updatedQuestion.difficulty;
-                    linkElement.href = updatedQuestion.leetcode_url;
+                    linkElement.href = updatedQuestion.question_url;
                     
                     // 添加更新动画效果
                     item.style.transition = 'background-color 0.3s ease';
@@ -1624,6 +1660,16 @@ async function loadStarredBanks() {
     }
 }
 
+document.getElementById('bankSource').addEventListener('change', function() {
+    const scoreRangeGroup = document.getElementById('scoreRangeGroup');
+    if (this.value) {
+        scoreRangeGroup.style.display = '';
+    } else {
+        scoreRangeGroup.style.display = 'none';
+        document.getElementById('minScore').value = '';
+        document.getElementById('maxScore').value = '';
+    }
+});
 
 </script>
 {{end}} 

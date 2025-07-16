@@ -45,6 +45,7 @@ func Init() (*gorm.DB, error) {
 		&models.QuestionTag{},
 		&models.UserUnlockedTag{},
 		&models.DailyStudyPlanCache{},
+		&models.ContestProblem{}, // 新增
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %v", err)
@@ -89,16 +90,16 @@ func initOfficialData(db *gorm.DB) error {
 
 	// 添加部分 Hot 100 题目（示例）
 	questions := []models.Question{
-		{Title: "两数之和", LeetcodeURL: "https://leetcode.cn/problems/two-sum/", Difficulty: "Easy", QuestionBankID: officialBank.ID},
-		{Title: "两数相加", LeetcodeURL: "https://leetcode.cn/problems/add-two-numbers/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
-		{Title: "无重复字符的最长子串", LeetcodeURL: "https://leetcode.cn/problems/longest-substring-without-repeating-characters/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
-		{Title: "寻找两个正序数组的中位数", LeetcodeURL: "https://leetcode.cn/problems/median-of-two-sorted-arrays/", Difficulty: "Hard", QuestionBankID: officialBank.ID},
-		{Title: "最长回文子串", LeetcodeURL: "https://leetcode.cn/problems/longest-palindromic-substring/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
-		{Title: "盛最多水的容器", LeetcodeURL: "https://leetcode.cn/problems/container-with-most-water/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
-		{Title: "三数之和", LeetcodeURL: "https://leetcode.cn/problems/3sum/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
-		{Title: "电话号码的字母组合", LeetcodeURL: "https://leetcode.cn/problems/letter-combinations-of-a-phone-number/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
-		{Title: "四数之和", LeetcodeURL: "https://leetcode.cn/problems/4sum/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
-		{Title: "删除链表的倒数第N个结点", LeetcodeURL: "https://leetcode.cn/problems/remove-nth-node-from-end-of-list/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
+		{Title: "两数之和", URL: "https://leetcode.cn/problems/two-sum/", Difficulty: "Easy", QuestionBankID: officialBank.ID},
+		{Title: "两数相加", URL: "https://leetcode.cn/problems/add-two-numbers/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
+		{Title: "无重复字符的最长子串", URL: "https://leetcode.cn/problems/longest-substring-without-repeating-characters/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
+		{Title: "寻找两个正序数组的中位数", URL: "https://leetcode.cn/problems/median-of-two-sorted-arrays/", Difficulty: "Hard", QuestionBankID: officialBank.ID},
+		{Title: "最长回文子串", URL: "https://leetcode.cn/problems/longest-palindromic-substring/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
+		{Title: "盛最多水的容器", URL: "https://leetcode.cn/problems/container-with-most-water/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
+		{Title: "三数之和", URL: "https://leetcode.cn/problems/3sum/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
+		{Title: "电话号码的字母组合", URL: "https://leetcode.cn/problems/letter-combinations-of-a-phone-number/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
+		{Title: "四数之和", URL: "https://leetcode.cn/problems/4sum/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
+		{Title: "删除链表的倒数第N个结点", URL: "https://leetcode.cn/problems/remove-nth-node-from-end-of-list/", Difficulty: "Medium", QuestionBankID: officialBank.ID},
 	}
 
 	for _, question := range questions {

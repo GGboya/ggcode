@@ -17,11 +17,12 @@ type QuestionListResult struct {
 type QuestionRepository interface {
 	GetQuestions(bankID uint, page, limit int) (*QuestionListResult, error)
 	GetAllQuestions() ([]models.Question, error)
-	CreateQuestion(userID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error)
+	CreateQuestion(userID, bankID uint, title, URL, difficulty string) (*models.Question, error)
 	GetQuestion(questionID uint) (*models.Question, error)
-	UpdateQuestion(userID, questionID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error)
-	UpdateQuestionWithDescription(userID, questionID, bankID uint, title, leetcodeURL, difficulty, description string) (*models.Question, error)
+	UpdateQuestion(userID, questionID, bankID uint, title, URL, difficulty string) (*models.Question, error)
+	UpdateQuestionWithDescription(userID, questionID, bankID uint, title, URL, difficulty, description string) (*models.Question, error)
 	DeleteQuestion(userID, questionID, bankID uint) error
+	BatchCreateQuestions(questions []models.Question) error // 新增
 }
 
 type questionRepository struct {
@@ -87,7 +88,7 @@ func (r *questionRepository) GetAllQuestions() ([]models.Question, error) {
 }
 
 // CreateQuestion 在题库中创建题目
-func (r *questionRepository) CreateQuestion(userID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error) {
+func (r *questionRepository) CreateQuestion(userID, bankID uint, title, URL, difficulty string) (*models.Question, error) {
 	// 检查题库是否存在且属于当前用户
 	var questionBank models.QuestionBank
 	if err := r.db.Where("id = ? AND created_by = ?", bankID, userID).First(&questionBank).Error; err != nil {
@@ -118,7 +119,7 @@ func (r *questionRepository) CreateQuestion(userID, bankID uint, title, leetcode
 	// 创建题目
 	question := models.Question{
 		Title:          title,
-		LeetcodeURL:    leetcodeURL,
+		URL:            URL,
 		Difficulty:     difficulty,
 		QuestionBankID: bankID,
 	}
@@ -155,7 +156,7 @@ func (r *questionRepository) copyQuestionsFromOriginal(fromBankID, toBankID uint
 		oldID := q.ID
 		newQ := models.Question{
 			Title:          q.Title,
-			LeetcodeURL:    q.LeetcodeURL,
+			URL:            q.URL,
 			Difficulty:     q.Difficulty,
 			QuestionBankID: toBankID,
 		}
@@ -202,7 +203,7 @@ func (r *questionRepository) GetQuestion(questionID uint) (*models.Question, err
 }
 
 // UpdateQuestion 更新题目信息
-func (r *questionRepository) UpdateQuestion(userID, questionID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error) {
+func (r *questionRepository) UpdateQuestion(userID, questionID, bankID uint, title, URL, difficulty string) (*models.Question, error) {
 	var question models.Question
 	if err := r.db.Where("id = ?", questionID).First(&question).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -240,7 +241,7 @@ func (r *questionRepository) UpdateQuestion(userID, questionID, bankID uint, tit
 
 	// 更新题目字段
 	question.Title = title
-	question.LeetcodeURL = leetcodeURL
+	question.URL = URL
 	question.Difficulty = difficulty
 
 	if err := r.db.Save(&question).Error; err != nil {
@@ -251,7 +252,7 @@ func (r *questionRepository) UpdateQuestion(userID, questionID, bankID uint, tit
 }
 
 // UpdateQuestionWithDescription 更新题目信息（包含描述）
-func (r *questionRepository) UpdateQuestionWithDescription(userID, questionID, bankID uint, title, leetcodeURL, difficulty, description string) (*models.Question, error) {
+func (r *questionRepository) UpdateQuestionWithDescription(userID, questionID, bankID uint, title, URL, difficulty, description string) (*models.Question, error) {
 	var question models.Question
 	if err := r.db.Where("id = ?", questionID).First(&question).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -289,7 +290,7 @@ func (r *questionRepository) UpdateQuestionWithDescription(userID, questionID, b
 
 	// 更新题目字段
 	question.Title = title
-	question.LeetcodeURL = leetcodeURL
+	question.URL = URL
 	question.Difficulty = difficulty
 
 	if err := r.db.Save(&question).Error; err != nil {
@@ -370,4 +371,45 @@ func (r *questionRepository) DeleteQuestion(userID, questionID, bankID uint) err
 	}
 
 	return tx.Commit().Error
+}
+
+// BatchCreateQuestions 批量创建题目
+func (r *questionRepository) BatchCreateQuestions(questions []models.Question) error {
+	if len(questions) == 0 {
+		return nil
+	}
+	return r.db.Create(&questions).Error
+}
+
+// ContestProblemRepository 比赛题目仓库接口
+// 支持按来源和分数区间筛选
+type ContestProblemRepository interface {
+	ListContestProblems(source string, minScore, maxScore int) ([]models.ContestProblem, error)
+}
+
+type contestProblemRepository struct {
+	db *gorm.DB
+}
+
+func NewContestProblemRepository(db *gorm.DB) ContestProblemRepository {
+	return &contestProblemRepository{db: db}
+}
+
+// ListContestProblems 按来源和分数区间筛选比赛题目
+func (r *contestProblemRepository) ListContestProblems(source string, minScore, maxScore int) ([]models.ContestProblem, error) {
+	var problems []models.ContestProblem
+	query := r.db.Model(&models.ContestProblem{})
+	if source != "" {
+		query = query.Where("source = ?", source)
+	}
+	if minScore > 0 {
+		query = query.Where("score >= ?", minScore)
+	}
+	if maxScore > 0 {
+		query = query.Where("score <= ?", maxScore)
+	}
+	if err := query.Find(&problems).Error; err != nil {
+		return nil, err
+	}
+	return problems, nil
 }

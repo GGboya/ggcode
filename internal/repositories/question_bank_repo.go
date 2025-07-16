@@ -241,8 +241,8 @@ func (r *questionBankRepository) AddQuestionToWrongBook(userID, questionID uint)
 
 	// 检查题目是否已经在错题本中
 	var existingQuestion models.Question
-	err = r.db.Where("question_bank_id = ? AND title = ? AND leetcode_url = ?",
-		wrongBook.ID, originalQuestion.Title, originalQuestion.LeetcodeURL).First(&existingQuestion).Error
+	err = r.db.Where("question_bank_id = ? AND title = ? AND url = ?",
+		wrongBook.ID, originalQuestion.Title, originalQuestion.URL).First(&existingQuestion).Error
 
 	if err == nil {
 		// 题目已存在，不重复添加
@@ -256,7 +256,7 @@ func (r *questionBankRepository) AddQuestionToWrongBook(userID, questionID uint)
 	// 创建新的错题记录
 	wrongQuestion := models.Question{
 		Title:          originalQuestion.Title,
-		LeetcodeURL:    originalQuestion.LeetcodeURL,
+		URL:            originalQuestion.URL,
 		Difficulty:     originalQuestion.Difficulty,
 		QuestionBankID: wrongBook.ID,
 	}

@@ -124,7 +124,7 @@ func duplicateQuestions(tx *gorm.DB, fromBankID, toBankID uint) error {
 	for _, q := range originalQuestions {
 		newQ := models.Question{
 			Title:          q.Title,
-			LeetcodeURL:    q.LeetcodeURL,
+			URL:            q.URL,
 			Difficulty:     q.Difficulty,
 			QuestionBankID: toBankID,
 		}

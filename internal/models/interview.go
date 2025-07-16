@@ -30,7 +30,7 @@ type InterviewLevel struct {
 	// 题目内容（直接在关卡中存储）
 	QuestionTitle       string `json:"question_title" gorm:"not null"`        // 题目标题
 	QuestionDescription string `json:"question_description" gorm:"type:text"` // 题目描述
-	QuestionLeetcodeURL string `json:"question_leetcode_url"`                 // LeetCode链接（可选）
+	QuestionURL         string `json:"question_url"`                          // LeetCode链接（可选）
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

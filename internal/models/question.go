@@ -6,7 +6,7 @@ import "time"
 type Question struct {
 	ID             uint         `json:"id" gorm:"primaryKey"`
 	Title          string       `json:"title" gorm:"not null"`
-	LeetcodeURL    string       `json:"leetcode_url" gorm:"not null"`
+	URL            string       `json:"url" gorm:"not null"`
 	Difficulty     string       `json:"difficulty" gorm:"not null"` // Easy, Medium, Hard
 	QuestionBankID uint         `json:"question_bank_id"`
 	QuestionBank   QuestionBank `json:"question_bank" gorm:"foreignKey:QuestionBankID"`
@@ -61,4 +61,18 @@ type DailyStudyPlanCache struct {
 	// 关联关系
 	User      User          `json:"user" gorm:"foreignKey:UserID"`
 	StudyPlan UserStudyPlan `gorm:"foreignKey:StudyPlanID"`
+}
+
+// ContestProblem 比赛题目模型
+// 用于从外部平台导入题库
+// Source: leetcode, atcoder, codeforces, nowcoder
+// Score: 题目分数（如100, 200等）
+type ContestProblem struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Source    string    `json:"source" gorm:"not null"` // leetcode, atcoder, codeforces, nowcoder
+	Title     string    `json:"title" gorm:"not null"`
+	Score     *float64  `json:"score" gorm:"not null"`
+	URL       string    `json:"url"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

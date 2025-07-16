@@ -54,6 +54,9 @@ func (ctrl *QuestionBankController) CreateQuestionBank(c *gin.Context) {
 	var req struct {
 		Name        string `json:"name" binding:"required"`
 		Description string `json:"description"`
+		Source      string `json:"source"`
+		MinScore    *int   `json:"min_score"`
+		MaxScore    *int   `json:"max_score"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -61,7 +64,16 @@ func (ctrl *QuestionBankController) CreateQuestionBank(c *gin.Context) {
 		return
 	}
 
-	questionBank, err := ctrl.questionBankService.CreateQuestionBank(req.Name, req.Description, userID)
+	minScore := 0
+	if req.MinScore != nil {
+		minScore = *req.MinScore
+	}
+	maxScore := 0
+	if req.MaxScore != nil {
+		maxScore = *req.MaxScore
+	}
+
+	questionBank, err := ctrl.questionBankService.CreateQuestionBankWithImport(req.Name, req.Description, userID, req.Source, minScore, maxScore)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建题库失败"})
 		return

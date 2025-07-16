@@ -13,6 +13,7 @@ type Repositories struct {
 	// Progress     ProgressRepository
 	// CheckIn      CheckInRepository
 	// Star         StarRepository
+	ContestProblem ContestProblemRepository
 }
 
 // NewRepositories 创建所有仓库实例
@@ -27,5 +28,6 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		// Progress:     NewProgressRepository(db),
 		// CheckIn:      NewCheckInRepository(db),
 		// Star:         NewStarRepository(db),
+		ContestProblem: NewContestProblemRepository(db),
 	}
 }

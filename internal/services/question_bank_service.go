@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 )
@@ -28,11 +29,17 @@ type PaginationResponse struct {
 }
 
 type QuestionBankService struct {
-	questionBankRepo repositories.QuestionBankRepository
+	questionBankRepo   repositories.QuestionBankRepository
+	contestProblemRepo repositories.ContestProblemRepository
+	questionRepo       repositories.QuestionRepository // 新增
 }
 
 func NewQuestionBankService(repos *repositories.Repositories) *QuestionBankService {
-	return &QuestionBankService{questionBankRepo: repos.QuestionBank}
+	return &QuestionBankService{
+		questionBankRepo:   repos.QuestionBank,
+		contestProblemRepo: repos.ContestProblem,
+		questionRepo:       repos.Question, // 新增
+	}
 }
 
 // GetQuestionBanks 获取题库列表
@@ -119,4 +126,29 @@ func (s *QuestionBankService) GetOrCreateWrongQuestionBook(userID uint) (*models
 // AddQuestionToWrongBook 添加题目到错题本
 func (s *QuestionBankService) AddQuestionToWrongBook(userID, questionID uint) error {
 	return s.questionBankRepo.AddQuestionToWrongBook(userID, questionID)
+}
+
+// CreateQuestionBankWithImport 创建题库并可选导入比赛题目
+func (s *QuestionBankService) CreateQuestionBankWithImport(name, description string, userID uint, source string, minScore, maxScore int) (*models.QuestionBank, error) {
+	bank, err := s.questionBankRepo.CreateQuestionBank(name, description, userID)
+	if err != nil {
+		return nil, err
+	}
+	if source != "" && s.contestProblemRepo != nil {
+		problems, err := s.contestProblemRepo.ListContestProblems(source, minScore, maxScore)
+		if err != nil {
+			return bank, nil // 不影响主流程
+		}
+		var questions []models.Question
+		for _, p := range problems {
+			questions = append(questions, models.Question{
+				Title:          p.Title,
+				URL:            p.URL,
+				QuestionBankID: bank.ID,
+			})
+		}
+		fmt.Println(len(questions))
+		_ = s.questionRepo.BatchCreateQuestions(questions)
+	}
+	return bank, nil
 }

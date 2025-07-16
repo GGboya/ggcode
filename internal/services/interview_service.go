@@ -27,10 +27,10 @@ type InterviewService interface {
 	DeleteIsland(id uint) error
 
 	// 关卡管理（管理员）
-	CreateLevel(islandID uint, name, difficulty, questionTitle, questionDescription, questionLeetcodeURL string) (*models.InterviewLevel, error)
+	CreateLevel(islandID uint, name, difficulty, questionTitle, questionDescription, questionURL string) (*models.InterviewLevel, error)
 	UpdateLevel(levelID uint, name string) error
 	UpdateLevelBasic(levelID uint, name, difficulty string) error
-	UpdateLevelQuestion(levelID uint, questionTitle, questionDescription, questionLeetcodeURL string) error
+	UpdateLevelQuestion(levelID uint, questionTitle, questionDescription, questionURL string) error
 	DeleteLevel(levelID uint) error
 
 	// 代码执行和判题
@@ -184,10 +184,10 @@ func (s *interviewService) GetLevelDetail(userID, levelID uint) (*LevelDetailRes
 
 	// 构造题目信息
 	question := models.Question{
-		ID:          level.ID, // 使用关卡ID作为题目ID
-		Title:       level.QuestionTitle,
-		LeetcodeURL: level.QuestionLeetcodeURL,
-		Difficulty:  level.Difficulty,
+		ID:         level.ID, // 使用关卡ID作为题目ID
+		Title:      level.QuestionTitle,
+		URL:        level.QuestionURL,
+		Difficulty: level.Difficulty,
 	}
 
 	return &LevelDetailResponse{
@@ -222,10 +222,10 @@ func (s *interviewService) GetLevelDetailForAdmin(userID, levelID uint) (*LevelD
 
 	// 构造题目信息
 	question := models.Question{
-		ID:          level.ID, // 使用关卡ID作为题目ID
-		Title:       level.QuestionTitle,
-		LeetcodeURL: level.QuestionLeetcodeURL,
-		Difficulty:  level.Difficulty,
+		ID:         level.ID, // 使用关卡ID作为题目ID
+		Title:      level.QuestionTitle,
+		URL:        level.QuestionURL,
+		Difficulty: level.Difficulty,
 	}
 
 	return &LevelDetailResponse{
@@ -580,7 +580,7 @@ func (s *interviewService) UpdateIsland(id uint, name, description string) error
 }
 
 // CreateLevel 创建新关卡
-func (s *interviewService) CreateLevel(islandID uint, name, difficulty, questionTitle, questionDescription, questionLeetcodeURL string) (*models.InterviewLevel, error) {
+func (s *interviewService) CreateLevel(islandID uint, name, difficulty, questionTitle, questionDescription, questionURL string) (*models.InterviewLevel, error) {
 	// 获取当前岛屿的最大关卡号
 	maxLevelNum, err := s.repo.GetMaxLevelNum(islandID)
 	if err != nil {
@@ -594,7 +594,7 @@ func (s *interviewService) CreateLevel(islandID uint, name, difficulty, question
 		LevelNum:            maxLevelNum + 1,
 		QuestionTitle:       questionTitle,
 		QuestionDescription: questionDescription,
-		QuestionLeetcodeURL: questionLeetcodeURL,
+		QuestionURL:         questionURL,
 		IsUnlocked:          false,
 	}
 
@@ -668,14 +668,14 @@ func (s *interviewService) DeleteLevel(levelID uint) error {
 }
 
 // UpdateLevelQuestion 更新关卡题目
-func (s *interviewService) UpdateLevelQuestion(levelID uint, questionTitle, questionDescription, questionLeetcodeURL string) error {
+func (s *interviewService) UpdateLevelQuestion(levelID uint, questionTitle, questionDescription, questionURL string) error {
 	level, err := s.repo.GetLevelByID(levelID)
 	if err != nil {
 		return err
 	}
 	level.QuestionTitle = questionTitle
 	level.QuestionDescription = questionDescription
-	level.QuestionLeetcodeURL = questionLeetcodeURL
+	level.QuestionURL = questionURL
 	return s.repo.UpdateLevel(level)
 }
 
