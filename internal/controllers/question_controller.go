@@ -68,9 +68,10 @@ func (ctrl *QuestionController) CreateQuestion(c *gin.Context) {
 	}
 
 	var req struct {
-		Title      string `json:"title" binding:"required"`
-		URL        string `json:"url" binding:"required"`
-		Difficulty string `json:"difficulty" binding:"required"`
+		Title      string  `json:"title" binding:"required"`
+		URL        string  `json:"url" binding:"required"`
+		Difficulty string  `json:"difficulty" binding:"required"`
+		Score      float64 `json:"score"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -79,7 +80,7 @@ func (ctrl *QuestionController) CreateQuestion(c *gin.Context) {
 	}
 
 	// 调用服务层创建题目
-	question, err := ctrl.questionService.CreateQuestion(userID, uint(bankID), req.Title, req.URL, req.Difficulty)
+	question, err := ctrl.questionService.CreateQuestion(userID, uint(bankID), req.Title, req.URL, req.Difficulty, req.Score)
 	if err != nil {
 		switch err.Error() {
 		case "题库不存在或无权限添加题目":

@@ -13,6 +13,7 @@ type Question struct {
 	TestCases      []TestCase   `json:"test_cases" gorm:"foreignKey:QuestionID"` // 关联的测试用例
 	// 与算法知识点的多对多关系
 	Tags      []AlgoTag `json:"tags" gorm:"many2many:question_tags;"`
+	Score     float64   `json:"score" gorm:"not null"` // 新增
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -71,7 +72,7 @@ type ContestProblem struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
 	Source    string    `json:"source" gorm:"not null"` // leetcode, atcoder, codeforces, nowcoder
 	Title     string    `json:"title" gorm:"not null"`
-	Score     *float64  `json:"score" gorm:"not null"`
+	Score     float64   `json:"score" gorm:"not null"`
 	URL       string    `json:"url"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

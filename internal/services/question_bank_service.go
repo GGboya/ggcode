@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 )
@@ -145,9 +144,9 @@ func (s *QuestionBankService) CreateQuestionBankWithImport(name, description str
 				Title:          p.Title,
 				URL:            p.URL,
 				QuestionBankID: bank.ID,
+				Score:          p.Score,
 			})
 		}
-		fmt.Println(len(questions))
 		_ = s.questionRepo.BatchCreateQuestions(questions)
 	}
 	return bank, nil

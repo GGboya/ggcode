@@ -17,7 +17,7 @@ type QuestionListResult struct {
 type QuestionRepository interface {
 	GetQuestions(bankID uint, page, limit int) (*QuestionListResult, error)
 	GetAllQuestions() ([]models.Question, error)
-	CreateQuestion(userID, bankID uint, title, URL, difficulty string) (*models.Question, error)
+	CreateQuestion(userID, bankID uint, title, URL, difficulty string, score float64) (*models.Question, error)
 	GetQuestion(questionID uint) (*models.Question, error)
 	UpdateQuestion(userID, questionID, bankID uint, title, URL, difficulty string) (*models.Question, error)
 	UpdateQuestionWithDescription(userID, questionID, bankID uint, title, URL, difficulty, description string) (*models.Question, error)
@@ -88,7 +88,7 @@ func (r *questionRepository) GetAllQuestions() ([]models.Question, error) {
 }
 
 // CreateQuestion 在题库中创建题目
-func (r *questionRepository) CreateQuestion(userID, bankID uint, title, URL, difficulty string) (*models.Question, error) {
+func (r *questionRepository) CreateQuestion(userID, bankID uint, title, URL, difficulty string, score float64) (*models.Question, error) {
 	// 检查题库是否存在且属于当前用户
 	var questionBank models.QuestionBank
 	if err := r.db.Where("id = ? AND created_by = ?", bankID, userID).First(&questionBank).Error; err != nil {
@@ -122,6 +122,7 @@ func (r *questionRepository) CreateQuestion(userID, bankID uint, title, URL, dif
 		URL:            URL,
 		Difficulty:     difficulty,
 		QuestionBankID: bankID,
+		Score:          score, // 新增
 	}
 
 	if err := r.db.Create(&question).Error; err != nil {
@@ -159,6 +160,7 @@ func (r *questionRepository) copyQuestionsFromOriginal(fromBankID, toBankID uint
 			URL:            q.URL,
 			Difficulty:     q.Difficulty,
 			QuestionBankID: toBankID,
+			Score:          q.Score, // 新增
 		}
 
 		// 在事务中创建新题目
@@ -378,6 +380,7 @@ func (r *questionRepository) BatchCreateQuestions(questions []models.Question) e
 	if len(questions) == 0 {
 		return nil
 	}
+
 	return r.db.Create(&questions).Error
 }
 

@@ -49,8 +49,8 @@ func (s *QuestionService) GetAllQuestions() ([]models.Question, error) {
 }
 
 // CreateQuestion 在题库中创建题目
-func (s *QuestionService) CreateQuestion(userID, bankID uint, title, URL, difficulty string) (*models.Question, error) {
-	return s.questionRepo.CreateQuestion(userID, bankID, title, URL, difficulty)
+func (s *QuestionService) CreateQuestion(userID, bankID uint, title, URL, difficulty string, score float64) (*models.Question, error) {
+	return s.questionRepo.CreateQuestion(userID, bankID, title, URL, difficulty, score)
 }
 
 // GetQuestion 获取单个题目
