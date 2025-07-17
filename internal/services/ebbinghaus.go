@@ -61,6 +61,7 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) (*DailyQ
 	}
 
 	questionBank := studyPlan.QuestionBank
+	// 使用服务器本地时区（北京时间）
 	today := time.Now().Truncate(24 * time.Hour)
 
 	// 确定实际使用的题库ID
@@ -383,8 +384,8 @@ func (s *EbbinghausService) GetAllQuestionBanksProgress(userID uint) ([]Question
 
 // CheckInToday 今日打卡
 func (s *EbbinghausService) CheckInToday(userID uint) error {
-	// 明确使用UTC时间，避免时区问题
-	today := time.Now().UTC().Truncate(24 * time.Hour)
+	// 使用服务器本地时区（北京时间）
+	today := time.Now().Truncate(24 * time.Hour)
 
 	// 检查今日是否已打卡
 	var existingCheckIn models.UserCheckIn
@@ -432,8 +433,8 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 // GetCheckInStats 获取打卡统计
 func (s *EbbinghausService) GetCheckInStats(userID uint) (*CheckInStats, error) {
 	var stats CheckInStats
-	// 明确使用UTC时间，避免时区问题
-	today := time.Now().UTC().Truncate(24 * time.Hour)
+	// 使用服务器本地时区（北京时间）
+	today := time.Now().Truncate(24 * time.Hour)
 
 	// 检查今日是否已打卡，同时获取连续天数和最长连续天数
 	var todayCheckIn models.UserCheckIn
