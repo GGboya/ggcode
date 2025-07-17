@@ -1,5 +1,23 @@
 # GGCode - 智能算法学习平台
 
+<div align="center">
+
+
+## 📈 GitHub Star History
+
+<div align="center">
+
+![GitHub Star History Chart](https://api.star-history.com/svg?repos=GGboya/ggcode&type=Date)
+## 📈 最近开发活动
+
+[![GitHub Activity](https://github-readme-activity-graph.vercel.app/graph?username=GGboya&repo=ggcode&theme=radical&hide_border=true&area=true&custom_title=GGCode%20开发活动)](https://github.com/GGboya/ggcode)
+
+</div>
+
+
+</div>
+
+
 ## 🎯 项目简介
 
 GGCode 是基于艾宾浩斯遗忘曲线理论的智能算法学习平台，帮助程序员科学高效地掌握算法题目。
