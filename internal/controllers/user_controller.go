@@ -8,11 +8,11 @@ import (
 )
 
 type UserController struct {
-	userService *services.UserService
+	userService services.UserServiceInterface
 }
 
-func NewUserController(services *services.Services) *UserController {
-	return &UserController{userService: services.User}
+func NewUserController(userService services.UserServiceInterface) *UserController {
+	return &UserController{userService: userService}
 }
 
 func (ctrl *UserController) Login(c *gin.Context) {

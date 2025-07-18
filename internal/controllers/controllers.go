@@ -18,7 +18,7 @@ type Controllers struct {
 // NewControllers 创建所有控制器实例
 func NewControllers(services *services.Services) *Controllers {
 	return &Controllers{
-		User:         NewUserController(services),
+		User:         NewUserController(services.User),
 		QuestionBank: NewQuestionBankController(services),
 		Question:     NewQuestionController(services),
 		StudyPlan:    NewStudyPlanController(services),

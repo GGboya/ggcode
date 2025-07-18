@@ -10,6 +10,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// UserServiceInterface 定义用户服务接口，便于 controller 解耦和单元测试
+//go:generate mockgen -source=user_service.go -destination=../../mocks/mock_user_service.go -package=mocks
+// 你可以用 mockgen 工具生成 mock 实现
+
+type UserServiceInterface interface {
+	Register(username, email, password string) (*models.User, string, error)
+	Login(username, password string) (*models.User, string, error)
+	IsAdmin(userID uint) (bool, error)
+	// 可以根据需要补充更多接口方法
+}
+
 type UserService struct {
 	userRepo repositories.UserRepository
 }
@@ -86,3 +97,6 @@ func (s *UserService) IsAdmin(userID uint) (bool, error) {
 // func (s *UserService) GetUserByID(id uint) (*models.User, error) {
 // 	return s.userRepo.GetByID(id)
 // }
+
+// UserService 实现 UserServiceInterface
+var _ UserServiceInterface = (*UserService)(nil)
