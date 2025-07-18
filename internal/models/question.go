@@ -77,3 +77,17 @@ type ContestProblem struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// QuestionWithProgress 带学习进度的题目
+type QuestionWithProgress struct {
+	Question Question             `json:"question"`
+	Progress UserQuestionProgress `json:"progress"`
+	IsReview bool                 `json:"is_review"` // 是否是复习题目
+	Score    int                  `json:"score"`     // 题目得分
+}
+
+type DailyQuestionsResponse struct {
+	Questions []QuestionWithProgress `json:"questions"`
+	Start     int                    `json:"start"`
+	Total     int                    `json:"total"`
+}

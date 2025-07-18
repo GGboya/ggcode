@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"ggcode/internal/mocks"
+	mocks "ggcode/internal/mocks/repositories"
 	"ggcode/internal/models"
 
 	"github.com/golang/mock/gomock"

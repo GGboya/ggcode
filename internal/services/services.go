@@ -32,7 +32,7 @@ func NewServices(repos *repositories.Repositories, db *gorm.DB) *Services {
 		User:         NewUserService(repos),
 		QuestionBank: NewQuestionBankService(repos),
 		Question:     NewQuestionService(repos),
-		StudyPlan:    NewStudyPlanService(repos, ebbinghausService),
+		StudyPlan:    NewStudyPlanService(repos),
 		Share:        NewShareService(repos),
 		Progress:     NewProgressService(repos, ebbinghausService),
 		Ebbinghaus:   ebbinghausService,
