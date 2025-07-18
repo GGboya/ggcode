@@ -23,6 +23,7 @@ type QuestionRepository interface {
 	UpdateQuestionWithDescription(userID, questionID, bankID uint, title, URL, difficulty, description string) (*models.Question, error)
 	DeleteQuestion(userID, questionID, bankID uint) error
 	BatchCreateQuestions(questions []models.Question) error // 新增
+	GetQuestionCount(questionBankID uint) (int64, error)    // 统计题库题目数量
 }
 
 type questionRepository struct {
@@ -382,6 +383,13 @@ func (r *questionRepository) BatchCreateQuestions(questions []models.Question) e
 	}
 
 	return r.db.Create(&questions).Error
+}
+
+// GetQuestionCount 统计题库题目数量
+func (r *questionRepository) GetQuestionCount(questionBankID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBankID).Count(&count).Error
+	return count, err
 }
 
 // ContestProblemRepository 比赛题目仓库接口

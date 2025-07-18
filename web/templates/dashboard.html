@@ -385,7 +385,7 @@ function animateCards() {
 // 加载统计信息
 async function loadStats() {
     try {
-        const response = await axios.get('/api/study-stats');
+        const response = await axios.get('/api/user-question/stats');
         const stats = response.data;
         
         // 更新统计数字
@@ -580,7 +580,7 @@ function renderMainStudyPlans(studyPlans) {
 async function loadStudyProgressSummary() {
     try {
         const [statsResponse, progressResponse] = await Promise.all([
-            axios.get('/api/study-stats'),
+            axios.get('/api/user-question/stats'),
             axios.get('/api/questionbanks-progress')
         ]);
         

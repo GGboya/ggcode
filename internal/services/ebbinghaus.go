@@ -61,8 +61,9 @@ func (s *EbbinghausService) GetDailyQuestions(userID, studyPlanID uint) (*DailyQ
 	}
 
 	questionBank := studyPlan.QuestionBank
-	// 使用服务器本地时区（北京时间）
-	today := time.Now().Truncate(24 * time.Hour)
+	// 使用本地时区获取今天的开始时间
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	// 确定实际使用的题库ID
 	actualQuestionBankID := questionBank.ID
@@ -384,8 +385,9 @@ func (s *EbbinghausService) GetAllQuestionBanksProgress(userID uint) ([]Question
 
 // CheckInToday 今日打卡
 func (s *EbbinghausService) CheckInToday(userID uint) error {
-	// 使用服务器本地时区（北京时间）
-	today := time.Now().Truncate(24 * time.Hour)
+	// 使用本地时区获取今天的开始时间
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	// 检查今日是否已打卡
 	var existingCheckIn models.UserCheckIn
@@ -405,7 +407,7 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 		// 昨天有打卡，连续天数 = 昨天的连续天数 + 1
 		consecutiveDays = yesterdayCheckIn.ConsecutiveDays + 1
 		// 最长连续天数 = max(当前连续天数, 昨天的最长连续天数)
-		bestStreak = max(consecutiveDays, yesterdayCheckIn.BestStreak)
+		bestStreak = int(max(int64(consecutiveDays), int64(yesterdayCheckIn.BestStreak)))
 	} else {
 		// 昨天没打卡，获取最近的一条记录来获取历史最长连续天数
 		var latestCheckIn models.UserCheckIn
@@ -414,7 +416,7 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 			First(&latestCheckIn).Error
 		if err == nil {
 			// 有历史记录，使用历史最长连续天数
-			bestStreak = max(1, latestCheckIn.BestStreak)
+			bestStreak = int(max(1, int64(latestCheckIn.BestStreak)))
 		}
 		// 如果没有历史记录，bestStreak 保持默认值 1
 	}
@@ -433,8 +435,9 @@ func (s *EbbinghausService) CheckInToday(userID uint) error {
 // GetCheckInStats 获取打卡统计
 func (s *EbbinghausService) GetCheckInStats(userID uint) (*CheckInStats, error) {
 	var stats CheckInStats
-	// 使用服务器本地时区（北京时间）
-	today := time.Now().Truncate(24 * time.Hour)
+	// 使用本地时区获取今天的开始时间
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	// 检查今日是否已打卡，同时获取连续天数和最长连续天数
 	var todayCheckIn models.UserCheckIn
@@ -663,7 +666,8 @@ func (s *EbbinghausService) GetStudyHeatmap(userID uint) (*HeatmapResponse, erro
 	}
 
 	// 填充过去一年的每一天，包括今天
-	tomorrow := time.Now().AddDate(0, 0, 1).Truncate(24 * time.Hour)
+	now := time.Now()
+	tomorrow := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
 	for currentDate.Before(tomorrow) {
 		dateStr := currentDate.Format("2006-01-02")
 		count := int(statsMap[dateStr])
@@ -748,7 +752,9 @@ func (s *EbbinghausService) GetStudyHeatmap(userID uint) (*HeatmapResponse, erro
 
 // generateDailyQuestions 生成每日学习题目
 func (s *EbbinghausService) generateDailyQuestions(userID, questionBankID uint, dailyCount int) ([]QuestionWithProgress, error) {
-	today := time.Now().Truncate(24 * time.Hour)
+	// 使用本地时区获取今天的开始时间
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	// 1. 获取需要复习的题目（根据艾宾浩斯遗忘曲线）
 	var reviewQuestions []QuestionWithProgress

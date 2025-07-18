@@ -306,8 +306,7 @@ function showCurrentQuestion(index) {
 // 完成题目处理
 async function completeQuestion(questionId, resultType) {
     try {
-        const response = await axios.post('/api/complete-question', {
-            question_id: questionId,
+        const response = await axios.post(`/api/user-question/${questionId}/complete`, {
             result_type: resultType
         });
         showAlert(response.data.message, 'success');

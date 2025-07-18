@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"ggcode/internal/mocks"
+	mocks "ggcode/internal/mocks/services"
 	"ggcode/internal/models"
 
 	"github.com/gin-gonic/gin"

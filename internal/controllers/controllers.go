@@ -13,6 +13,7 @@ type Controllers struct {
 	Page         *PageController
 	Interview    *InterviewController
 	GoJudge      *GoJudgeController
+	UserQuestion *UserQuestionController
 }
 
 // NewControllers 创建所有控制器实例
@@ -21,11 +22,12 @@ func NewControllers(services *services.Services) *Controllers {
 		User:         NewUserController(services.User),
 		QuestionBank: NewQuestionBankController(services),
 		Question:     NewQuestionController(services),
-		StudyPlan:    NewStudyPlanController(services),
+		StudyPlan:    NewStudyPlanController(services.StudyPlan),
 		Progress:     NewProgressController(services),
 		Share:        NewShareController(services),
 		Page:         NewPageController(),
 		Interview:    NewInterviewController(services),
 		GoJudge:      NewGoJudgeController(services.GoJudge, services.Interview),
+		UserQuestion: NewUserQuestionController(services.UserQuestion),
 	}
 }

@@ -10,14 +10,12 @@ import (
 )
 
 type StudyPlanController struct {
-	studyPlanService    *services.StudyPlanService
-	questionBankService *services.QuestionBankService
+	studyPlanService services.StudyPlanServiceInterface
 }
 
-func NewStudyPlanController(services *services.Services) *StudyPlanController {
+func NewStudyPlanController(studyPlanService services.StudyPlanServiceInterface) *StudyPlanController {
 	return &StudyPlanController{
-		studyPlanService:    services.StudyPlan,
-		questionBankService: services.QuestionBank,
+		studyPlanService: studyPlanService,
 	}
 }
 
@@ -199,88 +197,4 @@ func (ctrl *StudyPlanController) GetDailyQuestions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, questions)
-}
-
-// GetRandomMasteredQuestions 获取随机掌握题目
-func (ctrl *StudyPlanController) GetRandomMasteredQuestions(c *gin.Context) {
-	planIDStr := c.Param("id")
-	planID, err := strconv.ParseUint(planIDStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的学习计划ID"})
-		return
-	}
-
-	userID := c.GetUint("user_id")
-
-	// 获取指定数量，默认获取学习计划的daily_count数量
-	studyPlan, err := ctrl.studyPlanService.GetStudyPlan(uint(planID), userID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "学习计划不存在"})
-		return
-	}
-
-	questions, err := ctrl.studyPlanService.GetRandomMasteredQuestions(userID, uint(planID), studyPlan.DailyCount)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, questions)
-}
-
-// CompleteQuestion 完成题目
-func (ctrl *StudyPlanController) CompleteQuestion(c *gin.Context) {
-	userID := c.GetUint("user_id")
-
-	var req struct {
-		QuestionID uint   `json:"question_id" binding:"required"`
-		ResultType string `json:"result_type" binding:"required"` // "ac" 或 "failed"
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	err := ctrl.studyPlanService.CompleteQuestion(userID, req.QuestionID, req.ResultType)
-	if err != nil {
-		if err.Error() == "无效的结果类型" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 如果用户选择"未掌握"，添加到错题本
-	if req.ResultType == "failed" {
-		err = ctrl.questionBankService.AddQuestionToWrongBook(userID, req.QuestionID)
-		if err != nil {
-			// 错题本添加失败不影响主流程，只记录日志
-			// 这里可以添加日志记录
-		}
-	}
-
-	// 根据结果类型返回不同的消息
-	message := "题目完成"
-	if req.ResultType == "ac" {
-		message = "恭喜独立AC！已自动打卡"
-	} else {
-		message = "学习记录已保存，已添加到错题本！已自动打卡"
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": message})
-}
-
-// GetStudyStats 获取学习统计
-func (ctrl *StudyPlanController) GetStudyStats(c *gin.Context) {
-	userID := c.GetUint("user_id")
-
-	stats, err := ctrl.studyPlanService.GetStudyStats(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, stats)
 }

@@ -11,9 +11,11 @@ type Repositories struct {
 	Share        ShareRepository
 	Interview    InterviewRepository
 	// Progress     ProgressRepository
-	// CheckIn      CheckInRepository
+	CheckIn   CheckInRepository
+	UserStats UserStatsRepository
 	// Star         StarRepository
 	ContestProblem ContestProblemRepository
+	UserQuestion   UserQuestionRepository
 }
 
 // NewRepositories 创建所有仓库实例
@@ -26,8 +28,10 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		Share:        NewShareRepository(db),
 		Interview:    NewInterviewRepository(db),
 		// Progress:     NewProgressRepository(db),
-		// CheckIn:      NewCheckInRepository(db),
+		CheckIn:   NewCheckInRepository(db),
+		UserStats: NewUserStatsRepository(db),
 		// Star:         NewStarRepository(db),
 		ContestProblem: NewContestProblemRepository(db),
+		UserQuestion:   NewUserQuestionRepository(db),
 	}
 }

@@ -129,9 +129,6 @@ func (s *Server) setupRoutes() {
 
 			// 艾宾浩斯算法相关
 			api.GET("/study-plan/:id/daily-questions", ctrl.StudyPlan.GetDailyQuestions)
-			api.GET("/study-plan/:id/random-mastered-questions", ctrl.StudyPlan.GetRandomMasteredQuestions)
-			api.POST("/complete-question", ctrl.StudyPlan.CompleteQuestion)
-			api.GET("/study-stats", ctrl.StudyPlan.GetStudyStats)
 
 			// 学习进度相关
 			api.GET("/questionbanks/:id/progress", ctrl.Progress.GetQuestionBankProgress)
@@ -173,6 +170,13 @@ func (s *Server) setupRoutes() {
 				goJudge.GET("/health", ctrl.GoJudge.HealthCheck)
 				goJudge.GET("/languages", ctrl.GoJudge.GetSupportedLanguages)
 				goJudge.GET("/system-info", ctrl.GoJudge.GetSystemInfo)
+			}
+
+			// 用户-题目相关
+			userQuestion := api.Group("/user-question")
+			{
+				userQuestion.POST(":question_id/complete", ctrl.UserQuestion.CompleteQuestion)
+				userQuestion.GET("/stats", ctrl.UserQuestion.GetStudyStats)
 			}
 		}
 	}
