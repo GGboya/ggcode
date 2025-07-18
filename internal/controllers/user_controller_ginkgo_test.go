@@ -10,12 +10,14 @@ import (
 	"ggcode/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("UserController", func() {
 	var (
+		mockCtrl    *gomock.Controller
 		mockService *mocks.MockUserServiceInterface
 		controller  *UserController
 		router      *gin.Engine
@@ -23,13 +25,14 @@ var _ = Describe("UserController", func() {
 
 	BeforeEach(func() {
 		gin.SetMode(gin.TestMode)
-		mockService = new(mocks.MockUserServiceInterface)
+		mockCtrl = gomock.NewController(GinkgoT())
+		mockService = mocks.NewMockUserServiceInterface(mockCtrl)
 		controller = NewUserController(mockService)
 		router = gin.Default()
 	})
 
 	AfterEach(func() {
-		mockService.AssertExpectations(GinkgoT())
+		mockCtrl.Finish()
 	})
 
 	Describe("Register", func() {
@@ -45,8 +48,9 @@ var _ = Describe("UserController", func() {
 				}
 				expectedToken := "mock-token"
 
-				mockService.On("Register", "testuser", "test@example.com", "123456").
-					Return(expectedUser, expectedToken, nil).Once()
+				mockService.EXPECT().
+					Register("testuser", "test@example.com", "123456").
+					Return(expectedUser, expectedToken, nil)
 
 				// Act
 				w := httptest.NewRecorder()
@@ -85,8 +89,9 @@ var _ = Describe("UserController", func() {
 				// Arrange
 				router.POST("/register", controller.Register)
 
-				mockService.On("Register", "user1", "user1@example.com", "123456").
-					Return(nil, "", errors.New("注册失败")).Once()
+				mockService.EXPECT().
+					Register("user1", "user1@example.com", "123456").
+					Return(nil, "", errors.New("注册失败"))
 
 				// Act
 				w := httptest.NewRecorder()
@@ -116,8 +121,9 @@ var _ = Describe("UserController", func() {
 				}
 				expectedToken := "login-token"
 
-				mockService.On("Login", "testuser", "123456").
-					Return(expectedUser, expectedToken, nil).Once()
+				mockService.EXPECT().
+					Login("testuser", "123456").
+					Return(expectedUser, expectedToken, nil)
 
 				// Act
 				w := httptest.NewRecorder()
@@ -138,8 +144,9 @@ var _ = Describe("UserController", func() {
 				// Arrange
 				router.POST("/login", controller.Login)
 
-				mockService.On("Login", "wronguser", "wrongpass").
-					Return(nil, "", errors.New("用户名或密码错误")).Once()
+				mockService.EXPECT().
+					Login("wronguser", "wrongpass").
+					Return(nil, "", errors.New("用户名或密码错误"))
 
 				// Act
 				w := httptest.NewRecorder()
