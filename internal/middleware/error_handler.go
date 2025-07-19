@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"ggcode/internal/pkg/errors"
 	"net/http"
 	"runtime/debug"
 
@@ -11,7 +10,6 @@ import (
 // ErrorResponse 错误响应结构
 type ErrorResponse struct {
 	Success   bool                   `json:"success"`
-	Error     *errors.AppError       `json:"error,omitempty"`
 	Message   string                 `json:"message,omitempty"`
 	Details   string                 `json:"details,omitempty"`
 	Context   map[string]interface{} `json:"context,omitempty"`
@@ -31,142 +29,165 @@ func handlePanic(c *gin.Context, recovered interface{}) {
 	// 记录panic堆栈信息
 	stack := debug.Stack()
 
-	// 创建内部服务器错误
-	appErr := errors.NewWithDetails(
-		errors.ErrInternalServer,
-		"服务器内部错误",
-		"系统发生未预期的错误，请稍后重试",
-	)
+	// 创建错误响应
+	response := ErrorResponse{
+		Success: false,
+		Message: "服务器内部错误",
+		Details: "系统发生未预期的错误，请稍后重试",
+	}
 
 	// 添加调试信息（仅在开发环境）
 	if gin.Mode() == gin.DebugMode {
-		appErr.Context = map[string]interface{}{
+		response.Context = map[string]interface{}{
 			"panic": string(recovered.(string)),
 			"stack": string(stack),
 		}
 	}
 
-	// 返回错误响应
-	sendErrorResponse(c, appErr)
-}
-
-// sendErrorResponse 发送错误响应
-func sendErrorResponse(c *gin.Context, appErr *errors.AppError) {
 	// 获取请求ID（如果存在）
 	requestID := c.GetString("request_id")
-
-	response := ErrorResponse{
-		Success:   false,
-		Error:     appErr,
-		Message:   appErr.Message,
-		Details:   appErr.Details,
-		Context:   appErr.Context,
-		RequestID: requestID,
+	if requestID != "" {
+		response.RequestID = requestID
 	}
 
-	// 设置HTTP状态码
-	statusCode := appErr.HTTPStatus
-	if statusCode == 0 {
-		statusCode = http.StatusInternalServerError
-	}
-
-	c.JSON(statusCode, response)
+	c.JSON(http.StatusInternalServerError, response)
 }
 
 // HandleError 处理错误的辅助函数
 func HandleError(c *gin.Context, err error) {
-	// 检查是否为应用错误
-	if appErr := errors.GetAppError(err); appErr != nil {
-		sendErrorResponse(c, appErr)
-		return
+	response := ErrorResponse{
+		Success: false,
+		Message: "服务器内部错误",
+		Details: err.Error(),
 	}
 
-	// 处理其他类型的错误
-	appErr := errors.NewWithError(
-		errors.ErrInternalServer,
-		"服务器内部错误",
-		err,
-	)
+	// 获取请求ID（如果存在）
+	requestID := c.GetString("request_id")
+	if requestID != "" {
+		response.RequestID = requestID
+	}
 
-	sendErrorResponse(c, appErr)
+	c.JSON(http.StatusInternalServerError, response)
 }
 
 // ValidationError 处理验证错误
 func ValidationError(c *gin.Context, field, message string) {
-	appErr := errors.NewWithContext(
-		errors.ErrValidationFailed,
-		"数据验证失败",
-		map[string]interface{}{
-			"field":   field,
-			"message": message,
+	response := ErrorResponse{
+		Success: false,
+		Message: "数据验证失败",
+		Details: message,
+		Context: map[string]interface{}{
+			"field": field,
 		},
-	)
+	}
 
-	sendErrorResponse(c, appErr)
+	// 获取请求ID（如果存在）
+	requestID := c.GetString("request_id")
+	if requestID != "" {
+		response.RequestID = requestID
+	}
+
+	c.JSON(http.StatusBadRequest, response)
 }
 
 // NotFoundError 处理资源未找到错误
 func NotFoundError(c *gin.Context, resource string) {
-	appErr := errors.NewWithDetails(
-		errors.ErrNotFound,
-		"资源未找到",
-		resource+"不存在",
-	)
+	response := ErrorResponse{
+		Success: false,
+		Message: "资源未找到",
+		Details: resource + "不存在",
+	}
 
-	sendErrorResponse(c, appErr)
+	// 获取请求ID（如果存在）
+	requestID := c.GetString("request_id")
+	if requestID != "" {
+		response.RequestID = requestID
+	}
+
+	c.JSON(http.StatusNotFound, response)
 }
 
 // UnauthorizedError 处理未授权错误
 func UnauthorizedError(c *gin.Context, message string) {
-	appErr := errors.NewWithDetails(
-		errors.ErrUnauthorized,
-		"未授权访问",
-		message,
-	)
+	response := ErrorResponse{
+		Success: false,
+		Message: "未授权访问",
+		Details: message,
+	}
 
-	sendErrorResponse(c, appErr)
+	// 获取请求ID（如果存在）
+	requestID := c.GetString("request_id")
+	if requestID != "" {
+		response.RequestID = requestID
+	}
+
+	c.JSON(http.StatusUnauthorized, response)
 }
 
 // ForbiddenError 处理禁止访问错误
 func ForbiddenError(c *gin.Context, message string) {
-	appErr := errors.NewWithDetails(
-		errors.ErrForbidden,
-		"禁止访问",
-		message,
-	)
+	response := ErrorResponse{
+		Success: false,
+		Message: "禁止访问",
+		Details: message,
+	}
 
-	sendErrorResponse(c, appErr)
+	// 获取请求ID（如果存在）
+	requestID := c.GetString("request_id")
+	if requestID != "" {
+		response.RequestID = requestID
+	}
+
+	c.JSON(http.StatusForbidden, response)
 }
 
 // BadRequestError 处理请求错误
 func BadRequestError(c *gin.Context, message string) {
-	appErr := errors.NewWithDetails(
-		errors.ErrInvalidRequest,
-		"无效的请求",
-		message,
-	)
+	response := ErrorResponse{
+		Success: false,
+		Message: "无效的请求",
+		Details: message,
+	}
 
-	sendErrorResponse(c, appErr)
+	// 获取请求ID（如果存在）
+	requestID := c.GetString("request_id")
+	if requestID != "" {
+		response.RequestID = requestID
+	}
+
+	c.JSON(http.StatusBadRequest, response)
 }
 
 // DatabaseError 处理数据库错误
 func DatabaseError(c *gin.Context, err error) {
-	appErr := errors.NewWithError(
-		errors.ErrDatabaseError,
-		"数据库操作失败",
-		err,
-	)
+	response := ErrorResponse{
+		Success: false,
+		Message: "数据库操作失败",
+		Details: err.Error(),
+	}
 
-	sendErrorResponse(c, appErr)
+	// 获取请求ID（如果存在）
+	requestID := c.GetString("request_id")
+	if requestID != "" {
+		response.RequestID = requestID
+	}
+
+	c.JSON(http.StatusInternalServerError, response)
 }
 
 // ConfigError 处理配置错误
 func ConfigError(c *gin.Context, err error) {
-	appErr := errors.NewWithError(
-		errors.ErrConfigError,
-		"配置错误",
-		err,
-	)
+	response := ErrorResponse{
+		Success: false,
+		Message: "配置错误",
+		Details: err.Error(),
+	}
 
-	sendErrorResponse(c, appErr)
+	// 获取请求ID（如果存在）
+	requestID := c.GetString("request_id")
+	if requestID != "" {
+		response.RequestID = requestID
+	}
+
+	c.JSON(http.StatusInternalServerError, response)
 }

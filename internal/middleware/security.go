@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"ggcode/internal/config"
-	"ggcode/internal/pkg/errors"
 	"net/http"
 	"sync"
 	"time"
@@ -90,15 +89,9 @@ func (sm *SecurityMiddleware) RateLimit() gin.HandlerFunc {
 
 		// 检查是否超过限制
 		if !limiter.Allow() {
-			appErr := errors.NewWithDetails(
-				errors.ErrTooManyRequests,
-				"请求过于频繁",
-				"请稍后再试",
-			)
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"success": false,
-				"error":   appErr,
-				"message": appErr.Message,
+				"message": "请求过于频繁，请稍后再试",
 			})
 			c.Abort()
 			return

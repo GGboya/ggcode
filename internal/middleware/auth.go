@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"ggcode/internal/config"
-	"ggcode/internal/pkg/errors"
 	"net/http"
 	"strings"
 	"time"
@@ -40,15 +39,9 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 			// 对于API请求，返回JSON错误
 			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-				appErr := errors.NewWithDetails(
-					errors.ErrTokenMissing,
-					"缺少认证令牌",
-					"请先登录",
-				)
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"success": false,
-					"error":   appErr,
-					"message": appErr.Message,
+					"message": "缺少认证令牌，请先登录",
 				})
 				c.Abort()
 				return
@@ -70,32 +63,13 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 			// 对于API请求，返回JSON错误
 			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-				var appErr *errors.AppError
-				if err != nil {
-					if strings.Contains(err.Error(), "expired") {
-						appErr = errors.NewWithDetails(
-							errors.ErrTokenExpired,
-							"令牌已过期",
-							"请重新登录",
-						)
-					} else {
-						appErr = errors.NewWithDetails(
-							errors.ErrTokenInvalid,
-							"无效的令牌",
-							"请重新登录",
-						)
-					}
-				} else {
-					appErr = errors.NewWithDetails(
-						errors.ErrTokenInvalid,
-						"无效的令牌",
-						"请重新登录",
-					)
+				message := "无效的令牌，请重新登录"
+				if err != nil && strings.Contains(err.Error(), "expired") {
+					message = "令牌已过期，请重新登录"
 				}
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"success": false,
-					"error":   appErr,
-					"message": appErr.Message,
+					"message": message,
 				})
 				c.Abort()
 				return
@@ -113,15 +87,9 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 			// 对于API请求，返回JSON错误
 			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-				appErr := errors.NewWithDetails(
-					errors.ErrTokenExpired,
-					"令牌已过期",
-					"请重新登录",
-				)
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"success": false,
-					"error":   appErr,
-					"message": appErr.Message,
+					"message": "令牌已过期，请重新登录",
 				})
 				c.Abort()
 				return
