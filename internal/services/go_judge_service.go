@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"ggcode/internal/pkg/logger"
 	"io"
 	"net/http"
 	"strings"
@@ -383,8 +384,8 @@ func (s *GoJudgeService) sendRequest(req *GoJudgeAPIRequest) (GoJudgeAPIResponse
 	}
 
 	// 添加调试日志
-	fmt.Printf("[GoJudge] 发送请求到 %s/run\n", s.baseURL)
-	fmt.Printf("[GoJudge] 请求数据: %s\n", string(jsonData))
+	logger.Infof("[GoJudge] 发送请求到 %s/run", s.baseURL)
+	logger.Infof("[GoJudge] 请求数据: %s", string(jsonData))
 
 	resp, err := s.httpClient.Post(s.baseURL+"/run", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -408,7 +409,7 @@ func (s *GoJudgeService) sendRequest(req *GoJudgeAPIRequest) (GoJudgeAPIResponse
 	}
 
 	// 添加调试日志
-	fmt.Printf("[GoJudge] 响应数据: %s\n", string(body))
+	logger.Infof("[GoJudge] 响应数据: %s", string(body))
 
 	return result, nil
 }

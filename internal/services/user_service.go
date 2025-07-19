@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"ggcode/internal/config"
 	"ggcode/internal/middleware"
 	"ggcode/internal/models"
 	"ggcode/internal/repositories"
@@ -10,13 +11,25 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserService struct {
-	userRepo repositories.UserRepository
+// UserServiceInterface 定义用户服务接口，便于 controller 解耦和单元测试
+//go:generate mockgen -source=user_service.go -destination=../mocks/services/mock_user_service.go -package=services
+
+type UserServiceInterface interface {
+	Register(username, email, password string) (*models.User, string, error)
+	Login(username, password string) (*models.User, string, error)
+	IsAdmin(userID uint) (bool, error)
+	// 可以根据需要补充更多接口方法
 }
 
-func NewUserService(repos *repositories.Repositories) *UserService {
+type UserService struct {
+	userRepo repositories.UserRepository
+	config   *config.Config
+}
+
+func NewUserService(repos *repositories.Repositories, cfg *config.Config) *UserService {
 	return &UserService{
 		userRepo: repos.User,
+		config:   cfg,
 	}
 }
 
@@ -49,7 +62,7 @@ func (s *UserService) Register(username, email, password string) (*models.User, 
 	}
 
 	// 生成token
-	token, err := middleware.GenerateToken(user.ID, user.Username)
+	token, err := middleware.GenerateToken(user.ID, user.Username, s.config)
 	if err != nil {
 		return nil, "", errors.New("生成token失败")
 	}
@@ -69,7 +82,7 @@ func (s *UserService) Login(username, password string) (*models.User, string, er
 	}
 
 	// 生成token
-	token, err := middleware.GenerateToken(user.ID, user.Username)
+	token, err := middleware.GenerateToken(user.ID, user.Username, s.config)
 	if err != nil {
 		return nil, "", errors.New("生成token失败")
 	}
@@ -86,3 +99,6 @@ func (s *UserService) IsAdmin(userID uint) (bool, error) {
 // func (s *UserService) GetUserByID(id uint) (*models.User, error) {
 // 	return s.userRepo.GetByID(id)
 // }
+
+// UserService 实现 UserServiceInterface
+var _ UserServiceInterface = (*UserService)(nil)

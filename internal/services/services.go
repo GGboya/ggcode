@@ -1,6 +1,7 @@
 package services
 
 import (
+	"ggcode/internal/config"
 	"ggcode/internal/repositories"
 
 	"gorm.io/gorm"
@@ -12,31 +13,30 @@ type Services struct {
 	QuestionBank *QuestionBankService
 	Question     *QuestionService
 	StudyPlan    *StudyPlanService
+	UserQuestion *UserQuestionService
 	Share        *ShareService
 	Progress     *ProgressService
 	Ebbinghaus   *EbbinghausService
+	CheckIn      *CheckInService
 	Interview    InterviewService
 	GoJudge      *GoJudgeService
-	// CheckIn      *CheckInService
 }
 
 // NewServices 创建所有服务实例
-func NewServices(repos *repositories.Repositories, db *gorm.DB) *Services {
-	// 首先创建EbbinghausService
+func NewServices(repos *repositories.Repositories, db *gorm.DB, cfg *config.Config) *Services {
 	ebbinghausService := NewEbbinghausService(db)
-
-	// 创建 go-judge 服务
-	goJudgeService := NewGoJudgeService("")
-
+	checkInService := NewCheckInService(repos.CheckIn, db)
 	return &Services{
-		User:         NewUserService(repos),
+		User:         NewUserService(repos, cfg),
 		QuestionBank: NewQuestionBankService(repos),
 		Question:     NewQuestionService(repos),
-		StudyPlan:    NewStudyPlanService(repos, ebbinghausService),
+		StudyPlan:    NewStudyPlanService(repos.StudyPlan, repos.UserQuestion, repos.Question),
+		UserQuestion: NewUserQuestionService(repos.UserQuestion, repos.UserStats, checkInService),
 		Share:        NewShareService(repos),
-		Progress:     NewProgressService(repos, ebbinghausService),
+		Progress:     NewProgressService(repos, ebbinghausService, checkInService),
 		Ebbinghaus:   ebbinghausService,
+		CheckIn:      checkInService,
 		Interview:    NewInterviewService(repos.Interview),
-		GoJudge:      goJudgeService,
+		GoJudge:      NewGoJudgeService(""),
 	}
 }

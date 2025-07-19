@@ -2,12 +2,11 @@ package controllers
 
 import (
 	"fmt"
-	"log"
+	"ggcode/internal/pkg/logger"
+	"ggcode/internal/services"
 	"net/http"
 	"strconv"
 	"strings"
-
-	"ggcode/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -195,18 +194,18 @@ func (c *GoJudgeController) TestCode(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("[GoJudge] 测试代码 - 用户ID: %v, 关卡ID: %d, 语言: %s", userID, levelID, req.Language)
+	logger.Infof("[GoJudge] 测试代码 - 用户ID: %v, 关卡ID: %d, 语言: %s", userID, levelID, req.Language)
 
 	// 使用面试岛服务获取关卡详情和样例测试用例
 	levelDetail, err := c.interviewService.GetLevelDetail(userID.(uint), uint(levelID))
 	if err != nil {
-		log.Printf("[GoJudge] 获取关卡详情失败: %v", err)
+		logger.Errorf("[GoJudge] 获取关卡详情失败: %v", err)
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "关卡不存在或未解锁: " + err.Error()})
 		return
 	}
 
 	if len(levelDetail.SampleCases) == 0 {
-		log.Printf("[GoJudge] 关卡 %d 没有样例测试用例", levelID)
+		logger.Infof("[GoJudge] 关卡 %d 没有样例测试用例", levelID)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "关卡没有配置测试用例"})
 		return
 	}
@@ -223,7 +222,7 @@ func (c *GoJudgeController) TestCode(ctx *gin.Context) {
 		expectedStr = testCase.Output
 	}
 
-	log.Printf("[GoJudge] 使用测试用例 - 输入: %q, 期望输出: %q", inputStr, expectedStr)
+	logger.Infof("[GoJudge] 使用测试用例 - 输入: %q, 期望输出: %q", inputStr, expectedStr)
 
 	judgeReq := &services.GoJudgeRequest{
 		Language:    req.Language,
@@ -235,14 +234,14 @@ func (c *GoJudgeController) TestCode(ctx *gin.Context) {
 
 	result, err := c.goJudgeService.ExecuteCode(judgeReq)
 	if err != nil {
-		log.Printf("[GoJudge] 执行代码失败: %v", err)
+		logger.Errorf("[GoJudge] 执行代码失败: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "测试失败: " + err.Error()})
 		return
 	}
 
 	// 增强结果处理 - 添加输出比较
 	enhancedResult := c.enhanceGoJudgeResult(result, inputStr, expectedStr, false)
-	log.Printf("[GoJudge] 测试结果: %+v", enhancedResult)
+	logger.Infof("[GoJudge] 测试结果: %+v", enhancedResult)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "测试完成",
@@ -279,18 +278,18 @@ func (c *GoJudgeController) SubmitCode(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("[GoJudge] 提交代码 - 用户ID: %v, 关卡ID: %d, 语言: %s, 提交时间: %d秒", userID, levelID, req.Language, req.SubmitTime)
+	logger.Infof("[GoJudge] 提交代码 - 用户ID: %v, 关卡ID: %d, 语言: %s, 提交时间: %d秒", userID, levelID, req.Language, req.SubmitTime)
 
 	// 使用面试岛服务获取所有测试用例
 	testCases, err := c.interviewService.GetTestCases(uint(levelID))
 	if err != nil {
-		log.Printf("[GoJudge] 获取关卡 %d 的测试用例失败: %v", levelID, err)
+		logger.Errorf("[GoJudge] 获取关卡 %d 的测试用例失败: %v", levelID, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "获取测试用例失败: " + err.Error()})
 		return
 	}
 
 	if len(testCases) == 0 {
-		log.Printf("[GoJudge] 关卡 %d 没有配置测试用例", levelID)
+		logger.Infof("[GoJudge] 关卡 %d 没有配置测试用例", levelID)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "关卡没有配置测试用例"})
 		return
 	}
@@ -301,7 +300,7 @@ func (c *GoJudgeController) SubmitCode(ctx *gin.Context) {
 	allPassed := true
 
 	for i, testCase := range testCases {
-		log.Printf("[GoJudge] 运行测试用例 %d/%d", i+1, len(testCases))
+		logger.Infof("[GoJudge] 运行测试用例 %d/%d", i+1, len(testCases))
 		judgeReq := &services.GoJudgeRequest{
 			Language:    req.Language,
 			Code:        req.Code,
@@ -312,13 +311,13 @@ func (c *GoJudgeController) SubmitCode(ctx *gin.Context) {
 
 		result, err := c.goJudgeService.ExecuteCode(judgeReq)
 		if err != nil {
-			log.Printf("[GoJudge] 执行代码失败: %v", err)
+			logger.Errorf("[GoJudge] 执行代码失败: %v", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "提交失败: " + err.Error()})
 			return
 		}
 
 		enhancedResult := c.enhanceGoJudgeResult(result, testCase.Input, testCase.Output, true)
-		log.Printf("[GoJudge] 测试用例 %d/%d 结果: %s", i+1, len(testCases), enhancedResult["status"])
+		logger.Infof("[GoJudge] 测试用例 %d/%d 结果: %s", i+1, len(testCases), enhancedResult["status"])
 
 		// 记录最大耗时和内存
 		if t, ok := enhancedResult["time"].(int64); ok && t > maxTime {
@@ -354,19 +353,19 @@ func (c *GoJudgeController) SubmitCode(ctx *gin.Context) {
 		}
 	}
 
-	log.Printf("[GoJudge] 提交结果: %+v", finalEnhancedResult)
+	logger.Infof("[GoJudge] 提交结果: %+v", finalEnhancedResult)
 
 	// 调用面试岛服务更新用户进度（关键修复！）
 	if status, ok := finalEnhancedResult["status"].(string); ok && status == "Accepted" {
-		log.Printf("[GoJudge] AC成功，开始更新用户进度...")
+		logger.Infof("[GoJudge] AC成功，开始更新用户进度...")
 
 		// 调用面试岛服务的SubmitCode方法来更新用户进度、计算星级、解锁下一关
 		_, err := c.interviewService.SubmitCode(userID.(uint), uint(levelID), req.Code, req.Language, req.SubmitTime)
 		if err != nil {
-			log.Printf("[GoJudge] 更新用户进度失败: %v", err)
+			logger.Errorf("[GoJudge] 更新用户进度失败: %v", err)
 			// 不影响前端显示，只记录错误
 		} else {
-			log.Printf("[GoJudge] 用户进度更新成功")
+			logger.Infof("[GoJudge] 用户进度更新成功")
 		}
 
 		// 解锁知识点

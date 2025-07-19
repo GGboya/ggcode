@@ -680,12 +680,12 @@
             }
             
             // 题目链接部分（仅显示，不可跳转）
-            if (question.leetcode_url) {
+            if (question.url) {
                 problemHtml += '<div class="problem-link mt-3">';
-                problemHtml += '<h6>LeetCode 链接</h6>';
+                problemHtml += '<h6>题目链接</h6>';
                 problemHtml += '<p class="text-muted">';
                 problemHtml += '<i class="fas fa-link me-1"></i>';
-                problemHtml += '<span class="text-decoration-none">' + question.leetcode_url + '</span>';
+                problemHtml += `<a href="${question.url}" target="_blank" rel="noopener" class="text-decoration-none">查看题目链接</a>`;
                 problemHtml += '<small class="text-muted ms-2">(仅供参考，不可跳转)</small>';
                 problemHtml += '</p>';
                 problemHtml += '</div>';

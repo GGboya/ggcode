@@ -6,6 +6,7 @@ import (
 
 type ProgressService struct {
 	ebbinghausService *EbbinghausService
+	checkInService    *CheckInService
 }
 
 // HeatmapData 热力图数据结构
@@ -24,9 +25,10 @@ type HeatmapResponse struct {
 	ThisYear      int           `json:"this_year"`      // 今年学习天数
 }
 
-func NewProgressService(repos *repositories.Repositories, ebbinghausService *EbbinghausService) *ProgressService {
+func NewProgressService(repos *repositories.Repositories, ebbinghausService *EbbinghausService, checkInService *CheckInService) *ProgressService {
 	return &ProgressService{
 		ebbinghausService: ebbinghausService,
+		checkInService:    checkInService,
 	}
 }
 
@@ -42,15 +44,15 @@ func (s *ProgressService) GetAllQuestionBanksProgress(userID uint) ([]QuestionBa
 
 // CheckInToday 今日打卡
 func (s *ProgressService) CheckInToday(userID uint) error {
-	return s.ebbinghausService.CheckInToday(userID)
+	return s.checkInService.CheckInToday(userID)
 }
 
 // GetCheckInStats 获取打卡统计
 func (s *ProgressService) GetCheckInStats(userID uint) (*CheckInStats, error) {
-	return s.ebbinghausService.GetCheckInStats(userID)
+	return s.checkInService.GetCheckInStats(userID)
 }
 
 // GetStudyHeatmap 获取学习活动热力图数据
 func (s *ProgressService) GetStudyHeatmap(userID uint) (*HeatmapResponse, error) {
-	return s.ebbinghausService.GetStudyHeatmap(userID)
+	return s.checkInService.GetStudyHeatmap(userID)
 }

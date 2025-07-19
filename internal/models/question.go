@@ -6,13 +6,14 @@ import "time"
 type Question struct {
 	ID             uint         `json:"id" gorm:"primaryKey"`
 	Title          string       `json:"title" gorm:"not null"`
-	LeetcodeURL    string       `json:"leetcode_url" gorm:"not null"`
+	URL            string       `json:"url" gorm:"not null"`
 	Difficulty     string       `json:"difficulty" gorm:"not null"` // Easy, Medium, Hard
 	QuestionBankID uint         `json:"question_bank_id"`
 	QuestionBank   QuestionBank `json:"question_bank" gorm:"foreignKey:QuestionBankID"`
 	TestCases      []TestCase   `json:"test_cases" gorm:"foreignKey:QuestionID"` // 关联的测试用例
 	// 与算法知识点的多对多关系
 	Tags      []AlgoTag `json:"tags" gorm:"many2many:question_tags;"`
+	Score     float64   `json:"score" gorm:"not null"` // 新增
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -61,4 +62,32 @@ type DailyStudyPlanCache struct {
 	// 关联关系
 	User      User          `json:"user" gorm:"foreignKey:UserID"`
 	StudyPlan UserStudyPlan `gorm:"foreignKey:StudyPlanID"`
+}
+
+// ContestProblem 比赛题目模型
+// 用于从外部平台导入题库
+// Source: leetcode, atcoder, codeforces, nowcoder
+// Score: 题目分数（如100, 200等）
+type ContestProblem struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Source    string    `json:"source" gorm:"not null"` // leetcode, atcoder, codeforces, nowcoder
+	Title     string    `json:"title" gorm:"not null"`
+	Score     float64   `json:"score" gorm:"not null"`
+	URL       string    `json:"url"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// QuestionWithProgress 带学习进度的题目
+type QuestionWithProgress struct {
+	Question Question             `json:"question"`
+	Progress UserQuestionProgress `json:"progress"`
+	IsReview bool                 `json:"is_review"` // 是否是复习题目
+	Score    int                  `json:"score"`     // 题目得分
+}
+
+type DailyQuestionsResponse struct {
+	Questions []QuestionWithProgress `json:"questions"`
+	Start     int                    `json:"start"`
+	Total     int                    `json:"total"`
 }

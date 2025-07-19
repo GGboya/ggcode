@@ -286,7 +286,7 @@ func (ctrl *InterviewController) CreateLevel(c *gin.Context) {
 		Difficulty          string `json:"difficulty" binding:"required"`
 		QuestionTitle       string `json:"question_title"`
 		QuestionDescription string `json:"question_description"`
-		QuestionLeetcodeURL string `json:"question_leetcode_url"`
+		QuestionURL         string `json:"question_url"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
@@ -307,7 +307,7 @@ func (ctrl *InterviewController) CreateLevel(c *gin.Context) {
 		req.Difficulty,
 		req.QuestionTitle,
 		req.QuestionDescription,
-		req.QuestionLeetcodeURL,
+		req.QuestionURL,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建关卡失败", "details": err.Error()})
@@ -355,7 +355,7 @@ func (ctrl *InterviewController) UpdateLevelDetail(c *gin.Context) {
 		Difficulty          string `json:"difficulty"`
 		QuestionTitle       string `json:"question_title"`
 		QuestionDescription string `json:"question_description"`
-		QuestionLeetcodeURL string `json:"question_leetcode_url"`
+		QuestionURL         string `json:"question_url"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
@@ -371,7 +371,7 @@ func (ctrl *InterviewController) UpdateLevelDetail(c *gin.Context) {
 	}
 
 	// 更新题目信息
-	if err := ctrl.interviewService.UpdateLevelQuestion(uint(levelID), req.QuestionTitle, req.QuestionDescription, req.QuestionLeetcodeURL); err != nil {
+	if err := ctrl.interviewService.UpdateLevelQuestion(uint(levelID), req.QuestionTitle, req.QuestionDescription, req.QuestionURL); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新题目信息失败", "details": err.Error()})
 		return
 	}

@@ -49,8 +49,8 @@ func (s *QuestionService) GetAllQuestions() ([]models.Question, error) {
 }
 
 // CreateQuestion 在题库中创建题目
-func (s *QuestionService) CreateQuestion(userID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error) {
-	return s.questionRepo.CreateQuestion(userID, bankID, title, leetcodeURL, difficulty)
+func (s *QuestionService) CreateQuestion(userID, bankID uint, title, URL, difficulty string, score float64) (*models.Question, error) {
+	return s.questionRepo.CreateQuestion(userID, bankID, title, URL, difficulty, score)
 }
 
 // GetQuestion 获取单个题目
@@ -59,13 +59,13 @@ func (s *QuestionService) GetQuestion(questionID uint) (*models.Question, error)
 }
 
 // UpdateQuestion 更新题目信息
-func (s *QuestionService) UpdateQuestion(userID, questionID, bankID uint, title, leetcodeURL, difficulty string) (*models.Question, error) {
-	return s.questionRepo.UpdateQuestion(userID, questionID, bankID, title, leetcodeURL, difficulty)
+func (s *QuestionService) UpdateQuestion(userID, questionID, bankID uint, title, URL, difficulty string) (*models.Question, error) {
+	return s.questionRepo.UpdateQuestion(userID, questionID, bankID, title, URL, difficulty)
 }
 
 // UpdateQuestionWithDescription 更新题目信息（包含描述）
-func (s *QuestionService) UpdateQuestionWithDescription(userID, questionID, bankID uint, title, leetcodeURL, difficulty, description string) (*models.Question, error) {
-	return s.questionRepo.UpdateQuestionWithDescription(userID, questionID, bankID, title, leetcodeURL, difficulty, description)
+func (s *QuestionService) UpdateQuestionWithDescription(userID, questionID, bankID uint, title, URL, difficulty, description string) (*models.Question, error) {
+	return s.questionRepo.UpdateQuestionWithDescription(userID, questionID, bankID, title, URL, difficulty, description)
 }
 
 // DeleteQuestion 删除题目

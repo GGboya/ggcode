@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"ggcode/internal/config"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -10,22 +10,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// getJWTSecret 从环境变量获取JWT密钥，如果没有则使用默认值
-func getJWTSecret() []byte {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "your-secret-key" // 默认密钥，生产环境应该设置环境变量
-	}
-	return []byte(secret)
-}
-
 type Claims struct {
 	UserID   uint   `json:"user_id"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
-func AuthMiddleware() gin.HandlerFunc {
+// AuthMiddleware 认证中间件
+func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 首先尝试从Authorization header获取token
 		authHeader := c.GetHeader("Authorization")
@@ -47,7 +39,10 @@ func AuthMiddleware() gin.HandlerFunc {
 
 			// 对于API请求，返回JSON错误
 			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"success": false,
+					"message": "缺少认证令牌，请先登录",
+				})
 				c.Abort()
 				return
 			}
@@ -59,16 +54,23 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return getJWTSecret(), nil
+			return []byte(cfg.JWT.Secret), nil
 		})
 
 		if err != nil || !token.Valid {
-			// 清除无效Token Cookie，避免前端跳转循环
+			// 清除无效的Token Cookie
 			c.SetCookie("token", "", -1, "/", "", false, true)
 
 			// 对于API请求，返回JSON错误
 			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+				message := "无效的令牌，请重新登录"
+				if err != nil && strings.Contains(err.Error(), "expired") {
+					message = "令牌已过期，请重新登录"
+				}
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"success": false,
+					"message": message,
+				})
 				c.Abort()
 				return
 			}
@@ -78,31 +80,66 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 如果是页面请求且token有效，设置cookie以便后续使用
-		if !strings.HasPrefix(c.Request.URL.Path, "/api/") {
-			c.SetCookie("token", tokenString, 3600*24*7, "/", "", false, true) // 7天有效期
+		// 检查令牌是否过期
+		if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+			// 清除过期的Token Cookie
+			c.SetCookie("token", "", -1, "/", "", false, true)
+
+			// 对于API请求，返回JSON错误
+			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"success": false,
+					"message": "令牌已过期，请重新登录",
+				})
+				c.Abort()
+				return
+			}
+			// 对于页面请求，重定向到登录页
+			c.Redirect(http.StatusFound, "/login")
+			c.Abort()
+			return
 		}
 
+		// 将用户信息存储到上下文中
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
+
 		c.Next()
 	}
 }
 
-func GenerateToken(userID uint, username string) (string, error) {
-	// 设置token过期时间为7天
-	expirationTime := time.Now().Add(7 * 24 * time.Hour)
-
+// GenerateToken 生成JWT令牌
+func GenerateToken(userID uint, username string, cfg *config.Config) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "ggcode",
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(cfg.JWT.Expiration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    cfg.JWT.Issuer,
+			Subject:   username,
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(getJWTSecret())
+	return token.SignedString([]byte(cfg.JWT.Secret))
+}
+
+// GetUserID 从上下文中获取用户ID
+func GetUserID(c *gin.Context) uint {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return 0
+	}
+	return userID.(uint)
+}
+
+// GetUsername 从上下文中获取用户名
+func GetUsername(c *gin.Context) string {
+	username, exists := c.Get("username")
+	if !exists {
+		return ""
+	}
+	return username.(string)
 }

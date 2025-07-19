@@ -260,7 +260,7 @@ function showCurrentQuestion(index) {
     const totalQuestions = dailyQuestions.length;
     const overallProgress = ((index + 1) / totalQuestions) * 100;
 
-    const questionCard = `
+    let html = `
         <div class="text-center">
             <p class="text-muted mb-2">第 ${actualIndex} 题 / 共 ${totalQuestions} 题
                 ${isReview ? '<span class="badge bg-warning ms-2">复习</span>' : '<span class="badge bg-info ms-2">新题</span>'}
@@ -272,7 +272,14 @@ function showCurrentQuestion(index) {
         <div class="card shadow-sm p-4 text-center" style="min-height: 250px;">
             <div class="mb-3"><span class="badge bg-warning text-dark">${question.difficulty}</span></div>
             <h3 class="mb-4">${question.title}</h3>
-            <div class="mb-4"><a href="${question.leetcode_url}" target="_blank" class="btn btn-outline-primary"><i class="fas fa-external-link-alt"></i> 在 LeetCode 中查看题目</a></div>
+            <div class="mb-4">`;
+
+    // 题目链接部分
+    if (question.url) {
+        html += `<a href="${question.url}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm ms-2">查看题目链接</a>`;
+    }
+
+    html += `</div>
             <div class="alert alert-light border small">
                 <i class="fas fa-lightbulb text-warning"></i> <strong>学习提示:</strong> 请先尝试独立思考和解决这道题目，然后根据你的完成情况选择下面的选项。
             </div>
@@ -293,14 +300,13 @@ function showCurrentQuestion(index) {
                 </div>
             </div>
         </div>`;
-    document.getElementById('dailyTasks').innerHTML = questionCard;
+    document.getElementById('dailyTasks').innerHTML = html;
 }
 
 // 完成题目处理
 async function completeQuestion(questionId, resultType) {
     try {
-        const response = await axios.post('/api/complete-question', {
-            question_id: questionId,
+        const response = await axios.post(`/api/user-question/${questionId}/complete`, {
             result_type: resultType
         });
         showAlert(response.data.message, 'success');
