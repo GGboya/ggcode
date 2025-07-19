@@ -1,11 +1,13 @@
 package server
 
 import (
+	"ggcode/internal/config"
 	"ggcode/internal/controllers"
 	"ggcode/internal/middleware"
+	"ggcode/internal/pkg/logger"
 	"ggcode/internal/repositories"
 	"ggcode/internal/services"
-	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -15,10 +17,31 @@ type Server struct {
 	router      *gin.Engine
 	db          *gorm.DB
 	controllers *controllers.Controllers
+	config      *config.Config
 }
 
-func New(db *gorm.DB) (*Server, error) {
-	router := gin.Default()
+func New(db *gorm.DB, cfg *config.Config) (*Server, error) {
+	// 设置Gin模式
+	gin.SetMode(gin.ReleaseMode)
+
+	// 创建路由器，使用自定义恢复处理器
+	router := gin.New()
+
+	// 使用自定义错误处理中间件
+	router.Use(middleware.ErrorHandler())
+
+	// 创建安全中间件
+	securityMiddleware := middleware.NewSecurityMiddleware(cfg)
+
+	// 添加安全中间件
+	router.Use(securityMiddleware.RequestID())
+	router.Use(securityMiddleware.SecurityHeaders())
+	router.Use(securityMiddleware.CORS())
+	router.Use(securityMiddleware.RequestSizeLimit())
+	router.Use(securityMiddleware.RateLimit())
+
+	// 启动速率限制器清理
+	securityMiddleware.CleanupRateLimiters()
 
 	// 设置静态文件服务
 	router.Static("/static", "./web/static")
@@ -44,18 +67,21 @@ func New(db *gorm.DB) (*Server, error) {
 		}
 		c.Next()
 	})
+
 	// 初始化新架构
 	repos := repositories.NewRepositories(db)
-	serviceLayer := services.NewServices(repos, db)
+	serviceLayer := services.NewServices(repos, db, cfg)
 	controllers := controllers.NewControllers(serviceLayer)
 
 	server := &Server{
 		router:      router,
 		db:          db,
 		controllers: controllers,
+		config:      cfg,
 	}
 
 	server.setupRoutes()
+	logger.Info("Server initialized successfully")
 	return server, nil
 }
 
@@ -80,7 +106,7 @@ func (s *Server) setupRoutes() {
 
 	// 需要认证的路由
 	auth := s.router.Group("/")
-	auth.Use(middleware.AuthMiddleware())
+	auth.Use(middleware.AuthMiddleware(s.config))
 	{
 		// 页面路由
 		auth.GET("/dashboard", ctrl.Page.Dashboard)
@@ -180,37 +206,43 @@ func (s *Server) setupRoutes() {
 			}
 		}
 	}
+
+	logger.Info("Routes configured successfully")
 }
 
 func (s *Server) Run(addr string) error {
-	return s.router.Run(addr)
-}
+	// 创建HTTP服务器，使用配置中的超时设置
+	httpSrv := &http.Server{
+		Addr:         addr,
+		Handler:      s.router,
+		ReadTimeout:  s.config.Server.ReadTimeout,
+		WriteTimeout: s.config.Server.WriteTimeout,
+		IdleTimeout:  s.config.Server.IdleTimeout,
+	}
 
-// RunTLS 启动HTTPS服务器
-func (s *Server) RunTLS(addr, certFile, keyFile string) error {
-	return s.router.RunTLS(addr, certFile, keyFile)
+	return httpSrv.ListenAndServe()
 }
 
 // Shutdown 优雅关闭服务器
 func (s *Server) Shutdown() error {
-	log.Printf("正在优雅关闭服务器...")
+	logger.Info("正在优雅关闭服务器...")
 
 	if s.db != nil {
-		log.Printf("正在关闭数据库连接...")
+		logger.Info("正在关闭数据库连接...")
 		if sqlDB, err := s.db.DB(); err == nil {
 			if err := sqlDB.Close(); err != nil {
-				log.Printf("关闭数据库连接失败: %v", err)
+				logger.Errorf("数据库连接关闭失败: %v", err)
 			} else {
-				log.Printf("数据库连接已关闭")
+				logger.Info("数据库连接已关闭")
 			}
 		}
 	}
 
-	log.Printf("服务器已优雅关闭")
+	logger.Info("服务器已关闭")
 	return nil
 }
 
-// GetRouter 获取路由器（用于优雅关闭）
+// GetRouter 获取路由器实例
 func (s *Server) GetRouter() *gin.Engine {
 	return s.router
 }

@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"ggcode/internal/config"
 	"ggcode/internal/middleware"
 	"ggcode/internal/models"
 	"ggcode/internal/repositories"
@@ -22,11 +23,13 @@ type UserServiceInterface interface {
 
 type UserService struct {
 	userRepo repositories.UserRepository
+	config   *config.Config
 }
 
-func NewUserService(repos *repositories.Repositories) *UserService {
+func NewUserService(repos *repositories.Repositories, cfg *config.Config) *UserService {
 	return &UserService{
 		userRepo: repos.User,
+		config:   cfg,
 	}
 }
 
@@ -59,7 +62,7 @@ func (s *UserService) Register(username, email, password string) (*models.User, 
 	}
 
 	// 生成token
-	token, err := middleware.GenerateToken(user.ID, user.Username)
+	token, err := middleware.GenerateToken(user.ID, user.Username, s.config)
 	if err != nil {
 		return nil, "", errors.New("生成token失败")
 	}
@@ -79,7 +82,7 @@ func (s *UserService) Login(username, password string) (*models.User, string, er
 	}
 
 	// 生成token
-	token, err := middleware.GenerateToken(user.ID, user.Username)
+	token, err := middleware.GenerateToken(user.ID, user.Username, s.config)
 	if err != nil {
 		return nil, "", errors.New("生成token失败")
 	}

@@ -63,12 +63,22 @@ func (s *CheckInService) CheckInToday(userID uint) error {
 		// 如果没有历史记录，bestStreak 保持默认值 1
 	}
 
+	// 统计今天学习的题目数量
+	var studyCount int64
+	err = s.db.Table("user_question_progresses").
+		Where("user_id = ? AND DATE(last_review_date) = DATE(?)", userID, today).
+		Count(&studyCount).Error
+	if err != nil {
+		studyCount = 0 // 如果查询失败，默认为0
+	}
+
 	// 创建打卡记录
 	checkIn := models.UserCheckIn{
 		UserID:          userID,
 		CheckDate:       today,
 		ConsecutiveDays: consecutiveDays,
 		BestStreak:      bestStreak,
+		StudyCount:      int(studyCount),
 	}
 
 	return s.checkInRepo.CreateUserCheckIn(&checkIn)
@@ -110,96 +120,149 @@ func (s *CheckInService) GetCheckInStats(userID uint) (*CheckInStats, error) {
 
 // GetStudyHeatmap 获取学习活动热力图数据
 func (s *CheckInService) GetStudyHeatmap(userID uint) (*HeatmapResponse, error) {
-	// 获取过去一年的学习活动数据
-	oneYearAgo := time.Now().AddDate(-1, 0, 0)
+	// 获取过去一年的日期范围
+	endDate := time.Now()
+	startDate := endDate.AddDate(-1, 0, 0) // 一年前
 
-	var heatmapData []HeatmapData
-	var totalCommits int
-	var currentStreak int
-	var maxStreak int
-	var thisYear int
+	// 查询用户在过去一年的打卡记录（包含学习数量）
+	var checkInStats []struct {
+		Date       time.Time `json:"date"`
+		StudyCount int       `json:"study_count"`
+	}
 
-	// 查询过去一年的学习活动
-	err := s.db.Table("user_question_progresses").
-		Select("DATE(last_review_date) as date, COUNT(*) as count").
-		Where("user_id = ? AND last_review_date >= ?", userID, oneYearAgo).
-		Group("DATE(last_review_date)").
-		Order("date ASC").
-		Scan(&heatmapData).Error
+	err := s.db.Table("user_check_ins").
+		Select("DATE(check_date) as date, study_count").
+		Where("user_id = ? AND DATE(check_date) >= DATE(?) AND DATE(check_date) < DATE(?)", userID, startDate.Format("2006-01-02"), endDate.AddDate(0, 0, 1).Format("2006-01-02")).
+		Order("date").
+		Scan(&checkInStats).Error
 
 	if err != nil {
 		return nil, err
 	}
 
-	// 计算活跃度级别
-	for i := range heatmapData {
-		count := heatmapData[i].Count
-		switch {
-		case count == 0:
-			heatmapData[i].Level = 0
-		case count <= 3:
-			heatmapData[i].Level = 1
-		case count <= 6:
-			heatmapData[i].Level = 2
-		case count <= 10:
-			heatmapData[i].Level = 3
-		default:
-			heatmapData[i].Level = 4
+	// 查询用户在过去一年的学习记录（作为补充数据）
+	var dailyStats []struct {
+		Date  time.Time `json:"date"`
+		Count int64     `json:"count"`
+	}
+
+	err = s.db.Table("user_question_progresses").
+		Select("DATE(last_review_date) as date, COUNT(DISTINCT question_id) as count").
+		Where("user_id = ? AND DATE(last_review_date) >= DATE(?) AND DATE(last_review_date) < DATE(?) AND last_review_date IS NOT NULL", userID, startDate.Format("2006-01-02"), endDate.AddDate(0, 0, 1).Format("2006-01-02")).
+		Group("DATE(last_review_date)").
+		Order("date").
+		Scan(&dailyStats).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建热力图数据
+	heatmapData := make([]HeatmapData, 0)
+	currentDate := startDate
+
+	// 创建日期到打卡记录学习次数的映射
+	checkInMap := make(map[string]int)
+	for _, checkIn := range checkInStats {
+		dateStr := checkIn.Date.Format("2006-01-02")
+		checkInMap[dateStr] = checkIn.StudyCount
+	}
+
+	// 创建日期到学习记录次数的映射
+	statsMap := make(map[string]int64)
+	for _, stat := range dailyStats {
+		dateStr := stat.Date.Format("2006-01-02")
+		statsMap[dateStr] = stat.Count
+	}
+
+	// 填充过去一年的每一天，包括今天
+	now := time.Now()
+	tomorrow := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	for currentDate.Before(tomorrow) {
+		dateStr := currentDate.Format("2006-01-02")
+
+		// 优先使用打卡记录中的学习数量，如果没有则使用学习记录表的数据
+		count := checkInMap[dateStr]
+		if count == 0 {
+			// 如果打卡记录中没有学习数量，尝试从学习记录表获取
+			count = int(statsMap[dateStr])
+		}
+
+		// 根据学习次数确定活跃度级别 (0-4)
+		level := 0
+		if count > 0 {
+			if count >= 10 {
+				level = 4
+			} else if count >= 7 {
+				level = 3
+			} else if count >= 4 {
+				level = 2
+			} else {
+				level = 1
+			}
+		}
+
+		heatmapData = append(heatmapData, HeatmapData{
+			Date:  dateStr,
+			Count: count,
+			Level: level,
+		})
+
+		currentDate = currentDate.AddDate(0, 0, 1)
+	}
+
+	// 计算统计信息
+	totalStudyDays := 0     // 总学习天数
+	totalStudyCount := 0    // 总学习次数（题目数）
+	currentStreak := 0      // 当前连续学习天数
+	maxStreak := 0          // 最长连续学习天数
+	tempStreak := 0         // 临时连续天数
+	thisYearStudyCount := 0 // 今年学习次数
+
+	// 计算总学习天数和总学习次数
+	for _, data := range heatmapData {
+		if data.Count > 0 {
+			totalStudyDays++
+			totalStudyCount += data.Count
 		}
 	}
 
-	// 计算总学习天数
-	totalCommits = len(heatmapData)
-
-	// 计算当前连续天数和最长连续天数
-	currentStreak = 0
-	maxStreak = 0
-	thisYear = 0
-	currentDate := time.Now()
-	yearStart := time.Date(currentDate.Year(), 1, 1, 0, 0, 0, 0, currentDate.Location())
-
-	// 创建日期映射，用于快速查找
-	dateMap := make(map[string]bool)
-	for _, data := range heatmapData {
-		dateMap[data.Date] = true
+	// 计算当前连续学习天数（从今天往前推）
+	for i := len(heatmapData) - 1; i >= 0; i-- {
+		if heatmapData[i].Count > 0 {
+			currentStreak++
+		} else {
+			break // 遇到没有学习的天数就停止
+		}
 	}
 
-	// 计算连续天数
-	streak := 0
-	for i := 0; i < 365; i++ {
-		checkDate := currentDate.AddDate(0, 0, -i)
-		dateStr := checkDate.Format("2006-01-02")
-
-		if dateMap[dateStr] {
-			streak++
-			if checkDate.After(yearStart) {
-				thisYear++
+	// 计算最长连续学习天数
+	for i := 0; i < len(heatmapData); i++ {
+		if heatmapData[i].Count > 0 {
+			tempStreak++
+			if tempStreak > maxStreak {
+				maxStreak = tempStreak
 			}
 		} else {
-			if streak > maxStreak {
-				maxStreak = streak
-			}
-			if currentStreak == 0 && streak > 0 {
-				currentStreak = streak
-			}
-			streak = 0
+			tempStreak = 0 // 重置临时连续天数
 		}
 	}
 
-	// 处理边界情况
-	if streak > maxStreak {
-		maxStreak = streak
-	}
-	if currentStreak == 0 && streak > 0 {
-		currentStreak = streak
+	// 计算今年的学习次数
+	currentYear := time.Now().Year()
+	for _, data := range heatmapData {
+		date, _ := time.Parse("2006-01-02", data.Date)
+		if date.Year() == currentYear {
+			thisYearStudyCount += data.Count
+		}
 	}
 
 	return &HeatmapResponse{
 		Data:          heatmapData,
-		TotalCommits:  totalCommits,
-		CurrentStreak: currentStreak,
-		MaxStreak:     maxStreak,
-		ThisYear:      thisYear,
+		TotalCommits:  totalStudyCount,    // 总学习次数（题目数）
+		CurrentStreak: currentStreak,      // 当前连续学习天数
+		MaxStreak:     maxStreak,          // 最长连续学习天数
+		ThisYear:      thisYearStudyCount, // 今年学习次数
 	}, nil
 }
 

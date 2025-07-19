@@ -23,6 +23,7 @@ type UserCheckIn struct {
 	CheckDate       time.Time `json:"check_date" gorm:"uniqueIndex:idx_user_date"` // 联合唯一索引的一部分
 	ConsecutiveDays int       `json:"consecutive_days" gorm:"default:0"`           // 到当前日期的连续打卡天数
 	BestStreak      int       `json:"best_streak" gorm:"default:0"`                // 到当前日期为止的最长连续天数
+	StudyCount      int       `json:"study_count" gorm:"default:0"`                // 当天学习的题目数量
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
