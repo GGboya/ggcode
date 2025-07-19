@@ -16,6 +16,7 @@ type CheckInRepository interface {
 	GetUserCheckInByDate(userID uint, date time.Time, checkIn *models.UserCheckIn) error
 	GetLatestUserCheckIn(userID uint, checkIn *models.UserCheckIn) error
 	CreateUserCheckIn(checkIn *models.UserCheckIn) error
+	UpdateUserCheckIn(checkIn *models.UserCheckIn) error
 }
 
 type checkInRepository struct {
@@ -57,4 +58,9 @@ func (r *checkInRepository) GetLatestUserCheckIn(userID uint, checkIn *models.Us
 // CreateUserCheckIn 创建打卡记录
 func (r *checkInRepository) CreateUserCheckIn(checkIn *models.UserCheckIn) error {
 	return r.db.Create(checkIn).Error
+}
+
+// UpdateUserCheckIn 更新打卡记录
+func (r *checkInRepository) UpdateUserCheckIn(checkIn *models.UserCheckIn) error {
+	return r.db.Save(checkIn).Error
 }

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 	"time"
@@ -37,7 +36,18 @@ func (s *CheckInService) CheckInToday(userID uint) error {
 	var existingCheckIn models.UserCheckIn
 	err := s.checkInRepo.GetUserCheckInByDate(userID, today, &existingCheckIn)
 	if err == nil {
-		return errors.New("今日已打卡")
+		// 今日已打卡，更新学习数量
+		var studyCount int64
+		err = s.db.Table("user_question_progresses").
+			Where("user_id = ? AND DATE(last_review_date) = DATE(?)", userID, today).
+			Count(&studyCount).Error
+		if err != nil {
+			studyCount = 0
+		}
+
+		// 更新学习数量
+		existingCheckIn.StudyCount = int(studyCount)
+		return s.checkInRepo.UpdateUserCheckIn(&existingCheckIn)
 	}
 
 	// 获取昨天的打卡记录来计算连续天数和最长连续天数
