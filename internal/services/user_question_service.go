@@ -1,6 +1,7 @@
 package services
 
 import (
+	"ggcode/internal/events"
 	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 	"time"
@@ -16,14 +17,14 @@ type UserQuestionServiceInterface interface {
 type UserQuestionService struct {
 	userQuestionRepo repositories.UserQuestionRepository
 	userStatsRepo    repositories.UserStatsRepository
-	checkInService   *CheckInService // 新增
+	bus              *events.EventBus
 }
 
-func NewUserQuestionService(userQuestionRepo repositories.UserQuestionRepository, userStatsRepo repositories.UserStatsRepository, checkInService *CheckInService) *UserQuestionService {
+func NewUserQuestionService(userQuestionRepo repositories.UserQuestionRepository, userStatsRepo repositories.UserStatsRepository, bus *events.EventBus) *UserQuestionService {
 	return &UserQuestionService{
 		userQuestionRepo: userQuestionRepo,
 		userStatsRepo:    userStatsRepo,
-		checkInService:   checkInService,
+		bus:              bus,
 	}
 }
 
@@ -78,9 +79,10 @@ func (s *UserQuestionService) CompleteQuestion(userID, questionID uint, resultTy
 		}
 	}
 
-	// 自动打卡
-	if s.checkInService != nil {
-		_ = s.checkInService.CheckInToday(userID)
+	// 通过 events 包的 channel 发布事件
+	s.bus.UserCompletedQuestionChan <- events.UserCompletedQuestionEvent{
+		UserID:     userID,
+		QuestionID: questionID,
 	}
 
 	return nil

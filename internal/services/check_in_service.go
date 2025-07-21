@@ -1,6 +1,7 @@
 package services
 
 import (
+	"ggcode/internal/events"
 	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 	"time"
@@ -31,13 +32,17 @@ type CheckInServiceInterface interface {
 type CheckInService struct {
 	checkInRepo      repositories.CheckInRepository
 	userQuestionRepo repositories.UserQuestionRepository
+	bus              *events.EventBus
 }
 
-func NewCheckInService(checkInRepo repositories.CheckInRepository, userQuestionRepo repositories.UserQuestionRepository) *CheckInService {
-	return &CheckInService{
+func NewCheckInService(checkInRepo repositories.CheckInRepository, userQuestionRepo repositories.UserQuestionRepository, bus *events.EventBus) *CheckInService {
+	checkInService := &CheckInService{
 		checkInRepo:      checkInRepo,
 		userQuestionRepo: userQuestionRepo,
+		bus:              bus,
 	}
+	checkInService.StartEventListener()
+	return checkInService
 }
 
 // CheckInToday 用户今日打卡（支持连续天数和最大连续天数统计）
@@ -67,12 +72,12 @@ func (s *CheckInService) CheckInToday(userID uint) error {
 	err = s.checkInRepo.GetUserCheckInByDate(userID, yesterday, &yesterdayCheckIn)
 	if err == nil {
 		consecutiveDays = yesterdayCheckIn.ConsecutiveDays + 1
-		bestStreak = maxInt(consecutiveDays, yesterdayCheckIn.BestStreak)
+		bestStreak = max(consecutiveDays, yesterdayCheckIn.BestStreak)
 	} else {
 		var latestCheckIn models.UserCheckIn
 		err = s.checkInRepo.GetLatestUserCheckIn(userID, &latestCheckIn)
 		if err == nil {
-			bestStreak = maxInt(1, latestCheckIn.BestStreak)
+			bestStreak = max(1, latestCheckIn.BestStreak)
 		}
 	}
 
@@ -231,9 +236,14 @@ func (s *CheckInService) GetStudyHeatmap(userID uint) (*HeatmapResponse, error) 
 	}, nil
 }
 
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
+func (s *CheckInService) StartEventListener() {
+	go func() {
+		for event := range s.bus.UserCompletedQuestionChan {
+			// 加 recover 防止 panic
+			func() {
+				defer func() { recover() }()
+				_ = s.CheckInToday(event.UserID)
+			}()
+		}
+	}()
 }
