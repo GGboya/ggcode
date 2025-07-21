@@ -16,7 +16,17 @@ func NewQuestionController(questionService services.QuestionServiceInterface) *Q
 	return &QuestionController{questionService: questionService}
 }
 
-// GetQuestions 获取题库下的题目列表
+// @Summary      获取题库下的题目列表
+// @Description  分页获取指定题库的题目列表
+// @Tags         题目
+// @Produce      json
+// @Param        id     path     int  true  "题库ID"
+// @Param        page   query    int  false "页码"
+// @Param        limit  query    int  false "每页数量"
+// @Success      200    {object}  map[string]interface{}  "题目列表"
+// @Failure      400    {object}  map[string]string       "参数错误"
+// @Failure      500    {object}  map[string]string       "获取失败"
+// @Router       /api/questionbanks/{id}/questions [get]
 func (ctrl *QuestionController) GetQuestions(c *gin.Context) {
 	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -48,7 +58,13 @@ func (ctrl *QuestionController) GetQuestions(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// GetAllQuestions 获取所有题目，用于搜索
+// @Summary      获取所有题目（用于搜索）
+// @Description  获取所有题目列表
+// @Tags         题目
+// @Produce      json
+// @Success      200    {object}  map[string]interface{}  "题目列表"
+// @Failure      500    {object}  map[string]string       "获取失败"
+// @Router       /api/questions [get]
 func (ctrl *QuestionController) GetAllQuestions(c *gin.Context) {
 	questions, err := ctrl.questionService.GetAllQuestions()
 	if err != nil {
@@ -58,7 +74,18 @@ func (ctrl *QuestionController) GetAllQuestions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": questions})
 }
 
-// CreateQuestion 在题库中创建题目
+// @Summary      在题库中创建题目
+// @Description  在指定题库中创建新题目
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id   path     int     true  "题库ID"
+// @Param        data body     object  true  "题目信息"
+// @Success      201  {object}  map[string]interface{}  "创建成功"
+// @Failure      400  {object}  map[string]string       "参数错误"
+// @Failure      404  {object}  map[string]string       "题库不存在"
+// @Failure      500  {object}  map[string]string       "创建失败"
+// @Router       /api/questionbanks/{id}/questions [post]
 func (ctrl *QuestionController) CreateQuestion(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -94,7 +121,16 @@ func (ctrl *QuestionController) CreateQuestion(c *gin.Context) {
 	c.JSON(http.StatusCreated, question)
 }
 
-// GetQuestion 获取单个题目
+// @Summary      获取单个题目
+// @Description  获取指定ID的题目信息
+// @Tags         题目
+// @Produce      json
+// @Param        id   path     int  true  "题目ID"
+// @Success      200  {object}  map[string]interface{}  "题目信息"
+// @Failure      400  {object}  map[string]string       "参数错误"
+// @Failure      404  {object}  map[string]string       "题目不存在"
+// @Failure      500  {object}  map[string]string       "获取失败"
+// @Router       /api/questions/{id} [get]
 func (ctrl *QuestionController) GetQuestion(c *gin.Context) {
 	questionID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -117,7 +153,19 @@ func (ctrl *QuestionController) GetQuestion(c *gin.Context) {
 	c.JSON(http.StatusOK, question)
 }
 
-// UpdateQuestion 更新题目信息
+// @Summary      更新题目信息
+// @Description  更新指定ID的题目信息
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id   path     int     true  "题目ID"
+// @Param        data body     object  true  "题目信息"
+// @Success      200  {object}  map[string]interface{}  "更新成功"
+// @Failure      400  {object}  map[string]string       "参数错误"
+// @Failure      403  {object}  map[string]string       "无权限"
+// @Failure      404  {object}  map[string]string       "题目不存在"
+// @Failure      500  {object}  map[string]string       "更新失败"
+// @Router       /api/questions/{id} [put]
 func (ctrl *QuestionController) UpdateQuestion(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	questionID, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -156,7 +204,19 @@ func (ctrl *QuestionController) UpdateQuestion(c *gin.Context) {
 	c.JSON(http.StatusOK, question)
 }
 
-// DeleteQuestion 删除题目
+// @Summary      删除题目
+// @Description  删除指定ID的题目
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id   path     int     true  "题目ID"
+// @Param        data body     object  true  "题库ID"
+// @Success      200  {object}  map[string]string       "删除成功"
+// @Failure      400  {object}  map[string]string       "参数错误"
+// @Failure      403  {object}  map[string]string       "无权限"
+// @Failure      404  {object}  map[string]string       "题目不存在"
+// @Failure      500  {object}  map[string]string       "删除失败"
+// @Router       /api/questions/{id} [delete]
 func (ctrl *QuestionController) DeleteQuestion(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	questionID, err := strconv.ParseUint(c.Param("id"), 10, 32)

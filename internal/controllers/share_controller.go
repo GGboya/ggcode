@@ -19,7 +19,16 @@ func NewShareController(shareService services.ShareServiceInterface) *ShareContr
 	}
 }
 
-// ShareQuestionBank 共享题库
+// @Summary      题库分享
+// @Description  将指定题库设置为分享状态
+// @Tags         题库分享
+// @Produce      json
+// @Param        id    path     int  true  "题库ID"
+// @Success      200   {object}  map[string]string       "设置为分享成功"
+// @Failure      400   {object}  map[string]string       "无效题库ID"
+// @Failure      404   {object}  map[string]string       "题库不存在或无权限"
+// @Failure      500   {object}  map[string]string       "设置失败"
+// @Router       /api/questionbanks/{id}/share [post]
 func (ctrl *ShareController) ShareQuestionBank(c *gin.Context) {
 	bankIDStr := c.Param("id")
 	bankID, err := strconv.ParseUint(bankIDStr, 10, 32)
@@ -43,7 +52,16 @@ func (ctrl *ShareController) ShareQuestionBank(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "题库已设为共享"})
 }
 
-// UnshareQuestionBank 取消共享题库
+// @Summary      取消题库分享
+// @Description  取消指定题库的分享状态
+// @Tags         题库分享
+// @Produce      json
+// @Param        id    path     int  true  "题库ID"
+// @Success      200   {object}  map[string]string       "取消分享成功"
+// @Failure      400   {object}  map[string]string       "无效题库ID"
+// @Failure      404   {object}  map[string]string       "题库不存在或无权限"
+// @Failure      500   {object}  map[string]string       "取消失败"
+// @Router       /api/questionbanks/{id}/unshare [post]
 func (ctrl *ShareController) UnshareQuestionBank(c *gin.Context) {
 	bankIDStr := c.Param("id")
 	bankID, err := strconv.ParseUint(bankIDStr, 10, 32)
@@ -67,7 +85,17 @@ func (ctrl *ShareController) UnshareQuestionBank(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "题库已取消共享"})
 }
 
-// StarQuestionBank 收藏题库
+// @Summary      收藏题库
+// @Description  收藏指定题库
+// @Tags         题库分享
+// @Produce      json
+// @Param        id    path     int  true  "题库ID"
+// @Success      200   {object}  map[string]string       "收藏成功"
+// @Failure      400   {object}  map[string]string       "无效题库ID"
+// @Failure      404   {object}  map[string]string       "题库不存在或未分享"
+// @Failure      409   {object}  map[string]string       "已收藏"
+// @Failure      500   {object}  map[string]string       "收藏失败"
+// @Router       /api/questionbanks/{id}/star [post]
 func (ctrl *ShareController) StarQuestionBank(c *gin.Context) {
 	bankIDStr := c.Param("id")
 	bankID, err := strconv.ParseUint(bankIDStr, 10, 32)
@@ -95,7 +123,16 @@ func (ctrl *ShareController) StarQuestionBank(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Star成功"})
 }
 
-// UnstarQuestionBank 取消收藏题库
+// @Summary      取消收藏题库
+// @Description  取消收藏指定题库
+// @Tags         题库分享
+// @Produce      json
+// @Param        id    path     int  true  "题库ID"
+// @Success      200   {object}  map[string]string       "取消收藏成功"
+// @Failure      400   {object}  map[string]string       "无效题库ID"
+// @Failure      404   {object}  map[string]string       "尚未收藏该题库"
+// @Failure      500   {object}  map[string]string       "取消收藏失败"
+// @Router       /api/questionbanks/{id}/unstar [post]
 func (ctrl *ShareController) UnstarQuestionBank(c *gin.Context) {
 	bankIDStr := c.Param("id")
 	bankID, err := strconv.ParseUint(bankIDStr, 10, 32)
@@ -119,7 +156,17 @@ func (ctrl *ShareController) UnstarQuestionBank(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "取消Star成功"})
 }
 
-// ForkQuestionBank Fork题库
+// @Summary      Fork题库
+// @Description  Fork指定题库到个人空间
+// @Tags         题库分享
+// @Produce      json
+// @Param        id    path     int  true  "题库ID"
+// @Success      201   {object}  map[string]interface{}  "Fork成功"
+// @Failure      400   {object}  map[string]string       "无效题库ID"
+// @Failure      404   {object}  map[string]string       "题库不存在或未分享"
+// @Failure      409   {object}  map[string]string       "已Fork"
+// @Failure      500   {object}  map[string]string       "Fork失败"
+// @Router       /api/questionbanks/{id}/fork [post]
 func (ctrl *ShareController) ForkQuestionBank(c *gin.Context) {
 	bankIDStr := c.Param("id")
 	bankID, err := strconv.ParseUint(bankIDStr, 10, 32)
@@ -150,7 +197,15 @@ func (ctrl *ShareController) ForkQuestionBank(c *gin.Context) {
 	})
 }
 
-// GetUserStarredBanks 获取用户收藏的题库
+// @Summary      获取用户收藏的题库
+// @Description  分页获取当前用户收藏的题库列表
+// @Tags         题库分享
+// @Produce      json
+// @Param        page   query    int  false "页码"
+// @Param        limit  query    int  false "每页数量"
+// @Success      200    {object}  map[string]interface{}  "收藏题库列表"
+// @Failure      500    {object}  map[string]string       "获取失败"
+// @Router       /api/starred-questionbanks [get]
 func (ctrl *ShareController) GetUserStarredBanks(c *gin.Context) {
 	userID := c.GetUint("user_id")
 

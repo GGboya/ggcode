@@ -15,6 +15,16 @@ func NewUserController(userService services.UserServiceInterface) *UserControlle
 	return &UserController{userService: userService}
 }
 
+// @Summary      用户登录
+// @Description  用户登录，返回 token
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        data  body     object  true  "登录参数"
+// @Success      200   {object}  map[string]interface{}  "登录成功"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      401   {object}  map[string]string       "认证失败"
+// @Router       /api/login [post]
 func (ctrl *UserController) Login(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
@@ -41,6 +51,16 @@ func (ctrl *UserController) Login(c *gin.Context) {
 	})
 }
 
+// @Summary      用户注册
+// @Description  用户注册，返回 token
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        data  body     object  true  "注册参数"
+// @Success      201   {object}  map[string]interface{}  "注册成功"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      500   {object}  map[string]string       "注册失败"
+// @Router       /api/register [post]
 func (ctrl *UserController) Register(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
@@ -70,7 +90,12 @@ func (ctrl *UserController) Register(c *gin.Context) {
 	})
 }
 
-// Logout 用户退出登录
+// @Summary      用户登出
+// @Description  清除登录状态
+// @Tags         用户
+// @Produce      json
+// @Success      200   {object}  map[string]string  "登出成功"
+// @Router       /api/logout [post]
 func (ctrl *UserController) Logout(c *gin.Context) {
 	// 清除服务端cookie
 	c.SetCookie("token", "", -1, "/", "", false, true)
@@ -83,7 +108,12 @@ func (ctrl *UserController) Logout(c *gin.Context) {
 	})
 }
 
-// VerifyToken 校验当前 token 是否有效，并返回基础用户信息
+// @Summary      校验 token
+// @Description  校验当前 token 是否有效，返回用户信息
+// @Tags         用户
+// @Produce      json
+// @Success      200   {object}  map[string]interface{}  "token 有效"
+// @Router       /api/verify-token [get]
 func (ctrl *UserController) VerifyToken(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	username, _ := c.Get("username")

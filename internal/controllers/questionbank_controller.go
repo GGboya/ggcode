@@ -17,7 +17,17 @@ func NewQuestionBankController(questionBankService services.QuestionBankServiceI
 	return &QuestionBankController{questionBankService: questionBankService}
 }
 
-// GetQuestionBanks 获取题库列表
+// @Summary      获取题库列表
+// @Description  分页获取题库列表，可按类型和排序方式筛选
+// @Tags         题库
+// @Produce      json
+// @Param        type    query    string  false "题库类型(official/shared/personal)"
+// @Param        sort    query    string  false "排序方式(star_count/fork_count/created_at)"
+// @Param        page    query    int     false "页码"
+// @Param        limit   query    int     false "每页数量"
+// @Success      200     {object}  map[string]interface{}  "题库列表"
+// @Failure      500     {object}  map[string]string       "获取失败"
+// @Router       /api/questionbanks [get]
 func (ctrl *QuestionBankController) GetQuestionBanks(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	bankType := c.Query("type") // "official", "shared", "personal"
@@ -47,7 +57,16 @@ func (ctrl *QuestionBankController) GetQuestionBanks(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// CreateQuestionBank 创建题库
+// @Summary      创建题库
+// @Description  创建新的题库，可选导入题目
+// @Tags         题库
+// @Accept       json
+// @Produce      json
+// @Param        data  body     object  true  "题库信息"
+// @Success      201   {object}  map[string]interface{}  "创建成功"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      500   {object}  map[string]string       "创建失败"
+// @Router       /api/questionbanks [post]
 func (ctrl *QuestionBankController) CreateQuestionBank(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -82,7 +101,17 @@ func (ctrl *QuestionBankController) CreateQuestionBank(c *gin.Context) {
 	c.JSON(http.StatusCreated, questionBank)
 }
 
-// UpdateQuestionBank 更新题库
+// @Summary      更新题库
+// @Description  更新指定ID的题库信息
+// @Tags         题库
+// @Accept       json
+// @Produce      json
+// @Param        id    path     int     true  "题库ID"
+// @Param        data  body     object  true  "题库信息"
+// @Success      200   {object}  map[string]string       "更新成功"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      500   {object}  map[string]string       "更新失败"
+// @Router       /api/questionbanks/{id} [put]
 func (ctrl *QuestionBankController) UpdateQuestionBank(c *gin.Context) {
 	var req struct {
 		Name        string `json:"name" binding:"required"`
@@ -114,7 +143,17 @@ func (ctrl *QuestionBankController) UpdateQuestionBank(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "题库更新成功"})
 }
 
-// DeleteQuestionBank 删除题库
+// @Summary      删除题库
+// @Description  删除指定ID的题库
+// @Tags         题库
+// @Produce      json
+// @Param        id    path     int  true  "题库ID"
+// @Success      200   {object}  map[string]string       "删除成功"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      404   {object}  map[string]string       "题库不存在或无权限"
+// @Failure      409   {object}  map[string]string       "题库被学习计划使用"
+// @Failure      500   {object}  map[string]string       "删除失败"
+// @Router       /api/questionbanks/{id} [delete]
 func (ctrl *QuestionBankController) DeleteQuestionBank(c *gin.Context) {
 	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -141,7 +180,15 @@ func (ctrl *QuestionBankController) DeleteQuestionBank(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "题库删除成功"})
 }
 
-// GetQuestionBankProgress 获取特定题库的学习进度
+// @Summary      获取特定题库的学习进度
+// @Description  获取指定题库的学习进度信息
+// @Tags         题库
+// @Produce      json
+// @Param        id    path     int  true  "题库ID"
+// @Success      200   {object}  map[string]interface{}  "进度信息"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      500   {object}  map[string]string       "获取失败"
+// @Router       /api/questionbanks/{id}/progress [get]
 func (ctrl *QuestionBankController) GetQuestionBankProgress(c *gin.Context) {
 	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -160,7 +207,13 @@ func (ctrl *QuestionBankController) GetQuestionBankProgress(c *gin.Context) {
 	c.JSON(http.StatusOK, progress)
 }
 
-// GetAllQuestionBanksProgress 获取所有题库的学习进度
+// @Summary      获取所有题库的学习进度
+// @Description  获取当前用户所有题库的学习进度信息
+// @Tags         题库
+// @Produce      json
+// @Success      200   {object}  map[string]interface{}  "进度信息"
+// @Failure      500   {object}  map[string]string       "获取失败"
+// @Router       /api/questionbanks-progress [get]
 func (ctrl *QuestionBankController) GetAllQuestionBanksProgress(c *gin.Context) {
 	userID := c.GetUint("user_id")
 

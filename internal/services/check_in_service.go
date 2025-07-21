@@ -46,7 +46,6 @@ func NewCheckInService(checkInRepo repositories.CheckInRepository, userQuestionR
 	return checkInService
 }
 
-// CheckInToday 用户今日打卡（支持连续天数和最大连续天数统计）
 func (s *CheckInService) CheckInToday(userID uint) error {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -99,7 +98,6 @@ func (s *CheckInService) CheckInToday(userID uint) error {
 	return s.checkInRepo.CreateUserCheckIn(&checkIn)
 }
 
-// GetCheckInStats 获取打卡统计信息
 func (s *CheckInService) GetCheckInStats(userID uint) (*models.CheckInStat, error) {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -130,7 +128,6 @@ func (s *CheckInService) GetCheckInStats(userID uint) (*models.CheckInStat, erro
 	return &stats, nil
 }
 
-// GetStudyHeatmap 获取学习活动热力图数据
 func (s *CheckInService) GetStudyHeatmap(userID uint) (*HeatmapResponse, error) {
 	endDate := time.Now()
 	startDate := endDate.AddDate(-1, 0, 0)
