@@ -11,6 +11,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
+	// swagger
+	_ "ggcode/docs"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Server struct {
@@ -48,6 +54,9 @@ func New(db *gorm.DB, cfg *config.Config) (*Server, error) {
 
 	// 使用glob模式加载模板，强制每次重新加载
 	router.LoadHTMLGlob("web/templates/*.html")
+
+	// Swagger 文档路由
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 添加UTF-8编码中间件
 	router.Use(func(c *gin.Context) {
