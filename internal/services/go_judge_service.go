@@ -438,7 +438,11 @@ func (s *GoJudgeService) cleanupFile(fileId string) {
 		return
 	}
 
-	s.httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
 }
 
 // HealthCheck 健康检查

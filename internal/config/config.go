@@ -151,6 +151,7 @@ func (c *Config) Validate() error {
 
 	if c.JWT.Secret == "your-secret-key-change-this-in-production" {
 		// 警告：生产环境应该设置自定义密钥
+		fmt.Println("[警告] 生产环境请设置自定义 JWT 密钥！")
 	}
 
 	return nil

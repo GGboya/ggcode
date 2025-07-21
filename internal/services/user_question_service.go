@@ -93,11 +93,17 @@ func (s *UserQuestionService) CompleteQuestion(userID, questionID uint, resultTy
 // GetStudyStats 获取学习统计信息
 func (s *UserQuestionService) GetStudyStats(userID uint) (*models.StudyStats, error) {
 	var stats models.StudyStats
-	s.userStatsRepo.CountUserStudiedQuestions(userID, &stats.TotalStudied)
-	s.userStatsRepo.CountUserCompletedQuestions(userID, &stats.Completed)
+	if err := s.userStatsRepo.CountUserStudiedQuestions(userID, &stats.TotalStudied); err != nil {
+		return nil, err
+	}
+	if err := s.userStatsRepo.CountUserCompletedQuestions(userID, &stats.Completed); err != nil {
+		return nil, err
+	}
 	// 使用本地时区获取今天的开始时间
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	s.userStatsRepo.CountUserTodayReviewQuestions(userID, today, &stats.TodayReview)
+	if err := s.userStatsRepo.CountUserTodayReviewQuestions(userID, today, &stats.TodayReview); err != nil {
+		return nil, err
+	}
 	return &stats, nil
 }
