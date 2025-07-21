@@ -151,3 +151,60 @@ func (s *QuestionBankService) CreateQuestionBankWithImport(name, description str
 	}
 	return bank, nil
 }
+
+// GetQuestionBankProgress 获取特定题库的学习进度
+func (s *QuestionBankService) GetQuestionBankProgress(userID, bankID uint) (*QuestionBankProgress, error) {
+	// 获取题库总题目数
+	totalQuestions, err := s.questionRepo.GetQuestionCount(bankID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取已学习题目数（有学习记录的）
+	studiedCount, err := s.questionRepo.GetStudiedCount(userID, bankID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取已掌握题目数
+	completedCount, err := s.questionRepo.GetCompletedCount(userID, bankID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 计算进度百分比
+	var progressRate, masteryRate int
+	if totalQuestions > 0 {
+		progressRate = int((studiedCount * 100) / totalQuestions)
+		masteryRate = int((completedCount * 100) / totalQuestions)
+	}
+
+	return &QuestionBankProgress{
+		QuestionBankID: bankID,
+		TotalQuestions: totalQuestions,
+		StudiedCount:   studiedCount,
+		CompletedCount: completedCount,
+		ProgressRate:   progressRate,
+		MasteryRate:    masteryRate,
+	}, nil
+}
+
+// GetAllQuestionBanksProgress 获取所有题库的学习进度
+func (s *QuestionBankService) GetAllQuestionBanksProgress(userID uint) ([]QuestionBankProgress, error) {
+	// 获取所有题库
+	var questionBanks []models.QuestionBank
+	if err := s.questionBankRepo.GetAllQuestionBanks(&questionBanks); err != nil {
+		return nil, err
+	}
+
+	var progresses []QuestionBankProgress
+	for _, bank := range questionBanks {
+		progress, err := s.GetQuestionBankProgress(userID, bank.ID)
+		if err != nil {
+			continue // 跳过有问题的题库
+		}
+		progresses = append(progresses, *progress)
+	}
+
+	return progresses, nil
+}

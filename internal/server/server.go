@@ -157,15 +157,15 @@ func (s *Server) setupRoutes() {
 			api.GET("/study-plan/:id/daily-questions", ctrl.StudyPlan.GetDailyQuestions)
 
 			// 学习进度相关
-			api.GET("/questionbanks/:id/progress", ctrl.Progress.GetQuestionBankProgress)
-			api.GET("/questionbanks-progress", ctrl.Progress.GetAllQuestionBanksProgress)
+			api.GET("/questionbanks/:id/progress", ctrl.QuestionBank.GetQuestionBankProgress)
+			api.GET("/questionbanks-progress", ctrl.QuestionBank.GetAllQuestionBanksProgress)
 
 			// 打卡相关
-			api.POST("/checkin", ctrl.Progress.CheckInToday)
-			api.GET("/checkin-stats", ctrl.Progress.GetCheckInStats)
+			api.POST("/checkin", ctrl.CheckIn.CheckInToday)
+			api.GET("/checkin-stats", ctrl.CheckIn.GetCheckInStats)
 
 			// 学习热力图
-			api.GET("/study-heatmap", ctrl.Progress.GetStudyHeatmap)
+			api.GET("/study-heatmap", ctrl.CheckIn.GetStudyHeatmap)
 
 			// 面试岛相关
 			api.GET("/interview-island/map", ctrl.Interview.GetIslandMap)

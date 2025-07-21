@@ -15,7 +15,6 @@ type Services struct {
 	StudyPlan    *StudyPlanService
 	UserQuestion *UserQuestionService
 	Share        *ShareService
-	Progress     *ProgressService
 	Ebbinghaus   *EbbinghausService
 	CheckIn      *CheckInService
 	Interview    InterviewService
@@ -25,7 +24,6 @@ type Services struct {
 // NewServices 创建所有服务实例
 func NewServices(repos *repositories.Repositories, db *gorm.DB, cfg *config.Config) *Services {
 	ebbinghausService := NewEbbinghausService(db)
-	checkInService := NewCheckInService(repos.CheckIn, db)
 	return &Services{
 		User:         NewUserService(repos, cfg),
 		QuestionBank: NewQuestionBankService(repos),
@@ -33,9 +31,8 @@ func NewServices(repos *repositories.Repositories, db *gorm.DB, cfg *config.Conf
 		StudyPlan:    NewStudyPlanService(repos.StudyPlan, repos.UserQuestion, repos.Question),
 		UserQuestion: NewUserQuestionService(repos.UserQuestion, repos.UserStats, checkInService),
 		Share:        NewShareService(repos),
-		Progress:     NewProgressService(repos, ebbinghausService, checkInService),
 		Ebbinghaus:   ebbinghausService,
-		CheckIn:      checkInService,
+		CheckIn:      NewCheckInService(repos.CheckIn, repos.UserQuestion),
 		Interview:    NewInterviewService(repos.Interview),
 		GoJudge:      NewGoJudgeService(""),
 	}

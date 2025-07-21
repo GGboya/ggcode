@@ -93,6 +93,21 @@ func (mr *MockQuestionRepositoryMockRecorder) GetAllQuestions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllQuestions", reflect.TypeOf((*MockQuestionRepository)(nil).GetAllQuestions))
 }
 
+// GetCompletedCount mocks base method.
+func (m *MockQuestionRepository) GetCompletedCount(userID, questionBankID uint) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCompletedCount", userID, questionBankID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCompletedCount indicates an expected call of GetCompletedCount.
+func (mr *MockQuestionRepositoryMockRecorder) GetCompletedCount(userID, questionBankID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompletedCount", reflect.TypeOf((*MockQuestionRepository)(nil).GetCompletedCount), userID, questionBankID)
+}
+
 // GetQuestion mocks base method.
 func (m *MockQuestionRepository) GetQuestion(questionID uint) (*models.Question, error) {
 	m.ctrl.T.Helper()
@@ -136,6 +151,21 @@ func (m *MockQuestionRepository) GetQuestions(bankID uint, page, limit int) (*re
 func (mr *MockQuestionRepositoryMockRecorder) GetQuestions(bankID, page, limit interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQuestions", reflect.TypeOf((*MockQuestionRepository)(nil).GetQuestions), bankID, page, limit)
+}
+
+// GetStudiedCount mocks base method.
+func (m *MockQuestionRepository) GetStudiedCount(userID, questionBankID uint) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStudiedCount", userID, questionBankID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetStudiedCount indicates an expected call of GetStudiedCount.
+func (mr *MockQuestionRepositoryMockRecorder) GetStudiedCount(userID, questionBankID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStudiedCount", reflect.TypeOf((*MockQuestionRepository)(nil).GetStudiedCount), userID, questionBankID)
 }
 
 // UpdateQuestion mocks base method.

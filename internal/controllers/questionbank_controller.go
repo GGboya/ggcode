@@ -140,3 +140,35 @@ func (ctrl *QuestionBankController) DeleteQuestionBank(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "题库删除成功"})
 }
+
+// GetQuestionBankProgress 获取特定题库的学习进度
+func (ctrl *QuestionBankController) GetQuestionBankProgress(c *gin.Context) {
+	bankID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的题库ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	progress, err := ctrl.questionBankService.GetQuestionBankProgress(userID, uint(bankID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取进度失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, progress)
+}
+
+// GetAllQuestionBanksProgress 获取所有题库的学习进度
+func (ctrl *QuestionBankController) GetAllQuestionBanksProgress(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	progresses, err := ctrl.questionBankService.GetAllQuestionBanksProgress(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取进度失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, progresses)
+}

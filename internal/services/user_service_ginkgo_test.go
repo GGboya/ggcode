@@ -2,8 +2,10 @@ package services
 
 import (
 	"errors"
+	"ggcode/internal/config"
 	mocks "ggcode/internal/mocks/repositories"
 	"ggcode/internal/models"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -24,6 +26,13 @@ var _ = Describe("UserService", func() {
 		mockRepo = mocks.NewMockUserRepository(mockCtrl)
 		userService = &UserService{
 			userRepo: mockRepo,
+			config: &config.Config{
+				JWT: config.JWTConfig{
+					Secret:     "testsecret",
+					Expiration: time.Hour,
+					Issuer:     "test",
+				},
+			},
 		}
 	})
 
