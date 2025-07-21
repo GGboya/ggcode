@@ -1,6 +1,16 @@
 {{template "base.html" .}}
 
 {{define "content"}}
+<style>
+.cf-grey   { background: #808080 !important; color: #fff !important; }
+.cf-green  { background: #008000 !important; color: #fff !important; }
+.cf-cyan   { background: #03a89e !important; color: #fff !important; }
+.cf-blue   { background: #0000ff !important; color: #fff !important; }
+.cf-violet { background: #aa00aa !important; color: #fff !important; }
+.cf-orange { background: #ff8c00 !important; color: #fff !important; }
+.cf-red    { background: #ff0000 !important; color: #fff !important; }
+.cf-gold   { background: #ffd700 !important; color: #fff !important; }
+</style>
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -762,7 +772,39 @@ function addQuestion(bankId) {
     }, 50);
 }
 
-// 渲染题目列表
+// 获取难度样式类
+function getDifficultyClass(difficulty) {
+    switch(difficulty.toLowerCase()) {
+        case 'easy': return 'bg-success';
+        case 'medium': return 'bg-warning';
+        case 'hard': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+
+function getScoreClass(score) {
+    if (score == null) return 'cf-grey';
+    if (score < 1200) return 'cf-grey';
+    if (score < 1400) return 'cf-green';
+    if (score < 1600) return 'cf-cyan';
+    if (score < 1900) return 'cf-blue';
+    if (score < 2100) return 'cf-violet';
+    if (score < 2400) return 'cf-orange';
+    if (score < 3000) return 'cf-red';
+    return 'cf-gold';
+}
+
+function renderQuestionTag(q) {
+    if (q.score) {
+        return `<span class="badge ${getScoreClass(q.score)}">${q.score}</span>`;
+    } else if (q.difficulty) {
+        return `<span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>`;
+    } else {
+        return `<span class="badge bg-secondary">未知</span>`;
+    }
+}
+
+// 修改渲染题目列表
 function renderQuestionsList(questions, bank, pagination) {
     return questions.map((q, index) => {
         const globalIndex = pagination ? 
@@ -773,7 +815,7 @@ function renderQuestionsList(questions, bank, pagination) {
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <h6 class="mb-1">${globalIndex}. ${q.title}</h6>
-                        <span class="badge ${getDifficultyClass(q.difficulty)}">${q.difficulty}</span>
+                        ${renderQuestionTag(q)}
                     </div>
                     <div class="btn-group btn-group-sm">
                         <a href="${q.url}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm ms-2">查看题目链接</a>
@@ -851,16 +893,6 @@ function goToQuestionPage(page) {
     }
     
     viewQuestions(currentViewingBankId, page);
-}
-
-// 获取难度样式类
-function getDifficultyClass(difficulty) {
-    switch(difficulty.toLowerCase()) {
-        case 'easy': return 'bg-success';
-        case 'medium': return 'bg-warning';
-        case 'hard': return 'bg-danger';
-        default: return 'bg-secondary';
-    }
 }
 
 // 创建题库表单提交
@@ -981,7 +1013,7 @@ function addQuestionToModal(newQuestion, modal) {
             <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                     <h6 class="mb-1">${newIndex}. ${newQuestion.title}</h6>
-                    <span class="badge ${getDifficultyClass(newQuestion.difficulty)}">${newQuestion.difficulty}</span>
+                    ${renderQuestionTag(newQuestion)}
                 </div>
                 <div class="btn-group btn-group-sm">
                     <a href="${newQuestion.question_url}" target="_blank" rel="noopener" class="btn btn-outline-primary">
