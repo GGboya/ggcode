@@ -154,6 +154,21 @@ func (mr *MockUserQuestionRepositoryMockRecorder) GetStudiedQuestionCount(userID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStudiedQuestionCount", reflect.TypeOf((*MockUserQuestionRepository)(nil).GetStudiedQuestionCount), userID, questionBankID)
 }
 
+// GetUserDailyStudyCount mocks base method.
+func (m *MockUserQuestionRepository) GetUserDailyStudyCount(userID uint, date time.Time) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserDailyStudyCount", userID, date)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserDailyStudyCount indicates an expected call of GetUserDailyStudyCount.
+func (mr *MockUserQuestionRepositoryMockRecorder) GetUserDailyStudyCount(userID, date interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserDailyStudyCount", reflect.TypeOf((*MockUserQuestionRepository)(nil).GetUserDailyStudyCount), userID, date)
+}
+
 // GetUserQuestionProgress mocks base method.
 func (m *MockUserQuestionRepository) GetUserQuestionProgress(userID, questionID uint, progress *models.UserQuestionProgress) error {
 	m.ctrl.T.Helper()
@@ -166,6 +181,21 @@ func (m *MockUserQuestionRepository) GetUserQuestionProgress(userID, questionID 
 func (mr *MockUserQuestionRepositoryMockRecorder) GetUserQuestionProgress(userID, questionID, progress interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserQuestionProgress", reflect.TypeOf((*MockUserQuestionRepository)(nil).GetUserQuestionProgress), userID, questionID, progress)
+}
+
+// GetUserYearlyDailyStats mocks base method.
+func (m *MockUserQuestionRepository) GetUserYearlyDailyStats(userID uint, startDate, endDate time.Time) ([]models.DailyStat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserYearlyDailyStats", userID, startDate, endDate)
+	ret0, _ := ret[0].([]models.DailyStat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserYearlyDailyStats indicates an expected call of GetUserYearlyDailyStats.
+func (mr *MockUserQuestionRepositoryMockRecorder) GetUserYearlyDailyStats(userID, startDate, endDate interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserYearlyDailyStats", reflect.TypeOf((*MockUserQuestionRepository)(nil).GetUserYearlyDailyStats), userID, startDate, endDate)
 }
 
 // UpdateUserQuestionProgress mocks base method.

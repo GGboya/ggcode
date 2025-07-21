@@ -1,0 +1,1142 @@
+definitions:
+  models.CheckInStat:
+    properties:
+      best_streak:
+        description: 历史最长连续天数
+        type: integer
+      checked_in_today:
+        description: 今日是否已打卡
+        type: boolean
+      consecutive_days:
+        description: 当前连续打卡天数
+        type: integer
+      total_check_in_days:
+        description: 总打卡天数
+        type: integer
+    type: object
+  services.HeatmapData:
+    properties:
+      count:
+        description: 当天学习题目数量
+        type: integer
+      date:
+        description: YYYY-MM-DD 格式
+        type: string
+      level:
+        description: 活跃度级别 0-4
+        type: integer
+    type: object
+  services.HeatmapResponse:
+    properties:
+      current_streak:
+        description: 当前连续天数
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/services.HeatmapData'
+        type: array
+      max_streak:
+        description: 最长连续天数
+        type: integer
+      this_year:
+        description: 今年学习天数
+        type: integer
+      total_commits:
+        description: 总学习天数
+        type: integer
+    type: object
+info:
+  contact: {}
+paths:
+  /api/checkin:
+    post:
+      description: 用户手动打卡，记录当天学习情况
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打卡成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 打卡失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 今日打卡
+      tags:
+      - 打卡
+  /api/checkin-stats:
+    get:
+      description: 获取用户的打卡天数、连续天数等统计信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打卡统计信息
+          schema:
+            $ref: '#/definitions/models.CheckInStat'
+        "500":
+          description: 获取统计失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取打卡统计
+      tags:
+      - 打卡
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录，返回 token
+      parameters:
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 认证失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 用户登录
+      tags:
+      - 用户
+  /api/logout:
+    post:
+      description: 清除登录状态
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 用户登出
+      tags:
+      - 用户
+  /api/questionbanks:
+    get:
+      description: 分页获取题库列表，可按类型和排序方式筛选
+      parameters:
+      - description: 题库类型(official/shared/personal)
+        in: query
+        name: type
+        type: string
+      - description: 排序方式(star_count/fork_count/created_at)
+        in: query
+        name: sort
+        type: string
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 题库列表
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取题库列表
+      tags:
+      - 题库
+    post:
+      consumes:
+      - application/json
+      description: 创建新的题库，可选导入题目
+      parameters:
+      - description: 题库信息
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 创建成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 创建失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 创建题库
+      tags:
+      - 题库
+  /api/questionbanks-progress:
+    get:
+      description: 获取当前用户所有题库的学习进度信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 进度信息
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取所有题库的学习进度
+      tags:
+      - 题库
+  /api/questionbanks/{id}:
+    delete:
+      description: 删除指定ID的题库
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题库不存在或无权限
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 题库被学习计划使用
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 删除失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 删除题库
+      tags:
+      - 题库
+    put:
+      consumes:
+      - application/json
+      description: 更新指定ID的题库信息
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 题库信息
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 更新失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 更新题库
+      tags:
+      - 题库
+  /api/questionbanks/{id}/fork:
+    post:
+      description: Fork指定题库到个人空间
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Fork成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效题库ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题库不存在或未分享
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 已Fork
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Fork失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Fork题库
+      tags:
+      - 题库分享
+  /api/questionbanks/{id}/progress:
+    get:
+      description: 获取指定题库的学习进度信息
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 进度信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取特定题库的学习进度
+      tags:
+      - 题库
+  /api/questionbanks/{id}/questions:
+    get:
+      description: 分页获取指定题库的题目列表
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 题目列表
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取题库下的题目列表
+      tags:
+      - 题目
+    post:
+      consumes:
+      - application/json
+      description: 在指定题库中创建新题目
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 题目信息
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 创建成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题库不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 创建失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 在题库中创建题目
+      tags:
+      - 题目
+  /api/questionbanks/{id}/share:
+    post:
+      description: 将指定题库设置为分享状态
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 设置为分享成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 无效题库ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题库不存在或无权限
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 设置失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 题库分享
+      tags:
+      - 题库分享
+  /api/questionbanks/{id}/star:
+    post:
+      description: 收藏指定题库
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 收藏成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 无效题库ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题库不存在或未分享
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 已收藏
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 收藏失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 收藏题库
+      tags:
+      - 题库分享
+  /api/questionbanks/{id}/unshare:
+    post:
+      description: 取消指定题库的分享状态
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 取消分享成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 无效题库ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题库不存在或无权限
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 取消失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 取消题库分享
+      tags:
+      - 题库分享
+  /api/questionbanks/{id}/unstar:
+    post:
+      description: 取消收藏指定题库
+      parameters:
+      - description: 题库ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 取消收藏成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 无效题库ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 尚未收藏该题库
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 取消收藏失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 取消收藏题库
+      tags:
+      - 题库分享
+  /api/questions:
+    get:
+      description: 获取所有题目列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 题目列表
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取所有题目（用于搜索）
+      tags:
+      - 题目
+  /api/questions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定ID的题目
+      parameters:
+      - description: 题目ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 题库ID
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题目不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 删除失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 删除题目
+      tags:
+      - 题目
+    get:
+      description: 获取指定ID的题目信息
+      parameters:
+      - description: 题目ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 题目信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题目不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取单个题目
+      tags:
+      - 题目
+    put:
+      consumes:
+      - application/json
+      description: 更新指定ID的题目信息
+      parameters:
+      - description: 题目ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 题目信息
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 无权限
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 题目不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 更新失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 更新题目信息
+      tags:
+      - 题目
+  /api/register:
+    post:
+      consumes:
+      - application/json
+      description: 用户注册，返回 token
+      parameters:
+      - description: 注册参数
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 注册成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 注册失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 用户注册
+      tags:
+      - 用户
+  /api/starred-questionbanks:
+    get:
+      description: 分页获取当前用户收藏的题库列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 收藏题库列表
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取用户收藏的题库
+      tags:
+      - 题库分享
+  /api/study-heatmap:
+    get:
+      description: 获取用户一年内的学习热力图数据
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 热力图数据
+          schema:
+            $ref: '#/definitions/services.HeatmapResponse'
+        "500":
+          description: 获取热力图失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取学习热力图
+      tags:
+      - 打卡
+  /api/study-plan:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的学习计划
+      parameters:
+      - description: 学习计划信息
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 创建成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 已存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 创建失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 创建学习计划
+      tags:
+      - 学习计划
+  /api/study-plan/{id}:
+    delete:
+      description: 删除指定ID的学习计划
+      parameters:
+      - description: 学习计划ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 删除失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 删除学习计划
+      tags:
+      - 学习计划
+    get:
+      description: 获取指定ID的学习计划信息
+      parameters:
+      - description: 学习计划ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 学习计划信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取单个学习计划
+      tags:
+      - 学习计划
+    put:
+      consumes:
+      - application/json
+      description: 更新指定ID的学习计划
+      parameters:
+      - description: 学习计划ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 学习计划信息
+        in: body
+        name: data
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 更新失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 更新学习计划
+      tags:
+      - 学习计划
+  /api/study-plan/{id}/daily-questions:
+    get:
+      description: 获取指定学习计划的每日学习题目
+      parameters:
+      - description: 学习计划ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 每日任务
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取每日学习任务
+      tags:
+      - 学习计划
+  /api/study-plan/{id}/progress:
+    get:
+      description: 获取指定学习计划的进度信息
+      parameters:
+      - description: 学习计划ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 进度信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取学习计划进度
+      tags:
+      - 学习计划
+  /api/study-plans:
+    get:
+      description: 分页获取当前用户的所有学习计划
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 学习计划列表
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取所有学习计划
+      tags:
+      - 学习计划
+  /api/verify-token:
+    get:
+      description: 校验当前 token 是否有效，返回用户信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: token 有效
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 校验 token
+      tags:
+      - 用户
+swagger: "2.0"

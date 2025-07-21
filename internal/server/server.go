@@ -11,6 +11,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
+	// swagger
+	_ "ggcode/docs"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Server struct {
@@ -48,6 +54,9 @@ func New(db *gorm.DB, cfg *config.Config) (*Server, error) {
 
 	// 使用glob模式加载模板，强制每次重新加载
 	router.LoadHTMLGlob("web/templates/*.html")
+
+	// Swagger 文档路由
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 添加UTF-8编码中间件
 	router.Use(func(c *gin.Context) {
@@ -157,15 +166,15 @@ func (s *Server) setupRoutes() {
 			api.GET("/study-plan/:id/daily-questions", ctrl.StudyPlan.GetDailyQuestions)
 
 			// 学习进度相关
-			api.GET("/questionbanks/:id/progress", ctrl.Progress.GetQuestionBankProgress)
-			api.GET("/questionbanks-progress", ctrl.Progress.GetAllQuestionBanksProgress)
+			api.GET("/questionbanks/:id/progress", ctrl.QuestionBank.GetQuestionBankProgress)
+			api.GET("/questionbanks-progress", ctrl.QuestionBank.GetAllQuestionBanksProgress)
 
 			// 打卡相关
-			api.POST("/checkin", ctrl.Progress.CheckInToday)
-			api.GET("/checkin-stats", ctrl.Progress.GetCheckInStats)
+			api.POST("/checkin", ctrl.CheckIn.CheckInToday)
+			api.GET("/checkin-stats", ctrl.CheckIn.GetCheckInStats)
 
 			// 学习热力图
-			api.GET("/study-heatmap", ctrl.Progress.GetStudyHeatmap)
+			api.GET("/study-heatmap", ctrl.CheckIn.GetStudyHeatmap)
 
 			// 面试岛相关
 			api.GET("/interview-island/map", ctrl.Interview.GetIslandMap)

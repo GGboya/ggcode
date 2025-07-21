@@ -36,6 +36,9 @@ type QuestionBankRepository interface {
 	DeleteQuestionBank(bankID, userID uint) error
 	GetOrCreateWrongQuestionBook(userID uint) (*models.QuestionBank, error)
 	AddQuestionToWrongBook(userID, questionID uint) error
+
+	// 新增方法
+	GetAllQuestionBanks(questionBanks *[]models.QuestionBank) error
 }
 
 type questionBankRepository struct {
@@ -232,34 +235,32 @@ func (r *questionBankRepository) AddQuestionToWrongBook(userID, questionID uint)
 		return err
 	}
 
-	// 获取原题目信息
-	var originalQuestion models.Question
-	err = r.db.First(&originalQuestion, questionID).Error
-	if err != nil {
-		return err
-	}
-
 	// 检查题目是否已经在错题本中
 	var existingQuestion models.Question
-	err = r.db.Where("question_bank_id = ? AND title = ? AND url = ?",
-		wrongBook.ID, originalQuestion.Title, originalQuestion.URL).First(&existingQuestion).Error
-
+	err = r.db.Where("question_bank_id = ? AND id = ?", wrongBook.ID, questionID).First(&existingQuestion).Error
 	if err == nil {
-		// 题目已存在，不重复添加
-		return nil
+		return errors.New("题目已在错题本中")
 	}
 
-	if err != gorm.ErrRecordNotFound {
-		return err
+	// 获取原题目信息
+	var originalQuestion models.Question
+	if err := r.db.First(&originalQuestion, questionID).Error; err != nil {
+		return errors.New("题目不存在")
 	}
 
-	// 创建新的错题记录
-	wrongQuestion := models.Question{
+	// 复制题目到错题本
+	newQuestion := models.Question{
 		Title:          originalQuestion.Title,
 		URL:            originalQuestion.URL,
 		Difficulty:     originalQuestion.Difficulty,
 		QuestionBankID: wrongBook.ID,
+		Score:          originalQuestion.Score,
 	}
 
-	return r.db.Create(&wrongQuestion).Error
+	return r.db.Create(&newQuestion).Error
+}
+
+// GetAllQuestionBanks 获取所有题库
+func (r *questionBankRepository) GetAllQuestionBanks(questionBanks *[]models.QuestionBank) error {
+	return r.db.Find(questionBanks).Error
 }

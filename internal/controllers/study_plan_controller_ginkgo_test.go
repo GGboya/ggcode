@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"ggcode/internal/models"
-	"ggcode/internal/services"
 
 	mockservices "ggcode/internal/mocks/services"
 
@@ -499,7 +498,7 @@ var _ = Describe("StudyPlanController", func() {
 		Context("成功获取学习计划进度", func() {
 			It("应该返回 200 状态码和进度数据", func() {
 				// 设置 mock 期望
-				expectedProgress := &services.StudyPlanProgress{
+				expectedProgress := &models.StudyPlanProgress{
 					StudyPlanID:    planID,
 					TotalQuestions: 100,
 					StudiedCount:   50,
@@ -522,7 +521,7 @@ var _ = Describe("StudyPlanController", func() {
 				// 验证响应
 				Expect(recorder.Code).To(Equal(http.StatusOK))
 
-				var response services.StudyPlanProgress
+				var response models.StudyPlanProgress
 				err := json.Unmarshal(recorder.Body.Bytes(), &response)
 				Expect(err).To(BeNil())
 				Expect(response.StudyPlanID).To(Equal(planID))

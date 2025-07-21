@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"ggcode/internal/models"
+	"ggcode/internal/pkg/logger"
 	"ggcode/internal/repositories"
 	"math"
 	"sort"
@@ -18,7 +19,7 @@ type StudyPlanServiceInterface interface {
 	UpdateStudyPlan(planID, userID uint, dailyCount int) error
 	DeleteStudyPlan(planID, userID uint) error
 	GetAllStudyPlans(userID uint, page, limit int) ([]models.UserStudyPlan, int64, error)
-	GetStudyPlanProgress(userID, planID uint) (*StudyPlanProgress, error)
+	GetStudyPlanProgress(userID, planID uint) (*models.StudyPlanProgress, error)
 	GetDailyQuestions(userID, planID uint) (*models.DailyQuestionsResponse, error)
 }
 type StudyPlanService struct {
@@ -108,14 +109,14 @@ func (s *StudyPlanService) GetAllStudyPlans(userID uint, page, limit int) ([]mod
 }
 
 // GetStudyPlanProgress 获取学习计划进度
-func (s *StudyPlanService) GetStudyPlanProgress(userID, planID uint) (*StudyPlanProgress, error) {
+func (s *StudyPlanService) GetStudyPlanProgress(userID, planID uint) (*models.StudyPlanProgress, error) {
 	// 获取学习计划
 	studyPlan, err := s.studyPlanRepo.GetStudyPlan(planID, userID)
 	if err != nil {
 		return nil, errors.New("学习计划不存在")
 	}
 
-	var progress StudyPlanProgress
+	var progress models.StudyPlanProgress
 	progress.StudyPlanID = planID
 
 	// 确定实际统计的题库ID
@@ -214,6 +215,7 @@ func (s *StudyPlanService) GetDailyQuestions(userID, planID uint) (*models.Daily
 		if err := s.studyPlanRepo.CacheDailyQuestions(userID, planID, questionIDs, today); err != nil {
 			// 缓存失败不影响学习，记录日志即可
 			// 可以在这里添加日志记录
+			logger.Error("缓存每日学习题目失败", err)
 		}
 	} else if err != nil {
 		return nil, err

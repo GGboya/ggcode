@@ -36,7 +36,9 @@ func NewTestDataService(judgeDataRoot string) *TestDataService {
 	}
 
 	// 确保数据根目录存在
-	os.MkdirAll(judgeDataRoot, 0755)
+	if err := os.MkdirAll(judgeDataRoot, 0755); err != nil {
+		return nil
+	}
 
 	return &TestDataService{
 		judgeDataRoot: judgeDataRoot,

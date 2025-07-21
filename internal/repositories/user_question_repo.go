@@ -21,6 +21,10 @@ type UserQuestionRepository interface {
 	GetStudiedQuestionCount(userID, questionBankID uint) (int64, error)
 	GetCompletedQuestionCount(userID, questionBankID uint) (int64, error)
 	GetReviewQuestionCount(userID, questionBankID uint) (int64, error)
+	// 统计用户当天学习题目数量
+	GetUserDailyStudyCount(userID uint, date time.Time) (int64, error)
+	// 统计用户一年内每日学习题目数量
+	GetUserYearlyDailyStats(userID uint, startDate, endDate time.Time) ([]models.DailyStat, error)
 }
 
 type userQuestionRepository struct {
@@ -135,4 +139,23 @@ func (r *userQuestionRepository) GetReviewQuestionCount(userID, questionBankID u
 			userID, questionBankID, false, today).
 		Count(&count).Error
 	return count, err
+}
+
+func (r *userQuestionRepository) GetUserDailyStudyCount(userID uint, date time.Time) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.UserQuestionProgress{}).
+		Where("user_id = ? AND DATE(last_review_date) = DATE(?)", userID, date).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *userQuestionRepository) GetUserYearlyDailyStats(userID uint, startDate, endDate time.Time) ([]models.DailyStat, error) {
+	var dailyStats []models.DailyStat
+	err := r.db.Table("user_question_progresses").
+		Select("DATE(last_review_date) as date, COUNT(DISTINCT question_id) as count").
+		Where("user_id = ? AND DATE(last_review_date) >= DATE(?) AND DATE(last_review_date) < DATE(?) AND last_review_date IS NOT NULL", userID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02")).
+		Group("DATE(last_review_date)").
+		Order("date").
+		Scan(&dailyStats).Error
+	return dailyStats, err
 }

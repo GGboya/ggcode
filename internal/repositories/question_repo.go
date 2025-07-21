@@ -24,6 +24,10 @@ type QuestionRepository interface {
 	DeleteQuestion(userID, questionID, bankID uint) error
 	BatchCreateQuestions(questions []models.Question) error // 新增
 	GetQuestionCount(questionBankID uint) (int64, error)    // 统计题库题目数量
+
+	// 新增方法
+	GetStudiedCount(userID, questionBankID uint) (int64, error)   // 获取已学习题目数
+	GetCompletedCount(userID, questionBankID uint) (int64, error) // 获取已掌握题目数
 }
 
 type questionRepository struct {
@@ -389,6 +393,27 @@ func (r *questionRepository) BatchCreateQuestions(questions []models.Question) e
 func (r *questionRepository) GetQuestionCount(questionBankID uint) (int64, error) {
 	var count int64
 	err := r.db.Model(&models.Question{}).Where("question_bank_id = ?", questionBankID).Count(&count).Error
+	return count, err
+}
+
+// GetStudiedCount 获取用户已学习的题目数量
+func (r *questionRepository) GetStudiedCount(userID, questionBankID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.UserQuestionProgress{}).
+		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
+		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ?", userID, questionBankID).
+		Count(&count).Error
+	return count, err
+}
+
+// GetCompletedCount 获取用户已掌握的题目数量
+func (r *questionRepository) GetCompletedCount(userID, questionBankID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.UserQuestionProgress{}).
+		Joins("JOIN questions ON questions.id = user_question_progresses.question_id").
+		Where("user_question_progresses.user_id = ? AND questions.question_bank_id = ? AND user_question_progresses.is_completed = ?",
+			userID, questionBankID, true).
+		Count(&count).Error
 	return count, err
 }
 

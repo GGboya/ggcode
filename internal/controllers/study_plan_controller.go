@@ -19,7 +19,17 @@ func NewStudyPlanController(studyPlanService services.StudyPlanServiceInterface)
 	}
 }
 
-// CreateStudyPlan 创建学习计划
+// @Summary      创建学习计划
+// @Description  创建新的学习计划
+// @Tags         学习计划
+// @Accept       json
+// @Produce      json
+// @Param        data  body     object  true  "学习计划信息"
+// @Success      201   {object}  map[string]interface{}  "创建成功"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      409   {object}  map[string]string       "已存在"
+// @Failure      500   {object}  map[string]string       "创建失败"
+// @Router       /api/study-plan [post]
 func (ctrl *StudyPlanController) CreateStudyPlan(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -46,7 +56,15 @@ func (ctrl *StudyPlanController) CreateStudyPlan(c *gin.Context) {
 	c.JSON(http.StatusCreated, studyPlan)
 }
 
-// GetStudyPlan 获取单个学习计划
+// @Summary      获取单个学习计划
+// @Description  获取指定ID的学习计划信息
+// @Tags         学习计划
+// @Produce      json
+// @Param        id   path     int  true  "学习计划ID"
+// @Success      200  {object}  map[string]interface{}  "学习计划信息"
+// @Failure      400  {object}  map[string]string       "参数错误"
+// @Failure      404  {object}  map[string]string       "不存在"
+// @Router       /api/study-plan/{id} [get]
 func (ctrl *StudyPlanController) GetStudyPlan(c *gin.Context) {
 	planIDStr := c.Param("id")
 	planID, err := strconv.ParseUint(planIDStr, 10, 32)
@@ -66,7 +84,17 @@ func (ctrl *StudyPlanController) GetStudyPlan(c *gin.Context) {
 	c.JSON(http.StatusOK, studyPlan)
 }
 
-// UpdateStudyPlan 更新学习计划
+// @Summary      更新学习计划
+// @Description  更新指定ID的学习计划
+// @Tags         学习计划
+// @Accept       json
+// @Produce      json
+// @Param        id    path     int     true  "学习计划ID"
+// @Param        data  body     object  true  "学习计划信息"
+// @Success      200   {object}  map[string]string       "更新成功"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      500   {object}  map[string]string       "更新失败"
+// @Router       /api/study-plan/{id} [put]
 func (ctrl *StudyPlanController) UpdateStudyPlan(c *gin.Context) {
 	planIDStr := c.Param("id")
 	planID, err := strconv.ParseUint(planIDStr, 10, 32)
@@ -95,7 +123,16 @@ func (ctrl *StudyPlanController) UpdateStudyPlan(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "学习计划已更新"})
 }
 
-// DeleteStudyPlan 删除学习计划
+// @Summary      删除学习计划
+// @Description  删除指定ID的学习计划
+// @Tags         学习计划
+// @Produce      json
+// @Param        id    path     int  true  "学习计划ID"
+// @Success      200   {object}  map[string]string       "删除成功"
+// @Failure      400   {object}  map[string]string       "参数错误"
+// @Failure      404   {object}  map[string]string       "不存在"
+// @Failure      500   {object}  map[string]string       "删除失败"
+// @Router       /api/study-plan/{id} [delete]
 func (ctrl *StudyPlanController) DeleteStudyPlan(c *gin.Context) {
 	planIDStr := c.Param("id")
 	planID, err := strconv.ParseUint(planIDStr, 10, 32)
@@ -119,7 +156,15 @@ func (ctrl *StudyPlanController) DeleteStudyPlan(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "学习计划和对应的学习进度已删除"})
 }
 
-// GetAllStudyPlans 获取所有学习计划
+// @Summary      获取所有学习计划
+// @Description  分页获取当前用户的所有学习计划
+// @Tags         学习计划
+// @Produce      json
+// @Param        page   query    int  false "页码"
+// @Param        limit  query    int  false "每页数量"
+// @Success      200    {object}  map[string]interface{}  "学习计划列表"
+// @Failure      500    {object}  map[string]string       "获取失败"
+// @Router       /api/study-plans [get]
 func (ctrl *StudyPlanController) GetAllStudyPlans(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -159,7 +204,15 @@ func (ctrl *StudyPlanController) GetAllStudyPlans(c *gin.Context) {
 	})
 }
 
-// GetStudyPlanProgress 获取学习计划进度
+// @Summary      获取学习计划进度
+// @Description  获取指定学习计划的进度信息
+// @Tags         学习计划
+// @Produce      json
+// @Param        id   path     int  true  "学习计划ID"
+// @Success      200  {object}  map[string]interface{}  "进度信息"
+// @Failure      400  {object}  map[string]string       "参数错误"
+// @Failure      500  {object}  map[string]string       "获取失败"
+// @Router       /api/study-plan/{id}/progress [get]
 func (ctrl *StudyPlanController) GetStudyPlanProgress(c *gin.Context) {
 	planIDStr := c.Param("id")
 	planID, err := strconv.ParseUint(planIDStr, 10, 32)
@@ -179,7 +232,15 @@ func (ctrl *StudyPlanController) GetStudyPlanProgress(c *gin.Context) {
 	c.JSON(http.StatusOK, progress)
 }
 
-// GetDailyQuestions 获取每日学习题目
+// @Summary      获取每日学习任务
+// @Description  获取指定学习计划的每日学习题目
+// @Tags         学习计划
+// @Produce      json
+// @Param        id   path     int  true  "学习计划ID"
+// @Success      200  {object}  map[string]interface{}  "每日任务"
+// @Failure      400  {object}  map[string]string       "参数错误"
+// @Failure      500  {object}  map[string]string       "获取失败"
+// @Router       /api/study-plan/{id}/daily-questions [get]
 func (ctrl *StudyPlanController) GetDailyQuestions(c *gin.Context) {
 	planIDStr := c.Param("id")
 	planID, err := strconv.ParseUint(planIDStr, 10, 32)

@@ -26,9 +26,9 @@ type UserService struct {
 	config   *config.Config
 }
 
-func NewUserService(repos *repositories.Repositories, cfg *config.Config) *UserService {
+func NewUserService(userRepo repositories.UserRepository, cfg *config.Config) *UserService {
 	return &UserService{
-		userRepo: repos.User,
+		userRepo: userRepo,
 		config:   cfg,
 	}
 }

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"ggcode/internal/events"
 	"ggcode/internal/models"
 	"ggcode/internal/repositories"
 	"time"
@@ -8,22 +9,24 @@ import (
 	"gorm.io/gorm"
 )
 
+var reviewIntervals = []int{1, 2, 4, 7, 15, 30, 60}
+
 type UserQuestionServiceInterface interface {
 	CompleteQuestion(userID, questionID uint, resultType string) error
-	GetStudyStats(userID uint) (*StudyStats, error)
+	GetStudyStats(userID uint) (*models.StudyStats, error)
 }
 
 type UserQuestionService struct {
 	userQuestionRepo repositories.UserQuestionRepository
 	userStatsRepo    repositories.UserStatsRepository
-	checkInService   *CheckInService // 新增
+	bus              *events.EventBus
 }
 
-func NewUserQuestionService(userQuestionRepo repositories.UserQuestionRepository, userStatsRepo repositories.UserStatsRepository, checkInService *CheckInService) *UserQuestionService {
+func NewUserQuestionService(userQuestionRepo repositories.UserQuestionRepository, userStatsRepo repositories.UserStatsRepository, bus *events.EventBus) *UserQuestionService {
 	return &UserQuestionService{
 		userQuestionRepo: userQuestionRepo,
 		userStatsRepo:    userStatsRepo,
-		checkInService:   checkInService,
+		bus:              bus,
 	}
 }
 
@@ -78,22 +81,29 @@ func (s *UserQuestionService) CompleteQuestion(userID, questionID uint, resultTy
 		}
 	}
 
-	// 自动打卡
-	if s.checkInService != nil {
-		_ = s.checkInService.CheckInToday(userID)
+	// 通过 events 包的 channel 发布事件
+	s.bus.UserCompletedQuestionChan <- events.UserCompletedQuestionEvent{
+		UserID:     userID,
+		QuestionID: questionID,
 	}
 
 	return nil
 }
 
 // GetStudyStats 获取学习统计信息
-func (s *UserQuestionService) GetStudyStats(userID uint) (*StudyStats, error) {
-	var stats StudyStats
-	s.userStatsRepo.CountUserStudiedQuestions(userID, &stats.TotalStudied)
-	s.userStatsRepo.CountUserCompletedQuestions(userID, &stats.Completed)
+func (s *UserQuestionService) GetStudyStats(userID uint) (*models.StudyStats, error) {
+	var stats models.StudyStats
+	if err := s.userStatsRepo.CountUserStudiedQuestions(userID, &stats.TotalStudied); err != nil {
+		return nil, err
+	}
+	if err := s.userStatsRepo.CountUserCompletedQuestions(userID, &stats.Completed); err != nil {
+		return nil, err
+	}
 	// 使用本地时区获取今天的开始时间
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	s.userStatsRepo.CountUserTodayReviewQuestions(userID, today, &stats.TodayReview)
+	if err := s.userStatsRepo.CountUserTodayReviewQuestions(userID, today, &stats.TodayReview); err != nil {
+		return nil, err
+	}
 	return &stats, nil
 }
