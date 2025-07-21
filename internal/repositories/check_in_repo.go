@@ -74,7 +74,7 @@ func (r *checkInRepository) GetUserYearlyCheckInStats(userID uint, startDate, en
 	var checkInStats []models.DailyStat
 	err := r.db.Table("user_check_ins").
 		Select("DATE(check_date) as date, study_count").
-		Where("user_id = ? AND DATE(check_date) >= DATE(?) AND DATE(check_date) < DATE(?)", userID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02")).
+		Where("user_id = ? AND DATE(check_date) >= DATE(?) AND DATE(check_date) <= DATE(?)", userID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02")).
 		Order("date").
 		Scan(&checkInStats).Error
 	return checkInStats, err

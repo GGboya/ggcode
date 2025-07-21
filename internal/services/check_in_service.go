@@ -150,13 +150,13 @@ func (s *CheckInService) GetStudyHeatmap(userID uint) (*HeatmapResponse, error) 
 	checkInMap := make(map[string]int)
 	for _, checkIn := range checkInStats {
 		dateStr := checkIn.Date.Format("2006-01-02")
-		checkInMap[dateStr] = int(checkIn.Count)
+		checkInMap[dateStr] = int(checkIn.StudyCount)
 	}
 
 	statsMap := make(map[string]int64)
 	for _, stat := range dailyStats {
 		dateStr := stat.Date.Format("2006-01-02")
-		statsMap[dateStr] = stat.Count
+		statsMap[dateStr] = stat.StudyCount
 	}
 
 	now := time.Now()

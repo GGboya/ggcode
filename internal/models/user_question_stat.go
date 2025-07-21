@@ -3,8 +3,8 @@ package models
 import "time"
 
 type DailyStat struct {
-	Date  time.Time
-	Count int64
+	Date       time.Time `json:"date"`
+	StudyCount int64     `json:"study_count"`
 }
 
 // CheckInStat 打卡统计
