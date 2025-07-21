@@ -10,11 +10,17 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// clientLimiter 包含 limiter 和最后访问时间
+type clientLimiter struct {
+	limiter        *rate.Limiter
+	lastAccessTime time.Time
+}
+
 // SecurityMiddleware 安全中间件
 type SecurityMiddleware struct {
 	config *config.Config
 	// 速率限制器映射
-	rateLimiters map[string]*rate.Limiter
+	rateLimiters map[string]*clientLimiter
 	mu           sync.RWMutex
 }
 
@@ -22,7 +28,7 @@ type SecurityMiddleware struct {
 func NewSecurityMiddleware(cfg *config.Config) *SecurityMiddleware {
 	return &SecurityMiddleware{
 		config:       cfg,
-		rateLimiters: make(map[string]*rate.Limiter),
+		rateLimiters: make(map[string]*clientLimiter),
 	}
 }
 
@@ -106,16 +112,18 @@ func (sm *SecurityMiddleware) getRateLimiter(clientIP string) *rate.Limiter {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
-	limiter, exists := sm.rateLimiters[clientIP]
+	cl, exists := sm.rateLimiters[clientIP]
 	if !exists {
-		// 创建新的速率限制器
-		// 将时间窗口转换为每秒请求数
 		requestsPerSecond := float64(sm.config.Security.RateLimitRequests) / sm.config.Security.RateLimitWindow.Seconds()
-		limiter = rate.NewLimiter(rate.Limit(requestsPerSecond), sm.config.Security.RateLimitRequests)
-		sm.rateLimiters[clientIP] = limiter
+		cl = &clientLimiter{
+			limiter:        rate.NewLimiter(rate.Limit(requestsPerSecond), sm.config.Security.RateLimitRequests),
+			lastAccessTime: time.Now(),
+		}
+		sm.rateLimiters[clientIP] = cl
+	} else {
+		cl.lastAccessTime = time.Now()
 	}
-
-	return limiter
+	return cl.limiter
 }
 
 // SecurityHeaders 安全响应头中间件
@@ -189,8 +197,12 @@ func (sm *SecurityMiddleware) CleanupRateLimiters() {
 	go func() {
 		for range ticker.C {
 			sm.mu.Lock()
-			// 这里可以实现更复杂的清理逻辑
-			// 比如基于最后访问时间的清理
+			now := time.Now()
+			for ip, cl := range sm.rateLimiters {
+				if now.Sub(cl.lastAccessTime) > 2*time.Hour {
+					delete(sm.rateLimiters, ip)
+				}
+			}
 			sm.mu.Unlock()
 		}
 	}()

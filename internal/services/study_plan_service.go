@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"ggcode/internal/models"
+	"ggcode/internal/pkg/logger"
 	"ggcode/internal/repositories"
 	"math"
 	"sort"
@@ -214,6 +215,7 @@ func (s *StudyPlanService) GetDailyQuestions(userID, planID uint) (*models.Daily
 		if err := s.studyPlanRepo.CacheDailyQuestions(userID, planID, questionIDs, today); err != nil {
 			// 缓存失败不影响学习，记录日志即可
 			// 可以在这里添加日志记录
+			logger.Error("缓存每日学习题目失败", err)
 		}
 	} else if err != nil {
 		return nil, err

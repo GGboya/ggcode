@@ -3,6 +3,7 @@ package services
 import (
 	"ggcode/internal/events"
 	"ggcode/internal/models"
+	"ggcode/internal/pkg/logger"
 	"ggcode/internal/repositories"
 	"time"
 )
@@ -221,7 +222,10 @@ func (s *CheckInService) GetStudyHeatmap(userID uint) (*HeatmapResponse, error) 
 
 	currentYear := time.Now().Year()
 	for _, data := range heatmapData {
-		date, _ := time.Parse("2006-01-02", data.Date)
+		date, err := time.Parse("2006-01-02", data.Date)
+		if err != nil {
+			continue // 或者记录日志
+		}
 		if date.Year() == currentYear {
 			thisYearStudyCount += data.Count
 		}
@@ -241,8 +245,10 @@ func (s *CheckInService) StartEventListener() {
 		for event := range s.bus.UserCompletedQuestionChan {
 			// 加 recover 防止 panic
 			func() {
-				defer func() { recover() }()
-				_ = s.CheckInToday(event.UserID)
+				err := s.CheckInToday(event.UserID)
+				if err != nil {
+					logger.Error("打卡失败", err)
+				}
 			}()
 		}
 	}()
