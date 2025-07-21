@@ -10,11 +10,11 @@ import (
 )
 
 type QuestionBankController struct {
-	questionBankService *services.QuestionBankService
+	questionBankService services.QuestionBankServiceInterface
 }
 
-func NewQuestionBankController(services *services.Services) *QuestionBankController {
-	return &QuestionBankController{questionBankService: services.QuestionBank}
+func NewQuestionBankController(questionBankService services.QuestionBankServiceInterface) *QuestionBankController {
+	return &QuestionBankController{questionBankService: questionBankService}
 }
 
 // GetQuestionBanks 获取题库列表

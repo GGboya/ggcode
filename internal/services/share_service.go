@@ -6,13 +6,22 @@ import (
 	"ggcode/internal/repositories"
 )
 
+type ShareServiceInterface interface {
+	ShareQuestionBank(bankID, userID uint) error
+	UnshareQuestionBank(bankID, userID uint) error
+	StarQuestionBank(bankID, userID uint) error
+	UnstarQuestionBank(bankID, userID uint) error
+	ForkQuestionBank(bankID, userID uint) (*models.QuestionBank, error)
+	GetUserStarredBanks(userID uint, page, limit int) ([]models.QuestionBank, int64, error)
+}
+
 type ShareService struct {
 	shareRepo repositories.ShareRepository
 }
 
-func NewShareService(repos *repositories.Repositories) *ShareService {
+func NewShareService(shareRepo repositories.ShareRepository) *ShareService {
 	return &ShareService{
-		shareRepo: repos.Share,
+		shareRepo: shareRepo,
 	}
 }
 

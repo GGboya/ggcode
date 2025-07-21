@@ -8,11 +8,11 @@ import (
 )
 
 type CheckInController struct {
-	checkInService *services.CheckInService
+	checkInService services.CheckInServiceInterface
 }
 
-func NewCheckInController(services *services.Services) *CheckInController {
-	return &CheckInController{checkInService: services.CheckIn}
+func NewCheckInController(checkInService services.CheckInServiceInterface) *CheckInController {
+	return &CheckInController{checkInService: checkInService}
 }
 
 // CheckInToday 今日打卡

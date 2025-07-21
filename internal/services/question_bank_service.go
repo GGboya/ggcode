@@ -33,11 +33,11 @@ type QuestionBankService struct {
 	questionRepo       repositories.QuestionRepository // 新增
 }
 
-func NewQuestionBankService(repos *repositories.Repositories) *QuestionBankService {
+func NewQuestionBankService(questionBankRepo repositories.QuestionBankRepository, contestProblemRepo repositories.ContestProblemRepository, questionRepo repositories.QuestionRepository) *QuestionBankService {
 	return &QuestionBankService{
-		questionBankRepo:   repos.QuestionBank,
-		contestProblemRepo: repos.ContestProblem,
-		questionRepo:       repos.Question, // 新增
+		questionBankRepo:   questionBankRepo,
+		contestProblemRepo: contestProblemRepo,
+		questionRepo:       questionRepo, // 新增
 	}
 }
 
@@ -208,3 +208,17 @@ func (s *QuestionBankService) GetAllQuestionBanksProgress(userID uint) ([]Questi
 
 	return progresses, nil
 }
+
+type QuestionBankServiceInterface interface {
+	GetQuestionBanks(userID uint, bankType, sortBy string, page, limit int) (*QuestionBankListResponse, error)
+	CreateQuestionBank(name, description string, userID uint) (*models.QuestionBank, error)
+	UpdateQuestionBank(bankID, userID uint, updateData repositories.QuestionBankUpdateData) error
+	DeleteQuestionBank(bankID, userID uint) error
+	GetOrCreateWrongQuestionBook(userID uint) (*models.QuestionBank, error)
+	AddQuestionToWrongBook(userID, questionID uint) error
+	CreateQuestionBankWithImport(name, description string, userID uint, source string, minScore, maxScore int) (*models.QuestionBank, error)
+	GetQuestionBankProgress(userID, bankID uint) (*QuestionBankProgress, error)
+	GetAllQuestionBanksProgress(userID uint) ([]QuestionBankProgress, error)
+}
+
+var _ QuestionBankServiceInterface = &QuestionBankService{}

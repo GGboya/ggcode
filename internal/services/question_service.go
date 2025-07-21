@@ -15,8 +15,8 @@ type QuestionService struct {
 	questionRepo repositories.QuestionRepository
 }
 
-func NewQuestionService(repos *repositories.Repositories) *QuestionService {
-	return &QuestionService{questionRepo: repos.Question}
+func NewQuestionService(questionRepo repositories.QuestionRepository) *QuestionService {
+	return &QuestionService{questionRepo: questionRepo}
 }
 
 // GetQuestions 获取题库下的题目列表
@@ -72,3 +72,15 @@ func (s *QuestionService) UpdateQuestionWithDescription(userID, questionID, bank
 func (s *QuestionService) DeleteQuestion(userID, questionID, bankID uint) error {
 	return s.questionRepo.DeleteQuestion(userID, questionID, bankID)
 }
+
+type QuestionServiceInterface interface {
+	GetQuestions(bankID uint, page, limit int) (*QuestionListResponse, error)
+	GetAllQuestions() ([]models.Question, error)
+	CreateQuestion(userID, bankID uint, title, URL, difficulty string, score float64) (*models.Question, error)
+	GetQuestion(questionID uint) (*models.Question, error)
+	UpdateQuestion(userID, questionID, bankID uint, title, URL, difficulty string) (*models.Question, error)
+	UpdateQuestionWithDescription(userID, questionID, bankID uint, title, URL, difficulty, description string) (*models.Question, error)
+	DeleteQuestion(userID, questionID, bankID uint) error
+}
+
+var _ QuestionServiceInterface = &QuestionService{}

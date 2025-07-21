@@ -20,14 +20,14 @@ type Controllers struct {
 func NewControllers(services *services.Services) *Controllers {
 	return &Controllers{
 		User:         NewUserController(services.User),
-		QuestionBank: NewQuestionBankController(services),
-		Question:     NewQuestionController(services),
+		QuestionBank: NewQuestionBankController(services.QuestionBank),
+		Question:     NewQuestionController(services.Question),
 		StudyPlan:    NewStudyPlanController(services.StudyPlan),
-		Share:        NewShareController(services),
+		Share:        NewShareController(services.Share),
 		Page:         NewPageController(),
-		Interview:    NewInterviewController(services),
+		Interview:    NewInterviewController(services.Interview, services.User),
 		GoJudge:      NewGoJudgeController(services.GoJudge, services.Interview),
 		UserQuestion: NewUserQuestionController(services.UserQuestion),
-		CheckIn:      NewCheckInController(services),
+		CheckIn:      NewCheckInController(services.CheckIn),
 	}
 }

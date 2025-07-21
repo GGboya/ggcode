@@ -10,12 +10,12 @@ import (
 )
 
 type ShareController struct {
-	shareService *services.ShareService
+	shareService services.ShareServiceInterface
 }
 
-func NewShareController(services *services.Services) *ShareController {
+func NewShareController(shareService services.ShareServiceInterface) *ShareController {
 	return &ShareController{
-		shareService: services.Share,
+		shareService: shareService,
 	}
 }
 

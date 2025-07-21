@@ -11,13 +11,13 @@ import (
 
 type InterviewController struct {
 	interviewService services.InterviewService
-	userService      *services.UserService
+	userService      services.UserServiceInterface
 }
 
-func NewInterviewController(svcs *services.Services) *InterviewController {
+func NewInterviewController(interviewService services.InterviewService, userService services.UserServiceInterface) *InterviewController {
 	return &InterviewController{
-		interviewService: svcs.Interview,
-		userService:      svcs.User,
+		interviewService: interviewService,
+		userService:      userService,
 	}
 }
 

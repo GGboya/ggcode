@@ -9,11 +9,11 @@ import (
 )
 
 type QuestionController struct {
-	questionService *services.QuestionService
+	questionService services.QuestionServiceInterface
 }
 
-func NewQuestionController(services *services.Services) *QuestionController {
-	return &QuestionController{questionService: services.Question}
+func NewQuestionController(questionService services.QuestionServiceInterface) *QuestionController {
+	return &QuestionController{questionService: questionService}
 }
 
 // GetQuestions 获取题库下的题目列表
