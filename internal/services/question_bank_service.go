@@ -153,7 +153,7 @@ func (s *QuestionBankService) CreateQuestionBankWithImport(name, description str
 }
 
 // GetQuestionBankProgress 获取特定题库的学习进度
-func (s *QuestionBankService) GetQuestionBankProgress(userID, bankID uint) (*QuestionBankProgress, error) {
+func (s *QuestionBankService) GetQuestionBankProgress(userID, bankID uint) (*models.QuestionBankProgress, error) {
 	// 获取题库总题目数
 	totalQuestions, err := s.questionRepo.GetQuestionCount(bankID)
 	if err != nil {
@@ -179,7 +179,7 @@ func (s *QuestionBankService) GetQuestionBankProgress(userID, bankID uint) (*Que
 		masteryRate = int((completedCount * 100) / totalQuestions)
 	}
 
-	return &QuestionBankProgress{
+	return &models.QuestionBankProgress{
 		QuestionBankID: bankID,
 		TotalQuestions: totalQuestions,
 		StudiedCount:   studiedCount,
@@ -190,14 +190,14 @@ func (s *QuestionBankService) GetQuestionBankProgress(userID, bankID uint) (*Que
 }
 
 // GetAllQuestionBanksProgress 获取所有题库的学习进度
-func (s *QuestionBankService) GetAllQuestionBanksProgress(userID uint) ([]QuestionBankProgress, error) {
+func (s *QuestionBankService) GetAllQuestionBanksProgress(userID uint) ([]models.QuestionBankProgress, error) {
 	// 获取所有题库
 	var questionBanks []models.QuestionBank
 	if err := s.questionBankRepo.GetAllQuestionBanks(&questionBanks); err != nil {
 		return nil, err
 	}
 
-	var progresses []QuestionBankProgress
+	var progresses []models.QuestionBankProgress
 	for _, bank := range questionBanks {
 		progress, err := s.GetQuestionBankProgress(userID, bank.ID)
 		if err != nil {
@@ -217,8 +217,8 @@ type QuestionBankServiceInterface interface {
 	GetOrCreateWrongQuestionBook(userID uint) (*models.QuestionBank, error)
 	AddQuestionToWrongBook(userID, questionID uint) error
 	CreateQuestionBankWithImport(name, description string, userID uint, source string, minScore, maxScore int) (*models.QuestionBank, error)
-	GetQuestionBankProgress(userID, bankID uint) (*QuestionBankProgress, error)
-	GetAllQuestionBanksProgress(userID uint) ([]QuestionBankProgress, error)
+	GetQuestionBankProgress(userID, bankID uint) (*models.QuestionBankProgress, error)
+	GetAllQuestionBanksProgress(userID uint) ([]models.QuestionBankProgress, error)
 }
 
 var _ QuestionBankServiceInterface = &QuestionBankService{}

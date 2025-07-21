@@ -6,7 +6,6 @@ package services
 
 import (
 	models "ggcode/internal/models"
-	services "ggcode/internal/services"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -111,10 +110,10 @@ func (mr *MockStudyPlanServiceInterfaceMockRecorder) GetStudyPlan(planID, userID
 }
 
 // GetStudyPlanProgress mocks base method.
-func (m *MockStudyPlanServiceInterface) GetStudyPlanProgress(userID, planID uint) (*services.StudyPlanProgress, error) {
+func (m *MockStudyPlanServiceInterface) GetStudyPlanProgress(userID, planID uint) (*models.StudyPlanProgress, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStudyPlanProgress", userID, planID)
-	ret0, _ := ret[0].(*services.StudyPlanProgress)
+	ret0, _ := ret[0].(*models.StudyPlanProgress)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

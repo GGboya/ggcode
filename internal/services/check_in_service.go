@@ -25,7 +25,7 @@ type HeatmapResponse struct {
 
 type CheckInServiceInterface interface {
 	CheckInToday(userID uint) error
-	GetCheckInStats(userID uint) (*CheckInStats, error)
+	GetCheckInStats(userID uint) (*models.CheckInStat, error)
 	GetStudyHeatmap(userID uint) (*HeatmapResponse, error)
 }
 
@@ -99,10 +99,10 @@ func (s *CheckInService) CheckInToday(userID uint) error {
 }
 
 // GetCheckInStats 获取打卡统计信息
-func (s *CheckInService) GetCheckInStats(userID uint) (*CheckInStats, error) {
+func (s *CheckInService) GetCheckInStats(userID uint) (*models.CheckInStat, error) {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	var stats CheckInStats
+	var stats models.CheckInStat
 
 	var todayCheckIn models.UserCheckIn
 	err := s.checkInRepo.GetUserCheckInByDate(userID, today, &todayCheckIn)
@@ -149,7 +149,7 @@ func (s *CheckInService) GetStudyHeatmap(userID uint) (*HeatmapResponse, error) 
 	checkInMap := make(map[string]int)
 	for _, checkIn := range checkInStats {
 		dateStr := checkIn.Date.Format("2006-01-02")
-		checkInMap[dateStr] = checkIn.StudyCount
+		checkInMap[dateStr] = int(checkIn.Count)
 	}
 
 	statsMap := make(map[string]int64)

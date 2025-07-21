@@ -9,9 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
+var reviewIntervals = []int{1, 2, 4, 7, 15, 30, 60}
+
 type UserQuestionServiceInterface interface {
 	CompleteQuestion(userID, questionID uint, resultType string) error
-	GetStudyStats(userID uint) (*StudyStats, error)
+	GetStudyStats(userID uint) (*models.StudyStats, error)
 }
 
 type UserQuestionService struct {
@@ -89,8 +91,8 @@ func (s *UserQuestionService) CompleteQuestion(userID, questionID uint, resultTy
 }
 
 // GetStudyStats 获取学习统计信息
-func (s *UserQuestionService) GetStudyStats(userID uint) (*StudyStats, error) {
-	var stats StudyStats
+func (s *UserQuestionService) GetStudyStats(userID uint) (*models.StudyStats, error) {
+	var stats models.StudyStats
 	s.userStatsRepo.CountUserStudiedQuestions(userID, &stats.TotalStudied)
 	s.userStatsRepo.CountUserCompletedQuestions(userID, &stats.Completed)
 	// 使用本地时区获取今天的开始时间

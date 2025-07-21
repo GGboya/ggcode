@@ -29,3 +29,13 @@ type QuestionBankStar struct {
 	QuestionBank   QuestionBank `json:"question_bank" gorm:"foreignKey:QuestionBankID"`
 	CreatedAt      time.Time    `json:"created_at"`
 }
+
+type QuestionBankProgress struct {
+	QuestionBankID uint  `json:"question_bank_id"`
+	TotalQuestions int64 `json:"total_questions"` // 题库总题目数
+	StudiedCount   int64 `json:"studied_count"`   // 已学习题目数
+	CompletedCount int64 `json:"completed_count"` // 已掌握题目数
+	ReviewCount    int64 `json:"review_count"`    // 待复习题目数
+	ProgressRate   int   `json:"progress_rate"`   // 学习进度百分比
+	MasteryRate    int   `json:"mastery_rate"`    // 掌握率百分比
+}

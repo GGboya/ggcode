@@ -18,7 +18,7 @@ type CheckInRepository interface {
 	CreateUserCheckIn(checkIn *models.UserCheckIn) error
 	UpdateUserCheckIn(checkIn *models.UserCheckIn) error
 	// 统计用户一年内每日打卡记录
-	GetUserYearlyCheckInStats(userID uint, startDate, endDate time.Time) ([]models.CheckInStat, error)
+	GetUserYearlyCheckInStats(userID uint, startDate, endDate time.Time) ([]models.DailyStat, error)
 	// 统计总打卡天数
 	GetTotalCheckInDays(userID uint) (int64, error)
 }
@@ -69,8 +69,9 @@ func (r *checkInRepository) UpdateUserCheckIn(checkIn *models.UserCheckIn) error
 	return r.db.Save(checkIn).Error
 }
 
-func (r *checkInRepository) GetUserYearlyCheckInStats(userID uint, startDate, endDate time.Time) ([]models.CheckInStat, error) {
-	var checkInStats []models.CheckInStat
+func (r *checkInRepository) GetUserYearlyCheckInStats(userID uint, startDate, endDate time.Time) ([]models.DailyStat, error) {
+	// 查询用户在过去一年的打卡记录（包含学习数量）
+	var checkInStats []models.DailyStat
 	err := r.db.Table("user_check_ins").
 		Select("DATE(check_date) as date, study_count").
 		Where("user_id = ? AND DATE(check_date) >= DATE(?) AND DATE(check_date) < DATE(?)", userID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02")).
