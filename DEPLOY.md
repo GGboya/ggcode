@@ -1,155 +1,77 @@
-# 🚀 GGCode 快速部署指南
+# �� GGCode 快速部署指南
 
-## 一键启动（推荐）
+## 前置要求
 
-### 前置要求
-- Docker
-- Docker Compose
+- Go 1.18 及以上
+- MySQL 8.0 及以上（本地或远程均可）
+- Git
 
-### 启动步骤
-
-1. **克隆项目**
-   ```bash
-   git clone <your-repo-url>
-   cd ggcode
-   ```
-
-2. **一键启动**
-   ```bash
-   # 使用 docker-compose
-   docker-compose up -d
-   ```
-
-3. **访问应用**
-   - 打开浏览器访问：http://localhost:8080
-   - 数据库会自动初始化（GORM 自动迁移）
-
-### 常用命令
+## 1. 克隆项目
 
 ```bash
-# 启动服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f ggcode
-
-# 停止服务  
-docker-compose down
-
-# 重启服务
-docker-compose restart
-
-# 完全清理（包括数据）
-docker-compose down -v
+git clone https://github.com/GGboya/ggcode.git
+cd ggcode
 ```
+
+## 2. 配置数据库
+
+1. 启动本地 MySQL 服务（或准备好远程 MySQL 实例）。
+2. 创建数据库和用户：
+
+```sql
+CREATE DATABASE ggcode DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'ggcode'@'localhost' IDENTIFIED BY 'ggcode123';
+GRANT ALL PRIVILEGES ON ggcode.* TO 'ggcode'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+3. 修改 `config.yaml` 或 `.env` 文件，确保数据库连接信息正确：
+
+```
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=ggcode
+DB_PASSWORD=ggcode123
+DB_NAME=ggcode
+```
+
+## 3. 启动后端服务
+
+```bash
+go run main.go
+```
+
+首次启动会自动进行数据库迁移。
+
+## 4. 访问应用
+
+- 打开浏览器访问：[http://localhost:8080](http://localhost:8080)
+
+## 5. 常见问题
+
+### Q: 数据库连接失败？
+- 检查 MySQL 是否已启动，端口和账号密码是否正确。
+- 检查防火墙或本地端口占用。
+
+### Q: 启动报错？
+- 检查 Go 版本是否符合要求。
+- 检查依赖是否已安装（可运行 `go mod tidy`）。
+
+### Q: 如何重置数据库？
+- 直接删除数据库后重新创建。
+
+## 6. 生产环境建议
+
+- 修改默认数据库密码和 JWT 密钥，避免使用弱密码。
+- 推荐使用 Nginx/Apache 反向代理，启用 HTTPS。
+- 配置防火墙，限制数据库端口访问。
+- 定期备份数据库。
+
+## 7. 参考
+
+- 如需前端自定义开发，请参考 web 目录下静态资源和模板。
+- 详细功能和接口文档见 docs 目录。
 
 ---
 
-## 🔧 配置说明
-
-### 默认配置
-- **应用端口**：8080
-- **数据库**：MySQL 8.0
-- **数据库端口**：3306
-- **数据库用户**：ggcode
-- **数据库密码**：ggcode123
-
-### 自定义配置
-如需修改配置，编辑 `docker-compose.yml` 文件中的环境变量：
-
-```yaml
-environment:
-  DB_HOST: mysql
-  DB_PORT: 3306
-  DB_USER: ggcode
-  DB_PASSWORD: your-password  # 修改密码
-  DB_NAME: ggcode
-  JWT_SECRET: your-secret-key  # 修改JWT密钥
-  SERVER_PORT: 8080
-```
-
----
-
-## 📊 服务状态检查
-
-```bash
-# 检查容器状态
-docker-compose ps
-
-# 检查应用健康状态
-curl http://localhost:8080
-
-# 查看数据库连接
-docker-compose exec mysql mysql -u ggcode -p ggcode
-```
-
----
-
-## 🐛 故障排除
-
-### 端口被占用
-```bash
-# 修改 docker-compose.yml 中的端口映射
-ports:
-  - "8081:8080"  # 修改左侧端口号
-```
-
-### 数据库连接失败
-```bash
-# 查看MySQL容器日志
-docker-compose logs mysql
-
-# 重启MySQL容器
-docker-compose restart mysql
-```
-
-### 重置数据
-```bash
-# 停止服务并删除数据卷
-docker-compose down -v
-
-# 重新启动
-docker-compose up -d
-```
-
----
-
-## 💡 生产环境部署
-
-1. **修改默认密码**
-   ```yaml
-   environment:
-     MYSQL_ROOT_PASSWORD: your-secure-root-password
-     MYSQL_PASSWORD: your-secure-password
-     JWT_SECRET: your-production-jwt-secret
-   ```
-
-2. **使用外部MySQL**
-   ```yaml
-   ggcode:
-     environment:
-       DB_HOST: your-mysql-host
-       DB_PORT: 3306
-       DB_USER: your-username
-       DB_PASSWORD: your-password
-   ```
-
-3. **反向代理**
-   ```nginx
-   # Nginx 配置示例
-   location / {
-       proxy_pass http://localhost:8080;
-       proxy_set_header Host $host;
-       proxy_set_header X-Real-IP $remote_addr;
-   }
-   ```
-
----
-
-## ✨ 特性
-
-- 🐳 **Docker 化部署**：开箱即用
-- 🗄️ **自动数据库迁移**：GORM 自动创建表结构
-- 🔄 **健康检查**：确保服务正常启动
-- 📁 **数据持久化**：MySQL 数据自动备份
-- �� **零配置**：默认配置即可运行 
+如有更多问题，欢迎提交 Issue 反馈！ 
