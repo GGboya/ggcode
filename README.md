@@ -151,3 +151,4 @@ ggcode/
 
 [![MIT License](https://img.shields.io/github/license/GGboya/ggcode)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/GGboya/ggcode)](https://goreportcard.com/report/github.com/GGboya/ggcode) 
+[![codecov](https://codecov.io/gh/GGboya/ggcode/branch/release0.1/graph/badge.svg)](https://codecov.io/gh/GGboya/ggcode) 
