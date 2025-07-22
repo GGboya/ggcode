@@ -37,6 +37,8 @@ DB_NAME=ggcode
 
 ## 3. 启动后端服务
 
+> **提示：如果没有本地开发环境，可以直接从 GitHub 的 [release](https://github.com/GGboya/ggcode/releases) 页面下载最新版本的二进制文件（目前仅支持 Linux），下载后解压运行，无需本地编译。**
+
 ```bash
 go run main.go
 ```
