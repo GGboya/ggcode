@@ -198,9 +198,9 @@
                         <input type="text" class="form-control" id="questionTitle" required>
                     </div>
                     <div class="mb-3">
-                        <label for="questionURL" class="form-label">题目链接</label>
-                        <input type="url" class="form-control" id="questionURL" required>
-                        <div class="form-text">请输入完整的原题链接（如 LeetCode/AtCoder/Codeforces/牛客等）</div>
+                        <label for="questionURL" class="form-label">题目链接 <span class="text-muted">(可选)</span></label>
+                        <input type="url" class="form-control" id="questionURL" placeholder="https://leetcode.com/problems/...">
+                        <div class="form-text">请输入完整的原题链接（如 LeetCode/AtCoder/Codeforces/牛客等），留空表示自定义题目</div>
                     </div>
                     <div class="mb-3">
                         <label for="questionDifficulty" class="form-label">难度</label>
@@ -772,6 +772,18 @@ function addQuestion(bankId) {
     }, 50);
 }
 
+// URL验证函数
+function isValidUrl(string) {
+    if (!string) return false; // 空URL是允许的
+    try {
+        const url = new URL(string);
+        return url.protocol === "http:" || url.protocol === "https:";
+    } catch (_) {
+        // 如果不是完整URL，检查是否是相对URL或路径
+        return string.includes('.') || string.startsWith('/') || string.startsWith('http');
+    }
+}
+
 // 获取难度样式类
 function getDifficultyClass(difficulty) {
     switch(difficulty.toLowerCase()) {
@@ -943,6 +955,20 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
     const difficulty = document.getElementById('questionDifficulty').value;
     
     console.log('表单数据:', { title, url, difficulty, currentBankId });
+    console.log('URL值详细信息:', {
+        url: url,
+        urlType: typeof url,
+        urlLength: url.length,
+        urlTrim: url.trim(),
+        isEmpty: !url || url.trim() === ''
+    });
+    
+    // URL验证和处理
+    const trimmedUrl = url.trim();
+    if (trimmedUrl && !isValidUrl(trimmedUrl)) {
+        showAlert('请输入有效的URL格式（如：https://leetcode.com/problems/...）', 'warning');
+        return;
+    }
     
     if (!currentBankId) {
         console.error('当前题库ID为空');
@@ -951,11 +977,16 @@ document.getElementById('addQuestionForm').addEventListener('submit', async func
     }
     
     try {
-        const response = await axios.post(`/api/questionbanks/${currentBankId}/questions`, {
+        const requestData = {
             title: title,
-            question_url: url,
+            url: trimmedUrl,
             difficulty: difficulty
-        });
+        };
+        
+        console.log('即将发送的请求数据:', requestData);
+        console.log('请求URL:', `/api/questionbanks/${currentBankId}/questions`);
+        
+        const response = await axios.post(`/api/questionbanks/${currentBankId}/questions`, requestData);
         
         console.log('题目添加成功:', response.data);
         showAlert('题目添加成功！', 'success');
@@ -1016,7 +1047,7 @@ function addQuestionToModal(newQuestion, modal) {
                     ${renderQuestionTag(newQuestion)}
                 </div>
                 <div class="btn-group btn-group-sm">
-                    <a href="${newQuestion.question_url}" target="_blank" rel="noopener" class="btn btn-outline-primary">
+                    <a href="${newQuestion.url}" target="_blank" rel="noopener" class="btn btn-outline-primary">
                         <i class="fas fa-external-link-alt"></i> 做题
                     </a>
                     ${canEdit ? `
@@ -1136,7 +1167,7 @@ async function fetchQuestionDetails(questionId) {
         
         // 填充编辑表单
         document.getElementById('editQuestionTitle').value = question.title;
-        document.getElementById('editQuestionURL').value = question.question_url;
+        document.getElementById('editQuestionURL').value = question.url;
         document.getElementById('editQuestionDifficulty').value = question.difficulty;
         
         // 保存当前编辑的题目ID
@@ -1185,7 +1216,7 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
     try {
         const response = await axios.put(`/api/questions/${window.currentQuestionId}`, {
             title: title,
-            question_url: url,
+            url: url,
             difficulty: difficulty,
             question_bank_id: currentViewingBankId  // 添加题库ID
         });
@@ -1209,7 +1240,7 @@ document.getElementById('editQuestionForm').addEventListener('submit', async fun
         updateQuestionInModal(response.data || {
             id: window.currentQuestionId,
             title: title,
-            question_url: url,
+            url: url,
             difficulty: difficulty
         });
         
@@ -1242,7 +1273,7 @@ function updateQuestionInModal(updatedQuestion) {
                     titleElement.textContent = newTitleText;
                     difficultyElement.className = `badge ${getDifficultyClass(updatedQuestion.difficulty)}`;
                     difficultyElement.textContent = updatedQuestion.difficulty;
-                    linkElement.href = updatedQuestion.question_url;
+                    linkElement.href = updatedQuestion.url;
                     
                     // 添加更新动画效果
                     item.style.transition = 'background-color 0.3s ease';
